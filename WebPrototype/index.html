@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Guitar Pizza Hero - Asset Edition</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #2d3436;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            max-width: 600px;
+            /* Hybrid Desktop Limit */
+            position: relative;
+            background: #000;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0000 0%, #2d0a0a 50%, #1a0000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            color: #FAFAFA;
+            text-shadow: 0 0 15px rgba(206, 43, 55, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        h1 {
+            font-family: 'Impact', sans-serif;
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #ffeaa7;
+            text-transform: uppercase;
+            text-shadow: 4px 4px 0px #d63031;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: #dfe6e9;
+            text-align: center;
+            margin-bottom: 40px;
+            line-height: 1.5;
+            padding: 0 20px;
+        }
+
+        button {
+            padding: 18px 45px;
+            font-size: 1.6rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #8B0000 0%, #5a0000 100%);
+            color: #FFD700;
+            border: 3px solid #FFD700;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5), 0 6px 15px rgba(0, 0, 0, 0.8);
+            transition: all 0.3s;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            font-family: 'Courier New', monospace;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #d63031;
+        }
+
+        button:hover {
+            transform: scale(1.08) translateY(-3px);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.9), 0 10px 25px rgba(0, 0, 0, 0.9);
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #1a0000;
+            border-color: #FFF;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 15vw;
+            }
+
+            button {
+                font-size: 6vw;
+                padding: 15px 30px;
+            }
+        }
+
+        .key-hint {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 2px solid white;
+            border-radius: 8px;
+            line-height: 40px;
+            text-align: center;
+            font-weight: bold;
+            margin: 0 5px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #results {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0000 0%, #2d0a0a 50%, #1a0000 100%);
+            color: #FAFAFA;
+            z-index: 15;
+            text-shadow: 0 0 15px rgba(206, 43, 55, 0.8);
+        }
+
+        .stat-row {
+            font-size: 1.5rem;
+            margin: 10px 0;
+            color: #dfe6e9;
+        }
+
+        .grade {
+            font-size: 6rem;
+            font-weight: 900;
+            color: #fab1a0;
+            text-shadow: 0 0 20px #e17055;
+            margin: 20px 0;
+        }
+
+        #overlay h1 {
+            font-size: 5rem;
+            margin: 0 0 20px 0;
+            font-family: 'Impact', sans-serif;
+            color: #FFD700;
+            text-shadow:
+                0 0 40px #FFD700,
+                0 0 80px #FFD700,
+                4px 4px 0 #8B0000,
+                8px 8px 20px rgba(0, 0, 0, 0.9);
+            letter-spacing: 6px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+        }
+    </style>
+    </style>
+</head>
+
+<body>
+    <div id="gameContainer">
+        <div id="overlay">
+            <h1>PIZZA<br>HERO</h1>
+            <p>RHYTHM KITCHEN</p>
+            <div style="margin-bottom: 30px; text-align: center; font-size: 0.9rem; color: #b2bec3;">
+                <p>MANTÉN PULSADO para ingredientes largos 🥖</p>
+                <div>
+                    <span class="key-hint">A</span>
+                    <span class="key-hint">S</span>
+                    <span class="key-hint">K</span>
+                    <span class="key-hint">L</span>
+                </div>
+                <p style="margin-top: 10px;">o toca los carriles 👆</p>
+            </div>
+            <div id="highScoreDisplay"
+                style="margin: 20px 0; font-size: 1.2rem; color: #fdcb6e; text-shadow: 0 0 10px rgba(253, 203, 110, 0.5);">
+                <strong>BEST:</strong> <span id="bestScore">0</span>
+            </div>
+            <button id="startBtn">FIRE UP!</button>
+        </div>
+
+        <div id="results">
+            <div id="newRecordBanner"
+                style="display:none; font-size: 2rem; color: #fdcb6e; text-shadow: 0 0 20px #fdcb6e; margin-bottom: 20px; animation: pulse 1s infinite;">
+                ⭐ NEW RECORD! ⭐
+            </div>
+            <h1>SERVICE ENDED</h1>
+            <div class="grade" id="resGrade">A</div>
+            <div class="stat-row">SCORE: <span id="resScore">0</span></div>
+            <div class="stat-row" style="font-size: 0.9rem; color: #b2bec3;">BEST: <span id="resBest">0</span></div>
+            <div class="stat-row">COMBO MAX: <span id="resCombo">0</span></div>
+            <div class="stat-row">PIZZAS: <span id="resPizzas">0</span></div>
+            <div class="stat-row" style="font-size: 0.9rem; color: #dfe6e9;">
+                ACCURACY: <span id="resAccuracy">0%</span> (<span id="resPerfect">0</span>/<span id="resTotal">0</span>
+                perfect)
+            </div>
+            <button id="restartBtn" style="margin-top: 30px;">COOK AGAIN</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div style="position:absolute; bottom:5px; right:5px; color:#555; font-size:10px;">v2.5 (High Res)</div>
+    <script src="assets.js?v=3"></script>
+
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            const div = document.createElement("div");
+            div.style.position = "absolute"; div.style.top = "0"; div.style.left = "0";
+            div.style.background = "red"; div.style.color = "white"; div.style.padding = "10px";
+            div.style.zIndex = "9999";
+            div.innerHTML = `ERROR: ${msg}<br>Line: ${line}`;
+            document.body.appendChild(div);
+            return false;
+        };
+
+        // CONFIGURATION
+        const CONFIG = {
+            BPM: 128, LANE_COUNT: 4, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060, SONG_DURATION: 90,
+            HITS_PER_PIZZA: 20
+        };
+
+        // STATE
+        const STATE = { MENU: 0, GAME: 1, RESULTS: 2 };
+        let gameState = STATE.MENU;
+        let gameTimer = 0;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let health = 100;
+        let fireMode = false;
+        let difficultyMult = 1.0;
+        let difficultyTimer = 0;
+
+        // PIZZA MECHANIC
+        let pizzaProgress = 0;
+        let pizzasMade = 0;
+
+        // HIGH SCORE SYSTEM
+        let highScore = 0;
+        let totalPerfectHits = 0;
+        let totalHits = 0;
+
+        // ENTITIES
+        let notes = [];
+        let particles = [];
+        let feedbackSystem = [];
+        let shake = 0;
+        let camScale = 1.0;
+
+        // RHYTHM FX
+        let beatTimer = 0;
+        let beatFlash = 0;
+        let bgScrollY = 0; // NEW: Scrolling Background
+
+        // ENGINE
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('gameContainer');
+        let lastTime = 0;
+        let nextNoteTime = 0;
+
+        // DIMENSIONS (RESPONSIVE)
+        let W, H, LANE_W, HIT_Y, NOTE_SIZE;
+
+        // ASSETS
+        const ASSETS = {};
+        const TAGS = ["tomato", "cheese", "mushroom", "basil"];
+        const LANE_COLORS = ["#ff7675", "#ffeaa7", "#a29bfe", "#55efc4"];
+
+        // HIGH SCORE PERSISTENCE
+        function loadHighScore() {
+            try {
+                const data = localStorage.getItem('pizzaHeroData');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    highScore = parsed.highScore || 0;
+                    return parsed;
+                }
+            } catch (e) {
+                console.warn('Failed to load high score:', e);
+            }
+            return { highScore: 0, bestCombo: 0, totalPizzas: 0, gamesPlayed: 0 };
+        }
+
+        function saveHighScore(newScore, newCombo) {
+            try {
+                const data = loadHighScore();
+                let updated = false;
+
+                if (newScore > data.highScore) {
+                    data.highScore = newScore;
+                    highScore = newScore;
+                    updated = true;
+                }
+                if (newCombo > (data.bestCombo || 0)) {
+                    data.bestCombo = newCombo;
+                }
+
+                data.totalPizzas = (data.totalPizzas || 0) + pizzasMade;
+                data.gamesPlayed = (data.gamesPlayed || 0) + 1;
+
+                localStorage.setItem('pizzaHeroData', JSON.stringify(data));
+                return updated; // true if new high score
+            } catch (e) {
+                console.warn('Failed to save high score:', e);
+                return false;
+            }
+        }
+
+        // GREEN SCREEN MAGIC
+        // GREEN SCREEN MAGIC (FLOOD FILL)
+        // GREEN SCREEN MAGIC (ROBUST COLOR DISTANCE)
+        // GREEN SCREEN MAGIC (FLOOD FILL + SMOOTHING)
+        function processImage(img) {
+            try {
+                const tempCanvas = document.createElement('canvas');
+                const size = 120;
+                tempCanvas.width = size; tempCanvas.height = size;
+                const tCtx = tempCanvas.getContext('2d');
+
+                tCtx.drawImage(img, 0, 0, size, size);
+
+                const idata = tCtx.getImageData(0, 0, size, size);
+                const data = idata.data;
+                const width = size;
+                const height = size;
+
+                // Start Pixel (Background Reference)
+                const startR = data[0];
+                const startG = data[1];
+                const startB = data[2];
+
+                // Helper: Match Color Distance
+                function match(i) {
+                    const idx = i / 4;
+                    const x = idx % width;
+                    const y = Math.floor(idx / width);
+
+                    // SAFE ZONE: Center is precious
+                    const dx = x - (width / 2);
+                    const dy = y - (height / 2);
+                    if ((dx * dx + dy * dy) < 25 * 25) return false; // Never remove center 25px radius
+
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const a = data[i + 3];
+                    if (a === 0) return false;
+
+                    const dist = Math.sqrt(
+                        Math.pow(r - startR, 2) +
+                        Math.pow(g - startG, 2) +
+                        Math.pow(b - startB, 2)
+                    );
+                    return dist < 45; // Stricter tolerance (was 65)
+                }
+
+                // 1. Mark Background Pixels (Flood Fill)
+                const stack = [[0, 0]];
+                const visited = new Uint8Array(width * height);
+                const isBackground = new Uint8Array(width * height);
+
+                while (stack.length > 0) {
+                    const [x, y] = stack.pop();
+                    const idx = y * width + x;
+                    if (visited[idx]) continue;
+                    visited[idx] = 1;
+
+                    const i = idx * 4;
+
+                    if (match(i)) {
+                        data[i + 3] = 0; // Make Transparent
+                        isBackground[idx] = 1;
+
+                        // Push neighbors
+                        if (x > 0) stack.push([x - 1, y]);
+                        if (x < width - 1) stack.push([x + 1, y]);
+                        if (y > 0) stack.push([x, y - 1]);
+                        if (y < height - 1) stack.push([x, y + 1]);
+                    }
+                }
+
+                // 2. Edge Smoothing / Erosion
+                // Iterate again. If a pixel is NOT background but touches background, fade it.
+                const newData = new Uint8ClampedArray(data); // Copy for safe reading
+
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        if (isBackground[idx]) continue; // Already removed
+
+                        // Count transparent neighbors
+                        let holes = 0;
+                        if (isBackground[idx - 1]) holes++;         // Left
+                        if (isBackground[idx + 1]) holes++;         // Right
+                        if (isBackground[idx - width]) holes++;     // Top
+                        if (isBackground[idx + width]) holes++;     // Bottom
+
+                        // If it's an edge pixel (touches background), erode/smooth it
+                        if (holes > 0) {
+                            const i = idx * 4;
+                            // More holes = More transparent
+                            // 1 hole = 180 alpha, 3 holes = 50 alpha
+                            data[i + 3] = Math.max(0, 255 - (holes * 60));
+                        }
+                    }
+                }
+
+                tCtx.putImageData(idata, 0, 0);
+
+                const newImg = new Image();
+                newImg.src = tempCanvas.toDataURL();
+                return newImg;
+            } catch (e) {
+                console.warn("Flood Fill Error", e);
+                return img;
+            }
+        }
+
+        function loadImages() {
+            return new Promise((resolve, reject) => {
+                const debugDiv = document.createElement("div");
+                debugDiv.style.position = "absolute"; debugDiv.style.top = "10px"; debugDiv.style.right = "10px";
+                debugDiv.style.color = "white"; debugDiv.style.background = "rgba(0,0,0,0.5)";
+                debugDiv.id = "debug-assets";
+                document.body.appendChild(debugDiv);
+
+                if (typeof BASE64_ASSETS === 'undefined') {
+                    debugDiv.innerText = "ASSETS MISSING";
+                    reject("BASE64_ASSETS undefined");
+                    return;
+                }
+
+                let loadedCount = 0;
+                const total = TAGS.length + 1; // Tags + Pizza
+
+                function checkDone() {
+                    loadedCount++;
+                    debugDiv.innerText = `Assets: ${loadedCount}/${total}`;
+                    if (loadedCount >= total) {
+                        debugDiv.style.color = "#55efc4";
+                        debugDiv.innerText = "ASSETS READY";
+                        setTimeout(() => debugDiv.remove(), 2000);
+                        resolve();
+                    }
+                }
+
+                TAGS.forEach(tag => {
+                    if (BASE64_ASSETS[tag]) {
+                        const rawImg = new Image();
+                        rawImg.onload = () => {
+                            ASSETS[tag] = processImage(rawImg);
+                            checkDone();
+                        };
+                        rawImg.onerror = () => {
+                            debugDiv.innerText = `Error: ${tag}`;
+                            checkDone(); // Proceed anyway
+                        };
+                        rawImg.src = BASE64_ASSETS[tag];
+                    } else {
+                        checkDone();
+                    }
+                });
+
+                // Pizza
+                if (BASE64_ASSETS["pizza"]) {
+                    const p = new Image();
+                    p.onload = () => {
+                        ASSETS["pizza"] = p;
+                        checkDone();
+                    };
+                    p.onerror = () => checkDone();
+                    p.src = BASE64_ASSETS["pizza"];
+                } else {
+                    checkDone();
+                }
+            });
+        }
+
+        // ... (lines omitted)
+
+        // Notes PRO (Sprites - Natural)
+        notes.forEach(n => {
+            const x = n.lane * LANE_W + LANE_W / 2;
+            const img = ASSETS[n.tag];
+
+            ctx.save();
+            ctx.translate(x, n.y);
+            ctx.rotate(n.rotation);
+
+            if (img && img.complete && img.naturalWidth !== 0) {
+                const s = NOTE_SIZE * 1.2;
+
+                // Shadow
+                ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 8;
+
+                // Draw Natural Image (Processed)
+                ctx.drawImage(img, -s / 2, -s / 2, s, s);
+
+                ctx.shadowBlur = 0;
+            } else {
+                // Fallback Emoji
+                const fallback = { "tomato": "🍅", "cheese": "🧀", "mushroom": "🍄", "basil": "🌿" };
+                ctx.fillStyle = "rgba(0,0,0,0.3)";
+                ctx.font = NOTE_SIZE + "px Arial";
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(fallback[n.tag], 0, 0);
+            }
+            ctx.restore();
+        });
+        loadImages();
+
+        function resize() {
+            W = container.clientWidth;
+            H = container.clientHeight;
+            canvas.width = W;
+            canvas.height = H;
+
+            LANE_W = W / 4;
+            HIT_Y = H * 0.85;
+            NOTE_SIZE = Math.min(LANE_W * 0.8, 90); // Slightly larger for sprites
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- AUDIO ENGINE ---
+        const AudioEngine = {
+            ctx: null, isInit: false, masterGain: null,
+
+            init: function () {
+                if (this.isInit) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.35;
+                this.masterGain.connect(this.ctx.destination);
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                this.isInit = true;
+                this.playTone(440, "sine", 0.05, 0.4);
+            },
+
+            playChord: function (lane) {
+                if (!this.isInit) return;
+                const roots = [110, 130.81, 146.83, 164.81];
+                const root = roots[lane];
+                [root, root * 1.5, root * 2].forEach(freq => {
+                    this.playTone(freq, "sawtooth", 0.05, 0.3);
+                });
+            },
+
+            playOvenBell: function () {
+                if (!this.isInit) return;
+                this.playTone(880, "sine", 0.01, 0.8);
+                this.playTone(1760, "sine", 0.01, 0.6);
+            },
+
+            playTone: function (freq, type, attack, decay) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + attack);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + decay);
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start();
+                osc.stop(this.ctx.currentTime + decay);
+            },
+
+            playMiss: function () {
+                if (!this.isInit) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = "sawtooth";
+                osc.frequency.setValueAtTime(60, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+        };
+
+        // INPUT
+        // INPUT
+        const Input = {
+            held: [false, false, false, false],
+            keyMap: { 'a': 0, 's': 1, 'k': 2, 'l': 3 }
+        };
+
+        function triggerInput(lane) {
+            if (gameState !== STATE.GAME) return;
+            checkHit(lane);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            const k = e.key.toLowerCase();
+            if (Input.keyMap.hasOwnProperty(k)) {
+                const lane = Input.keyMap[k];
+                Input.held[lane] = true;
+                triggerInput(lane);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (Input.keyMap.hasOwnProperty(k)) {
+                Input.held[Input.keyMap[k]] = false;
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                const x = (t.clientX - rect.left) * scaleX;
+                const lane = Math.floor(x / LANE_W);
+                if (lane >= 0 && lane < 4) {
+                    Input.held[lane] = true;
+                    triggerInput(lane);
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                const x = (t.clientX - rect.left) * scaleX;
+                const lane = Math.floor(x / LANE_W);
+                if (lane >= 0 && lane < 4) Input.held[lane] = false;
+            }
+        });
+
+        // LOGIC
+        function spawnNote() {
+            const lane = Math.floor(Math.random() * 4);
+            const tag = TAGS[lane];
+
+            // Check for collision with existing notes in this lane
+            const MIN_SPACING = NOTE_SIZE * 2.5; // Minimum distance between notes
+            const hasCollision = notes.some(n => {
+                if (n.lane !== lane) return false;
+                // Check if new note would spawn too close to existing note
+                const newNoteY = -NOTE_SIZE;
+                const existingNoteBottom = n.y - n.length;
+                return Math.abs(newNoteY - existingNoteBottom) < MIN_SPACING;
+            });
+
+            // Skip spawning if collision detected
+            if (hasCollision) {
+                // Reschedule for very soon
+                nextNoteTime += 0.05;
+                return;
+            }
+
+            // 20% Chance of Sustained Note
+            const isSustain = Math.random() < 0.2;
+            const length = isSustain ? (150 + Math.random() * 200) : 0;
+
+            notes.push({
+                lane: lane, y: -NOTE_SIZE - length, color: LANE_COLORS[lane],
+                tag: tag, // Store sprite tag
+                hit: false, rotation: (Math.random() - 0.5) * 6.0,
+                length: length,
+                isSustaining: false
+            });
+            const beat = (60 / CONFIG.BPM) / difficultyMult; // INCREASE SPAWN RATE
+            const mult = [0.5, 0.5, 0.25, 1][Math.floor(Math.random() * 4)];
+            nextNoteTime += beat * mult;
+        }
+
+        function checkHit(lane) {
+            let bestDist = Infinity;
+            let targetNote = null;
+
+            notes.forEach(n => {
+                if (n.lane === lane && !n.hit) {
+                    const dist = Math.abs(n.y - HIT_Y);
+                    if (dist < bestDist) { bestDist = dist; targetNote = n; }
+                }
+            });
+
+            const hitZone = H * 0.15;
+
+            if (targetNote && bestDist < hitZone) {
+                targetNote.hit = true;
+                if (targetNote.length > 0) targetNote.isSustaining = true; // START SUSTAIN
+                const perfect = bestDist < (hitZone * 0.3);
+
+                // TRACK STATS
+                totalHits++;
+                if (perfect) totalPerfectHits++;
+
+                const multiplier = fireMode ? 2 : 1;
+                score += (perfect ? 100 + (combo * 10) : 50 + (combo * 5)) * multiplier;
+
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+
+                // Fire Mode Logic
+                if (combo >= 20) fireMode = true;
+
+                // COMBO MILESTONES
+                if (combo === 10) createFeedback("10x COMBO!", -1, H / 2);
+                if (combo === 20) { createFeedback("20x HEATING UP!", -1, H / 2); AudioEngine.playOvenBell(); }
+                if (combo === 50) { createFeedback("50x ON FIRE! 🔥", -1, H / 2); AudioEngine.playOvenBell(); }
+                if (combo === 100) { createFeedback("100x CHEF GOD! 👨‍🍳", -1, H / 2); AudioEngine.playOvenBell(); }
+
+                health = Math.min(100, health + (perfect ? 3 : 1));
+
+                createExplosion(targetNote.lane, HIT_Y, targetNote.color, perfect);
+
+                const txt = perfect ? "DELICIOUS!" : "TASTY";
+                createFeedback(fireMode ? txt + " 🔥" : txt, lane, HIT_Y);
+
+                shake = perfect ? (fireMode ? 8 : 6) : 3;
+                camScale = perfect ? 1.02 : 1.01;
+
+                AudioEngine.playChord(lane);
+
+                pizzaProgress++;
+                if (pizzaProgress >= CONFIG.HITS_PER_PIZZA) finishPizza();
+            } else {
+                combo = 0;
+                fireMode = false;
+                health -= 8;
+                createFeedback("BURNT", lane, HIT_Y);
+                shake = 5;
+                camScale = 0.98;
+                AudioEngine.playMiss();
+            }
+        }
+
+        let pizzaPopup = { active: false, scale: 0, alpha: 0, timer: 0 };
+
+        function finishPizza() {
+            pizzaProgress = 0;
+            pizzasMade++;
+            score += 1000;
+            health = Math.min(100, health + 15);
+            AudioEngine.playOvenBell();
+            createFeedback("ORDER UP!", -1, H * 0.3);
+
+            pizzaPopup.active = true;
+            pizzaPopup.scale = 0;
+            pizzaPopup.alpha = 1;
+            pizzaPopup.timer = 1.5;
+
+            // Confetti
+            for (let i = 0; i < 30; i++) {
+                particles.push({
+                    x: W / 2, y: H * 0.25,
+                    vx: (Math.random() - 0.5) * W, vy: (Math.random() - 0.5) * W,
+                    color: i % 2 == 0 ? "#ffeaa7" : "#fab1a0", life: 1.2, size: Math.random() * 8 + 4
+                });
+            }
+        }
+
+        function update(dt) {
+            if (shake > 0) shake *= 0.9;
+            if (camScale > 1.0) camScale -= dt * 0.1;
+            if (camScale < 1.0) camScale += dt * 0.1;
+            if (Math.abs(camScale - 1.0) < 0.001) camScale = 1.0;
+
+            // Scroll Background
+            const scrollSpeed = 100 + (combo * 2);
+            bgScrollY = (bgScrollY + scrollSpeed * dt) % 120; // 120 is pattern size * 2
+
+            // BEAT LOGIC
+            const beatDur = 60 / CONFIG.BPM;
+            beatTimer += dt;
+            if (beatTimer >= beatDur) {
+                beatTimer -= beatDur;
+                beatFlash = 0.3;
+                if (!fireMode) camScale = 1.005;
+            }
+            if (beatFlash > 0) beatFlash -= dt * 2.0;
+
+            if (health <= 0) {
+                return endGame();
+            }
+
+            // PROGRESSIVE DIFFICULTY
+            difficultyTimer += dt;
+            if (difficultyTimer > 15.0) { // Every 15 seconds
+                difficultyTimer = 0;
+                difficultyMult += 0.05; // +5% speed
+                createFeedback("SPEED UP! ⚡", -1, H / 2);
+            }
+
+            gameTimer += dt;
+            if (gameTimer > nextNoteTime) spawnNote();
+
+            // Fire Mode Effects
+            if (fireMode) {
+                if (Math.random() < 0.3) {
+                    particles.push({
+                        x: Math.random() * W, y: H,
+                        vx: (Math.random() - 0.5) * 100, vy: -(Math.random() * 200 + 100),
+                        color: Math.random() < 0.5 ? "#e17055" : "#fdcb6e",
+                        life: 0.8, size: Math.random() * 10 + 5
+                    });
+                }
+            }
+
+            if (pizzaPopup.active) {
+                pizzaPopup.timer -= dt;
+                if (pizzaPopup.timer <= 0) {
+                    pizzaPopup.active = false;
+                } else {
+                    if (pizzaPopup.scale < 0.6) pizzaPopup.scale += dt * 8;
+                    else pizzaPopup.scale = 0.6;
+                    if (pizzaPopup.timer < 0.3) pizzaPopup.alpha = pizzaPopup.timer * 3;
+                }
+            }
+
+            // SPEEED CALCULATION
+            const baseSpeed = H * 0.8;
+            const moveSpeed = baseSpeed * difficultyMult;
+
+            for (let i = notes.length - 1; i >= 0; i--) {
+                let n = notes[i];
+                n.y += moveSpeed * dt;
+
+                // HANDLING HIT NOTES (Sustain Logic)
+                if (n.hit) {
+                    if (n.length > 0) {
+                        // Check if tail passed
+                        if (n.y - n.length > HIT_Y) {
+                            notes.splice(i, 1);
+                            // Bonus for finishing hold?
+                            createFeedback("HELD!", n.lane, HIT_Y);
+                            score += 500;
+                            continue;
+                        }
+
+                        // Sustain Logic
+                        if (Input.held[n.lane]) {
+                            n.isSustaining = true;
+                            score += 10; // Tick score
+                            health = Math.min(100, health + 0.05);
+                            if (gameTimer % 0.1 < 0.02) { // Sparkles rarely
+                                createExplosion(n.lane, HIT_Y, n.color, true);
+                            }
+                        } else {
+                            n.isSustaining = false;
+                        }
+                    } else {
+                        // Instant note, remove immediately
+                        notes.splice(i, 1);
+                    }
+                    continue;
+                }
+
+                n.rotation += dt * 2;
+
+                // MISSED NOTES
+                const tailEnd = n.y - n.length;
+                if (tailEnd > H + NOTE_SIZE) {
+                    notes.splice(i, 1);
+                    combo = 0;
+                    fireMode = false;
+                    health -= 12;
+                    createFeedback("DROPPED", n.lane, H - 50);
+                    AudioEngine.playMiss();
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx * dt; p.y += p.vy * dt;
+                p.life -= dt * 2.5;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            for (let i = feedbackSystem.length - 1; i >= 0; i--) {
+                let f = feedbackSystem[i];
+                f.y -= (H * 0.2) * dt;
+                f.life -= dt;
+                if (f.life <= 0) feedbackSystem.splice(i, 1);
+            }
+        }
+
+        let bgOffsetY = 0; // Declare bgOffsetY globally
+
+        // VISUALS
+        function createExplosion(lane, y, color, big) {
+            const tempX = (lane * LANE_W) + (LANE_W / 2);
+            const count = big ? 25 : 15;
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: tempX, y: y,
+                    vx: (Math.random() - 0.5) * (W * 0.6), vy: (Math.random() - 0.5) * (W * 0.6),
+                    color: color, life: 1.0, size: Math.random() * (W * 0.03) + 4
+                });
+            }
+        }
+        let flourParticles = []; // Flour dust particles
+
+        function drawBackground(dt, speed) {
+            bgOffsetY += speed * dt * 0.4;
+
+            // SIMPLE DARK BACKGROUND (won't cover game elements)
+            ctx.fillStyle = "#1a1a1a";
+            ctx.fillRect(0, 0, W, H);
+
+            // Subtle texture
+            ctx.globalAlpha = 0.03;
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * W;
+                const y = (Math.random() * H + bgOffsetY) % H;
+                ctx.fillStyle = "#000";
+                ctx.fillRect(x, y, 2, 2);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        function createFeedback(text, lane, y) {
+            let x = W / 2;
+            if (lane !== -1) x = (lane * LANE_W) + (LANE_W / 2);
+
+            feedbackSystem.push({
+                text: text, x: x, y: y, life: 1.0,
+                color: text == "ORDER UP!" ? "#55efc4" : ((text.startsWith("D") || text == "TASTY") ? "#ffeaa7" : "#ff7675")
+            });
+        }
+
+
+
+        function render(dt) {
+            // SPEEED CALCULATION (Visual consistency)
+            const baseSpeed = H * 0.8;
+            const moveSpeed = baseSpeed * difficultyMult;
+
+            // BACKGROUND with Scroll
+            drawBackground(dt, moveSpeed);
+
+            ctx.save();
+            ctx.translate(W / 2, H / 2);
+            ctx.scale(camScale, camScale);
+            ctx.translate(-W / 2, -H / 2);
+
+            if (shake > 0.1) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+            // BOARD BG (Removed to show tablecloth)
+            // ctx.fillStyle = "#ffeaa7"; ctx.fillRect(0, 0, W, H);
+
+            // BEAT FLASH ON BOARD
+            if (beatFlash > 0) {
+                ctx.fillStyle = fireMode ? "#ff7675" : "#fff";
+                ctx.globalAlpha = beatFlash * 0.5;
+                ctx.fillRect(0, 0, W, H);
+                ctx.globalAlpha = 1.0;
+            }
+
+            // LANES: SIMPLIFIED NEON DESIGN (High Visibility)
+            const neonColors = [
+                { color: "#00FF00", name: "Green" },   // Bright Green
+                { color: "#FFFFFF", name: "White" },   // Pure White
+                { color: "#FF0000", name: "Red" },     // Bright Red
+                { color: "#FFD700", name: "Gold" }     // Gold
+            ];
+
+            for (let i = 0; i < 4; i++) {
+                const x = i * LANE_W;
+                const neon = neonColors[i];
+
+                // LIGHTER BACKGROUND for visibility
+                ctx.fillStyle = "#2a2a2a";
+                ctx.fillRect(x, 0, LANE_W, H);
+
+                // STRONG NEON BORDERS (Very visible)
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = neon.color;
+                ctx.strokeStyle = neon.color;
+                ctx.lineWidth = 6;
+                ctx.strokeRect(x + 10, 10, LANE_W - 20, H - 20);
+                ctx.shadowBlur = 0;
+
+                // Subtle inner glow
+                ctx.fillStyle = neon.color;
+                ctx.globalAlpha = 0.1;
+                ctx.fillRect(x + 10, 10, LANE_W - 20, H - 20);
+                ctx.globalAlpha = 1.0;
+
+                // BEAT FLASH
+                if (beatFlash > 0) {
+                    ctx.shadowBlur = 40;
+                    ctx.shadowColor = neon.color;
+                    ctx.fillStyle = neon.color;
+                    ctx.globalAlpha = beatFlash * 0.3;
+                    ctx.fillRect(x + 10, 10, LANE_W - 20, H - 20);
+                    ctx.globalAlpha = 1.0;
+                    ctx.shadowBlur = 0;
+                }
+
+                // INPUT FEEDBACK
+                if (Input.held[i]) {
+                    ctx.shadowBlur = 40;
+                    ctx.shadowColor = neon.color;
+                    ctx.fillStyle = neon.color;
+                    ctx.globalAlpha = 0.4;
+                    ctx.fillRect(x + 10, 10, LANE_W - 20, H - 20);
+                    ctx.globalAlpha = 1.0;
+                    ctx.shadowBlur = 0;
+                }
+
+                // HIT ZONE (Bright Circle)
+                const plateX = x + LANE_W / 2;
+                const plateY = HIT_Y;
+                const plateRadius = LANE_W * 0.35;
+
+                // Shadow
+                ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+                ctx.beginPath();
+                ctx.arc(plateX + 3, plateY + 3, plateRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Main circle (bright)
+                ctx.fillStyle = "#FFFFFF";
+                ctx.beginPath();
+                ctx.arc(plateX, plateY, plateRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Colored rim
+                ctx.strokeStyle = neon.color;
+                ctx.lineWidth = 6;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = neon.color;
+                ctx.beginPath();
+                ctx.arc(plateX, plateY, plateRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Active glow
+                if (Input.held[i]) {
+                    ctx.shadowBlur = 35;
+                    ctx.shadowColor = neon.color;
+                    ctx.strokeStyle = neon.color;
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.arc(plateX, plateY, plateRadius + 8, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+
+                // Key hints (black on white background)
+                ctx.fillStyle = "#000";
+                ctx.textAlign = "center";
+                ctx.font = `bold ${LANE_W * 0.2}px Arial`;
+                if (W > 600) ctx.fillText(["A", "S", "K", "L"][i], plateX, H - 20);
+            }
+
+            // HIT LINE (Bright and visible)
+            ctx.shadowBlur = 25;
+            ctx.shadowColor = "#FFD700";
+            ctx.strokeStyle = "#FFD700";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(0, HIT_Y);
+            ctx.lineTo(W, HIT_Y);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Notes PRO (Sprites)
+            notes.forEach(n => {
+                const x = n.lane * LANE_W + LANE_W / 2;
+
+                // SUSTAIN TAIL (Draw before rotation)
+                if (n.length > 0) {
+                    ctx.save();
+                    const tailWidth = LANE_W * 0.4;
+                    const tailX = x - tailWidth / 2;
+                    const tailY = n.y - n.length;
+
+                    // Gradient or Solid?
+                    ctx.fillStyle = n.color;
+                    ctx.globalAlpha = 0.6;
+                    ctx.fillRect(tailX, tailY, tailWidth, n.length);
+
+                    // Core line
+                    ctx.fillStyle = "#fff";
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillRect(x - 2, tailY, 4, n.length);
+
+                    // Sustain Glow
+                    if (n.isSustaining) {
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = "white";
+                        ctx.globalAlpha = 0.8;
+                        ctx.fillStyle = "#fff";
+                        ctx.fillRect(tailX, tailY, tailWidth, n.length);
+                    }
+                    ctx.restore();
+                }
+
+                const img = ASSETS[n.tag];
+
+                ctx.save();
+                ctx.translate(x, n.y);
+                ctx.rotate(n.rotation);
+
+                if (img && img.complete && img.naturalWidth !== 0) {
+                    const s = NOTE_SIZE;
+
+                    // Shadow
+                    ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 5; ctx.shadowOffsetY = 5;
+
+                    // Token Shape (Circle)
+                    ctx.beginPath();
+                    ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
+                    ctx.closePath();
+
+                    ctx.save();
+                    ctx.clip();
+                    // Zoom in (1.3x) to crop out background edges/corners
+                    ctx.drawImage(img, -s * 0.65, -s * 0.65, s * 1.3, s * 1.3);
+                    ctx.restore();
+
+                    // Token Border
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = "white";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                } else {
+                    // Fallback Emoji
+                    const fallback = { "tomato": "🍅", "cheese": "🧀", "mushroom": "🍄", "basil": "🌿" };
+                    ctx.fillStyle = "rgba(0,0,0,0.3)";
+                    ctx.font = NOTE_SIZE + "px Arial";
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText(fallback[n.tag], 0, 0);
+                }
+                ctx.restore();
+            });
+
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            if (pizzaPopup.active) {
+                ctx.save();
+                ctx.globalAlpha = pizzaPopup.alpha;
+                ctx.translate(W / 2, H * 0.25);
+                const s = pizzaPopup.scale;
+                ctx.scale(s, s);
+
+                const pImg = ASSETS["pizza"];
+                if (pImg && pImg.complete && pImg.naturalWidth !== 0) {
+                    const size = Math.min(W * 0.6, 250);
+                    ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 10;
+                    ctx.beginPath(); ctx.arc(0, 0, size / 2, 0, Math.PI * 2); ctx.closePath();
+                    ctx.save(); ctx.clip();
+                    ctx.drawImage(pImg, -size * 0.6, -size * 0.6, size * 1.2, size * 1.2);
+                    ctx.restore();
+                    ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(0, 0, size / 2, 0, Math.PI * 2); ctx.lineWidth = 8; ctx.strokeStyle = "white"; ctx.stroke();
+                } else {
+                    ctx.beginPath(); ctx.arc(0, 0, W * 0.2, 0, Math.PI * 2);
+                    ctx.fillStyle = "#fab1a0"; ctx.fill();
+                    ctx.strokeStyle = "#e17055"; ctx.lineWidth = 10; ctx.stroke();
+                    ctx.fillStyle = "#d63031"; ctx.font = "bold 40px Impact";
+                    ctx.textAlign = "center"; ctx.fillText("PIZZA!", 0, 15);
+                }
+                ctx.restore();
+            }
+
+            feedbackSystem.forEach(f => {
+                const fontSize = Math.min(W * 0.12, 60);
+                ctx.save();
+                ctx.translate(f.x, f.y);
+                const s = Math.min(1.5, 1 + (1.0 - f.life));
+                ctx.globalAlpha = f.life;
+                ctx.font = "900 " + fontSize + "px 'Impact'";
+                ctx.textAlign = "center";
+                ctx.lineWidth = 4; ctx.strokeStyle = "white"; ctx.strokeText(f.text, 0, 0);
+                ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
+                ctx.restore();
+            });
+
+            ctx.restore(); // Undo Camera Zoom
+
+            // ========== VINTAGE NEON SIGN HUD ==========
+            const hudH = Math.min(H * 0.13, 110);
+
+            // DARK NOIR BACKGROUND
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, hudH);
+            bgGrad.addColorStop(0, "#0a0a0a");
+            bgGrad.addColorStop(0.5, "#1a1a1a");
+            bgGrad.addColorStop(1, "#0a0a0a");
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, hudH);
+
+            // Subtle scan lines (vintage CRT effect)
+            ctx.globalAlpha = 0.03;
+            for (let i = 0; i < hudH; i += 2) {
+                ctx.fillStyle = "#000";
+                ctx.fillRect(0, i, W, 1);
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Bottom neon strip
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#CE2B37";
+            ctx.strokeStyle = "#CE2B37";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, hudH - 2);
+            ctx.lineTo(W, hudH - 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // LEFT SECTION: Score (Neon Red)
+            ctx.textAlign = "left";
+
+            // "SCORE" label (small neon)
+            ctx.font = `bold ${hudH * 0.18}px 'Courier New'`;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#CE2B37";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 3;
+            ctx.strokeText("SCORE", 20, hudH * 0.35);
+            ctx.fillStyle = "#CE2B37"; // Red neon
+            ctx.fillText("SCORE", 20, hudH * 0.35);
+            ctx.shadowBlur = 0;
+
+            // Score value (large neon)
+            ctx.font = `bold ${hudH * 0.32}px Impact`;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#FFD700";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 4;
+            ctx.strokeText(Math.floor(score), 20, hudH * 0.75);
+            ctx.fillStyle = "#FFD700"; // Gold neon
+            ctx.fillText(Math.floor(score), 20, hudH * 0.75);
+            ctx.shadowBlur = 0;
+
+            // Pizzas made (green neon)
+            ctx.font = `bold ${hudH * 0.22}px 'Courier New'`;
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "#009246";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 3;
+            ctx.strokeText(`🍕 x${pizzasMade}`, 20, hudH * 0.95);
+            ctx.fillStyle = "#009246"; // Green neon
+            ctx.fillText(`🍕 x${pizzasMade}`, 20, hudH * 0.95);
+            ctx.shadowBlur = 0;
+
+            // CENTER: Pizza Progress (Neon circle)
+            const pct = pizzaProgress / CONFIG.HITS_PER_PIZZA;
+            const radius = hudH * 0.3;
+
+            // Dark background
+            ctx.beginPath();
+            ctx.arc(W / 2, hudH * 0.5, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#0a0a0a";
+            ctx.fill();
+
+            // Progress arc (red neon)
+            ctx.beginPath();
+            ctx.arc(W / 2, hudH * 0.5, radius - 3, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * pct));
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#CE2B37";
+            ctx.strokeStyle = "#CE2B37";
+            ctx.lineWidth = 6;
+            ctx.lineCap = "round";
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Progress number (white neon)
+            ctx.textAlign = "center";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#FFF";
+            ctx.fillStyle = "#FFF";
+            ctx.font = `bold ${radius * 0.6}px Impact`;
+            ctx.fillText(pizzaProgress, W / 2, hudH * 0.5 + (radius * 0.2));
+            ctx.shadowBlur = 0;
+
+            // RIGHT SECTION: Health Bar (Neon tube style)
+            const barW = Math.min(W * 0.2, 170);
+            const barH = hudH * 0.2;
+            const barX = W - barW - 20;
+            const barY = hudH * 0.35;
+
+            // "HEAT" label
+            ctx.textAlign = "right";
+            ctx.font = `bold ${hudH * 0.16}px 'Courier New'`;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#CE2B37";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.strokeText("HEAT", W - 20, barY - 8);
+            ctx.fillStyle = "#CE2B37";
+            ctx.fillText("HEAT", W - 20, barY - 8);
+            ctx.shadowBlur = 0;
+
+            // Health bar background (dark tube)
+            ctx.fillStyle = "#0a0a0a";
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
+
+            // Health bar fill (neon glow)
+            const healthNeon = health > 50 ? "#009246" : "#CE2B37"; // Green or Red
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = healthNeon;
+            ctx.fillStyle = healthNeon;
+            ctx.fillRect(barX + 2, barY + 2, ((health / 100) * barW) - 4, barH - 4);
+            ctx.shadowBlur = 0;
+
+            // Pulse on low health
+            if (health < 30 && Math.sin(Date.now() / 100) > 0) {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = "#CE2B37";
+                ctx.strokeStyle = "#CE2B37";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(barX - 2, barY - 2, barW + 4, barH + 4);
+                ctx.shadowBlur = 0;
+            }
+
+            // Health percentage
+            ctx.textAlign = "center";
+            ctx.fillStyle = "#000";
+            ctx.font = `bold ${barH * 0.5}px Arial`;
+            ctx.fillText(`${Math.floor(health)}°`, barX + barW / 2, barY + barH * 0.7);
+
+            // COMBO COUNTER (Neon style)
+            if (combo > 0) {
+                const comboX = W - 25;
+                const comboY = hudH + 55;
+
+                // Combo color (neon)
+                let comboNeon = "#009246"; // Green
+                if (combo >= 100) comboNeon = "#FFD700"; // Gold
+                else if (combo >= 50) comboNeon = "#CE2B37"; // Red
+                else if (combo >= 20) comboNeon = "#F1F2F1"; // White
+                else if (combo >= 10) comboNeon = "#FFD700"; // Gold
+
+                ctx.textAlign = "right";
+                ctx.font = `900 ${Math.min(combo * 0.7 + 35, 75)}px Impact`;
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = comboNeon;
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 6;
+                ctx.strokeText(`${combo}x`, comboX, comboY);
+                ctx.fillStyle = comboNeon;
+                ctx.fillText(`${combo}x`, comboX, comboY);
+                ctx.shadowBlur = 0;
+
+                // "COMBO" label
+                ctx.font = `bold ${hudH * 0.14}px 'Courier New'`;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = comboNeon;
+                ctx.fillStyle = comboNeon;
+                ctx.fillText("COMBO", comboX, comboY + 22);
+                ctx.shadowBlur = 0;
+            }
+
+            // FIRE MODE BANNER (Neon flashing)
+            if (fireMode) {
+                const bannerY = hudH + 35;
+                ctx.textAlign = "center";
+                ctx.font = `900 ${hudH * 0.38}px Impact`;
+
+                // Flashing neon effect
+                const flicker = Math.sin(Date.now() / 100) > 0.5 ? 1 : 0.7;
+                ctx.shadowBlur = 30 * flicker;
+                ctx.shadowColor = "#CE2B37";
+                ctx.strokeStyle = "#000";
+                ctx.lineWidth = 6;
+                ctx.strokeText("🔥 ON FIRE! 🔥", W / 2, bannerY);
+                ctx.fillStyle = "#CE2B37";
+                ctx.globalAlpha = flicker;
+                ctx.fillText("🔥 ON FIRE! 🔥", W / 2, bannerY);
+                ctx.globalAlpha = 1.0;
+                ctx.shadowBlur = 0;
+            }
+
+            // VERSION INDICATOR
+            ctx.textAlign = "right";
+            ctx.fillStyle = "rgba(206, 43, 55, 0.3)";
+            ctx.font = `${Math.min(H * 0.018, 11)}px 'Courier New'`;
+            ctx.fillText("v2.3 Mafia", W - 10, H - 10);
+        }
+
+        function resetGame() {
+            score = 0; combo = 0; maxCombo = 0; health = 100;
+            notes = []; particles = []; feedbackSystem = [];
+            gameTimer = 0; nextNoteTime = 0;
+            pizzasMade = 0; pizzaProgress = 0;
+            fireMode = false;
+            difficultyMult = 1.0;
+            difficultyTimer = 0;
+            totalHits = 0;
+            totalPerfectHits = 0;
+
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('overlay').classList.add('hidden');
+            document.getElementById('newRecordBanner').style.display = 'none';
+
+            gameState = STATE.GAME;
+            spawnNote();
+        }
+
+        function endGame() {
+            gameState = STATE.RESULTS;
+
+            // Save high score
+            const isNewRecord = saveHighScore(Math.floor(score), maxCombo);
+
+            // Calculate stats
+            const accuracy = totalHits > 0 ? Math.floor((totalPerfectHits / totalHits) * 100) : 0;
+            const rank = score > 50000 ? "S" : (score > 25000 ? "A" : (score > 10000 ? "B" : (score > 5000 ? "C" : "F")));
+
+            // Update results display
+            document.getElementById('resGrade').innerText = rank;
+            document.getElementById('resGrade').style.color = rank === "S" ? "#fdcb6e" : (rank === "F" ? "#d63031" : "#fab1a0");
+            document.getElementById('resScore').innerText = Math.floor(score);
+            document.getElementById('resBest').innerText = highScore;
+            document.getElementById('resCombo').innerText = maxCombo;
+            document.getElementById('resPizzas').innerText = pizzasMade;
+            document.getElementById('resAccuracy').innerText = accuracy + "%";
+            document.getElementById('resPerfect').innerText = totalPerfectHits;
+            document.getElementById('resTotal').innerText = totalHits;
+
+            // Show new record banner if applicable
+            if (isNewRecord) {
+                document.getElementById('newRecordBanner').style.display = 'block';
+            }
+
+            document.getElementById('results').style.display = 'flex';
+        }
+
+        function loop(timestamp) {
+            const dt = (timestamp - lastTime) / 1000; lastTime = timestamp;
+            if (gameState === STATE.GAME) update(dt);
+            render(dt); requestAnimationFrame(loop);
+        }
+
+        window.onload = function () {
+            // Load high score
+            const savedData = loadHighScore();
+            document.getElementById('bestScore').innerText = highScore;
+
+            loadImages().then(() => {
+                console.log("Assets Loaded. Starting Game Loop.");
+
+                document.getElementById('startBtn').addEventListener('click', () => {
+                    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume();
+                    AudioEngine.init();
+                    resetGame();
+                });
+
+                document.getElementById('restartBtn').addEventListener('click', () => {
+                    resetGame();
+                });
+
+                lastTime = performance.now();
+                requestAnimationFrame(loop);
+            }).catch(e => {
+                console.error("Asset Loading Failed", e);
+                alert("Error loading assets. Check console.");
+            });
+        };
+    </script>
+</body>
+
+</html>
