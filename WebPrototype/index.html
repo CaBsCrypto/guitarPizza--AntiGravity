@@ -262,7 +262,7 @@
         let maxCombo = 0;
         let health = 100;
         let fireMode = false;
-        let difficultyMult = 1.0;
+        let difficultyMult = 0.6; // Start at 60% speed (slower, more beginner-friendly)
         let difficultyTimer = 0;
 
         // PIZZA MECHANIC
@@ -822,11 +822,12 @@
                 return endGame();
             }
 
-            // PROGRESSIVE DIFFICULTY
+            // PROGRESSIVE DIFFICULTY (Gradual increase)
             difficultyTimer += dt;
-            if (difficultyTimer > 15.0) { // Every 15 seconds
+            if (difficultyTimer > 20.0 && difficultyMult < 1.3) { // Every 20 seconds, max 1.3x speed
                 difficultyTimer = 0;
-                difficultyMult += 0.05; // +5% speed
+                difficultyMult += 0.1; // +10% speed each time
+                difficultyMult = Math.min(difficultyMult, 1.3); // Cap at 130% speed
                 createFeedback("SPEED UP! ⚡", -1, H / 2);
             }
 
