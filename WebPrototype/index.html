@@ -5,6 +5,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Guitar Pizza Hero - Asset Edition</title>
+
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Supabase Configuration -->
+    <script src="supabase-config.js"></script>
+
+    <!-- Google Fonts - Brawl Stars Style -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- Brawl Stars Theme CSS -->
+    <link rel="stylesheet" href="brawl-stars-theme.css">
+
     <style>
         body {
             margin: 0;
@@ -186,13 +203,936 @@
                 opacity: 0.8;
             }
         }
+
+        /* ===== LOBBY STYLES ===== */
+        #lobby {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0000 0%, #2d0a0a 50%, #1a0000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .lobby-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .floating-ingredient {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.15;
+            animation: float 6s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-30px) rotate(15deg);
+            }
+        }
+
+        .logo-container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .main-logo {
+            font-size: 5rem;
+            margin: 0;
+            font-family: 'Impact', sans-serif;
+            color: #FFD700;
+            text-shadow:
+                0 0 40px #FFD700,
+                0 0 80px #FFD700,
+                4px 4px 0 #8B0000,
+                8px 8px 20px rgba(0, 0, 0, 0.9);
+            letter-spacing: 8px;
+            line-height: 1;
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+
+            0%,
+            100% {
+                text-shadow: 0 0 40px #FFD700, 0 0 80px #FFD700, 4px 4px 0 #8B0000, 8px 8px 20px rgba(0, 0, 0, 0.9);
+            }
+
+            50% {
+                text-shadow: 0 0 60px #FFD700, 0 0 120px #FFD700, 4px 4px 0 #8B0000, 8px 8px 30px rgba(0, 0, 0, 0.9);
+            }
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #b2bec3;
+            letter-spacing: 4px;
+            margin: 10px 0 0 0;
+            font-weight: bold;
+        }
+
+        .high-score-display {
+            position: relative;
+            z-index: 2;
+            margin: 20px 0;
+            font-size: 1.3rem;
+            color: #fdcb6e;
+            text-shadow: 0 0 10px rgba(253, 203, 110, 0.5);
+        }
+
+        .high-score-display .label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .high-score-display .score {
+            font-size: 1.5rem;
+            color: #FFD700;
+        }
+
+        .main-menu {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            color: #FAFAFA;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            min-width: 300px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            animation: slideInUp 0.5s ease-out backwards;
+        }
+
+        .menu-btn:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .menu-btn:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .menu-btn:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .menu-btn:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .menu-btn.primary {
+            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+            border-color: #FFD700;
+            box-shadow: 0 4px 20px rgba(220, 20, 60, 0.5);
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.05) translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.5);
+            border-color: #FFD700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .menu-btn.primary:hover {
+            box-shadow: 0 10px 40px rgba(220, 20, 60, 0.8);
+            background: linear-gradient(135deg, #A52A2A 0%, #FF1744 100%);
+        }
+
+        .btn-icon {
+            font-size: 1.5rem;
+        }
+
+        .lobby-footer {
+            position: relative;
+            z-index: 2;
+            margin-top: 30px;
+            color: #636e72;
+            font-size: 0.9rem;
+        }
+
+        /* ===== PANEL STYLES ===== */
+        .panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a0000 0%, #2d0a0a 50%, #1a0000 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 15;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .panel.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .panel-content {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .panel-title {
+            font-size: 2.5rem;
+            color: #FFD700;
+            text-align: center;
+            margin: 0 0 30px 0;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            font-family: 'Impact', sans-serif;
+        }
+
+        .close-btn {
+            background: rgba(139, 0, 0, 0.8);
+            border: 2px solid #FFD700;
+            color: #FAFAFA;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .close-btn:hover {
+            background: rgba(220, 20, 60, 0.9);
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.5);
+        }
+
+        /* ===== SETTINGS PANEL ===== */
+        .setting-group {
+            margin-bottom: 30px;
+        }
+
+        .setting-label {
+            display: block;
+            color: #FFD700;
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+
+        .diff-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            color: #b2bec3;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .diff-btn.active,
+        .diff-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .volume-control input[type="range"] {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .volume-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #FFD700;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .volume-value {
+            color: #FFD700;
+            font-weight: bold;
+            min-width: 50px;
+        }
+
+        .controls-display {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .control-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .key-display {
+            background: #FFD700;
+            color: #1a0000;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .control-label {
+            color: #b2bec3;
+            font-size: 0.9rem;
+        }
+
+        .setting-hint {
+            color: #636e72;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* ===== LEADERBOARD PANEL ===== */
+        .leaderboard-table {
+            margin-bottom: 30px;
+        }
+
+        .leaderboard-header {
+            display: grid;
+            grid-template-columns: 60px 1fr 80px 60px;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 8px;
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .leaderboard-entries {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .entry {
+            display: grid;
+            grid-template-columns: 60px 1fr 80px 60px;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            color: #dfe6e9;
+            transition: all 0.3s ease;
+        }
+
+        .entry:hover {
+            background: rgba(255, 215, 0, 0.05);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+
+        .entry.rank-1 {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+            border-color: #FFD700;
+        }
+
+        .entry.rank-2 {
+            background: linear-gradient(90deg, rgba(192, 192, 192, 0.15) 0%, rgba(192, 192, 192, 0.05) 100%);
+            border-color: #C0C0C0;
+        }
+
+        .entry.rank-3 {
+            background: linear-gradient(90deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.05) 100%);
+            border-color: #CD7F32;
+        }
+
+        .player-stats {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .player-stats h3 {
+            color: #FFD700;
+            text-align: center;
+            margin: 0 0 20px 0;
+            font-size: 1.3rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-label {
+            display: block;
+            color: #b2bec3;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            display: block;
+            color: #FFD700;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* ===== TUTORIAL PANEL ===== */
+        .tutorial-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tutorial-step {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .tutorial-step:hover {
+            background: rgba(255, 215, 0, 0.05);
+            border-color: rgba(255, 215, 0, 0.4);
+            transform: translateX(5px);
+        }
+
+        .step-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
+        }
+
+        .tutorial-step h3 {
+            color: #FFD700;
+            font-size: 1.3rem;
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+
+        .tutorial-step p {
+            color: #dfe6e9;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+            text-align: center;
+        }
+
+
+        /* ===== NAME INPUT POPUP ===== */
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .popup-content {
+            background: linear-gradient(135deg, rgba(26, 0, 0, 0.95) 0%, rgba(45, 10, 10, 0.95) 100%);
+            backdrop-filter: blur(20px);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.3);
+            animation: popupSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .popup-title {
+            font-size: 2.2rem;
+            color: #FFD700;
+            text-align: center;
+            margin: 0 0 10px 0;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            font-family: 'Impact', sans-serif;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .popup-subtitle {
+            text-align: center;
+            color: #dfe6e9;
+            font-size: 1rem;
+            margin: 0 0 30px 0;
+        }
+
+        .name-input-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .name-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.3rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            color: #FFD700;
+            outline: none;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .name-input::placeholder {
+            color: rgba(255, 215, 0, 0.3);
+        }
+
+        .name-input:focus {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        .char-count {
+            position: absolute;
+            right: 15px;
+            bottom: -25px;
+            font-size: 0.85rem;
+            color: #636e72;
+        }
+
+        .name-hint {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #636e72;
+            margin: 25px 0 30px 0;
+            font-style: italic;
+        }
+
+        .popup-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .submit-name-btn {
+            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+            border: 2px solid #FFD700;
+            color: #FAFAFA;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 5px 20px rgba(220, 20, 60, 0.5);
+        }
+
+        .submit-name-btn:hover:not(:disabled) {
+            transform: scale(1.05) translateY(-3px);
+            box-shadow: 0 10px 30px rgba(220, 20, 60, 0.8);
+            background: linear-gradient(135deg, #A52A2A 0%, #FF1744 100%);
+        }
+
+        .submit-name-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .skip-name-btn {
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: #b2bec3;
+            padding: 12px 30px;
+            font-size: 0.95rem;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .skip-name-btn:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #dfe6e9;
+        }
+
+        /* ===== RESPONSIVE ===== */
+
+        @media (max-width: 600px) {
+            .main-logo {
+                font-size: 3.5rem;
+            }
+
+            .menu-btn {
+                min-width: 250px;
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+
+            .panel-content {
+                padding: 25px;
+            }
+
+            .panel-title {
+                font-size: 2rem;
+            }
+
+            .controls-display {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .leaderboard-header,
+            .entry {
+                grid-template-columns: 50px 1fr 70px 50px;
+                font-size: 0.85rem;
+            }
+        }
     </style>
-    </style>
+
 </head>
 
 <body>
     <div id="gameContainer">
-        <div id="overlay">
+        <!-- LOBBY PRINCIPAL -->
+        <div id="lobby">
+            <!-- Background decorativo -->
+            <div class="lobby-background">
+                <!-- Ingredientes flotantes -->
+                <div class="floating-ingredient" style="left: 10%; top: 20%; animation-delay: 0s;">🍅</div>
+                <div class="floating-ingredient" style="left: 80%; top: 30%; animation-delay: 1s;">🧀</div>
+                <div class="floating-ingredient" style="left: 15%; top: 70%; animation-delay: 2s;">🍄</div>
+                <div class="floating-ingredient" style="left: 85%; top: 60%; animation-delay: 1.5s;">🌿</div>
+                <div class="floating-ingredient" style="left: 50%; top: 15%; animation-delay: 0.5s;">🫒</div>
+            </div>
+
+            <!-- Logo principal -->
+            <div class="logo-container">
+                <h1 class="main-logo">PIZZA<br>HERO</h1>
+                <p class="subtitle">RHYTHM KITCHEN</p>
+            </div>
+
+            <!-- High Score Display -->
+            <div class="high-score-display">
+                <span class="label">BEST CHEF:</span>
+                <span class="score" id="lobbyBestScore">0</span>
+            </div>
+
+            <!-- Menú principal -->
+            <div class="main-menu">
+                <button class="menu-btn primary" id="playBtn">
+                    <span class="btn-icon">🔥</span>
+                    <span class="btn-text">FIRE UP!</span>
+                </button>
+                <button class="menu-btn" id="settingsBtn">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">SETTINGS</span>
+                </button>
+                <button class="menu-btn" id="leaderboardBtn">
+                    <span class="btn-icon">🏆</span>
+                    <span class="btn-text">LEADERBOARD</span>
+                </button>
+                <button class="menu-btn" id="tutorialBtn">
+                    <span class="btn-icon">📖</span>
+                    <span class="btn-text">HOW TO PLAY</span>
+                </button>
+            </div>
+
+            <!-- Footer info -->
+            <div class="lobby-footer">
+                <p>Made with ❤️ for pizza lovers</p>
+            </div>
+        </div>
+
+        <!-- PANEL DE SETTINGS -->
+        <div id="settingsPanel" class="panel">
+            <div class="panel-content">
+                <h2 class="panel-title">⚙️ SETTINGS</h2>
+
+                <!-- Dificultad -->
+                <div class="setting-group">
+                    <label class="setting-label">DIFFICULTY</label>
+                    <div class="difficulty-selector">
+                        <button class="diff-btn" data-difficulty="easy">EASY</button>
+                        <button class="diff-btn active" data-difficulty="normal">NORMAL</button>
+                        <button class="diff-btn" data-difficulty="hard">HARD</button>
+                    </div>
+                    <p class="setting-hint">Easy: 50% speed | Normal: 60% | Hard: 80%</p>
+                </div>
+
+                <!-- Volumen -->
+                <div class="setting-group">
+                    <label class="setting-label">MASTER VOLUME</label>
+                    <div class="volume-control">
+                        <input type="range" id="volumeSlider" min="0" max="100" value="70">
+                        <span class="volume-value" id="volumeValue">70%</span>
+                    </div>
+                </div>
+
+                <!-- Controles -->
+                <div class="setting-group">
+                    <label class="setting-label">CONTROLS</label>
+                    <div class="controls-display">
+                        <div class="control-item">
+                            <span class="key-display">A</span>
+                            <span class="control-label">Lane 1</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">S</span>
+                            <span class="control-label">Lane 2</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">K</span>
+                            <span class="control-label">Lane 3</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key-display">L</span>
+                            <span class="control-label">Lane 4</span>
+                        </div>
+                    </div>
+                    <p class="setting-hint">Or tap the lanes on mobile 👆</p>
+                </div>
+
+                <button class="close-btn" id="closeSettings">BACK TO LOBBY</button>
+            </div>
+        </div>
+
+        <!-- PANEL DE LEADERBOARD -->
+        <div id="leaderboardPanel" class="panel">
+            <div class="panel-content">
+                <h2 class="panel-title">🏆 TOP CHEFS</h2>
+
+                <div class="leaderboard-table">
+                    <div class="leaderboard-header">
+                        <span>RANK</span>
+                        <span>SCORE</span>
+                        <span>PIZZAS</span>
+                        <span>GRADE</span>
+                    </div>
+                    <div class="leaderboard-entries" id="leaderboardEntries">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Stats del jugador -->
+                <div class="player-stats">
+                    <h3>YOUR STATS</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Games Played</span>
+                            <span class="stat-value" id="statGames">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Best Score</span>
+                            <span class="stat-value" id="statBest">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Pizzas</span>
+                            <span class="stat-value" id="statPizzas">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Avg Accuracy</span>
+                            <span class="stat-value" id="statAccuracy">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="close-btn" id="closeLeaderboard">BACK TO LOBBY</button>
+            </div>
+        </div>
+
+        <!-- PANEL DE TUTORIAL -->
+        <div id="tutorialPanel" class="panel">
+            <div class="panel-content">
+                <h2 class="panel-title">📖 HOW TO PLAY</h2>
+
+                <div class="tutorial-content">
+                    <div class="tutorial-step">
+                        <div class="step-icon">🎵</div>
+                        <h3>Hit the Beat</h3>
+                        <p>Press keys (A, S, K, L) when ingredients reach the hit zone at the bottom</p>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">⏸️</div>
+                        <h3>Hold for Long Notes</h3>
+                        <p>Keep the key pressed for sustained ingredients (longer notes). Release when they end!</p>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">🔥</div>
+                        <h3>Fire Mode</h3>
+                        <p>Get 20+ combo to activate Fire Mode with 2x score multiplier!</p>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">🍕</div>
+                        <h3>Complete Pizzas</h3>
+                        <p>Every 20 hits completes a pizza for +1000 bonus points!</p>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">⭐</div>
+                        <h3>Perfect Timing</h3>
+                        <p>Hit notes perfectly for higher scores and maintain your combo streak!</p>
+                    </div>
+
+                    <div class="tutorial-step">
+                        <div class="step-icon">📈</div>
+                        <h3>Progressive Difficulty</h3>
+                        <p>The game gets faster every 10 seconds. Can you keep up?</p>
+                    </div>
+                </div>
+
+                <button class="close-btn" id="closeTutorial">GOT IT!</button>
+            </div>
+        </div>
+
+        <!-- OVERLAY DE JUEGO (original simplificado) -->
+        <div id="overlay" style="display: none;">
             <h1>PIZZA<br>HERO</h1>
             <p>RHYTHM KITCHEN</p>
             <div style="margin-bottom: 30px; text-align: center; font-size: 0.9rem; color: #b2bec3;">
@@ -228,6 +1168,37 @@
                 perfect)
             </div>
             <button id="restartBtn" style="margin-top: 30px;">COOK AGAIN</button>
+            <button id="backToLobbyBtn"
+                style="margin-top: 10px; background: rgba(255, 215, 0, 0.1); border-color: #FFD700;">BACK TO
+                LOBBY</button>
+        </div>
+
+        <!-- NAME INPUT POPUP -->
+        <div id="nameInputPopup" class="popup" style="display: none;">
+            <div class="popup-content">
+                <h2 class="popup-title">🏆 ENTER THE LEADERBOARD!</h2>
+                <p class="popup-subtitle">Your score deserves recognition, Chef!</p>
+
+                <div class="name-input-container">
+                    <input type="text" id="playerNameInput" class="name-input" maxlength="15"
+                        placeholder="YOUR CHEF NAME" autocomplete="off">
+                    <div class="char-count">
+                        <span id="charCount">0</span>/15
+                    </div>
+                </div>
+
+                <div class="name-hint">
+                    3-15 characters • No special symbols
+                </div>
+
+                <div class="popup-buttons">
+                    <button id="submitNameBtn" class="submit-name-btn">
+                        <span>SUBMIT TO LEADERBOARD</span>
+                        <span class="btn-icon">🚀</span>
+                    </button>
+                    <button id="skipNameBtn" class="skip-name-btn">Skip</button>
+                </div>
+            </div>
         </div>
 
         <canvas id="gameCanvas"></canvas>
@@ -249,7 +1220,7 @@
 
         // CONFIGURATION
         const CONFIG = {
-            BPM: 128, LANE_COUNT: 4, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060, SONG_DURATION: 90,
+            BPM: 128, LANE_COUNT: 5, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060, SONG_DURATION: 90,
             HITS_PER_PIZZA: 20
         };
 
@@ -298,8 +1269,8 @@
 
         // ASSETS
         const ASSETS = {};
-        const TAGS = ["tomato", "cheese", "mushroom", "basil"];
-        const LANE_COLORS = ["#ff7675", "#ffeaa7", "#a29bfe", "#55efc4"];
+        const TAGS = ["bacon", "champiñones", "mozarella", "onions", "pimientos"];
+        const LANE_COLORS = ["#ff7675", "#ffeaa7", "#a29bfe", "#55efc4", "#74b9ff"];
 
         // HIGH SCORE PERSISTENCE
         function loadHighScore() {
@@ -995,102 +1966,111 @@
                 ctx.globalAlpha = 1.0;
             }
 
-            // LANES: SIMPLIFIED NEON DESIGN (High Visibility)
-            const neonColors = [
-                { color: "#00FF00", name: "Green" },   // Bright Green
-                { color: "#FFFFFF", name: "White" },   // Pure White
-                { color: "#FF0000", name: "Red" },     // Bright Red
-                { color: "#FFD700", name: "Gold" }     // Gold
+            // BRAWL STARS STYLE LANES - Clean & Vibrant
+            const pizzaColors = [
+                { color: "#E74C3C", dark: "#C0392B", plate: "#FFE5B4", name: "Tomato" },      // Vibrant red
+                { color: "#F39C12", dark: "#D68910", plate: "#FFF4E0", name: "Cheese" },      // Bright orange
+                { color: "#27AE60", dark: "#229954", plate: "#D5F4E6", name: "Basil" },       // Fresh green
+                { color: "#9B59B6", dark: "#7D3C98", plate: "#EBDEF0", name: "Eggplant" }     // Purple
             ];
 
             for (let i = 0; i < 4; i++) {
                 const x = i * LANE_W;
-                const neon = neonColors[i];
+                const ingredient = pizzaColors[i];
 
-                // LIGHTER BACKGROUND for visibility
-                ctx.fillStyle = "#2a2a2a";
+                // CLEAN GRADIENT BACKGROUND (Brawl Stars style)
+                const gradient = ctx.createLinearGradient(x, 0, x, H);
+                gradient.addColorStop(0, ingredient.dark);
+                gradient.addColorStop(1, ingredient.color);
+                ctx.fillStyle = gradient;
                 ctx.fillRect(x, 0, LANE_W, H);
 
-                // STRONG NEON BORDERS (Very visible)
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = neon.color;
-                ctx.strokeStyle = neon.color;
+                // BOLD DARK OUTLINE (Cartoon style)
+                ctx.strokeStyle = "#1C1C1C";
                 ctx.lineWidth = 6;
-                ctx.strokeRect(x + 10, 10, LANE_W - 20, H - 20);
-                ctx.shadowBlur = 0;
+                ctx.strokeRect(x + 3, 3, LANE_W - 6, H - 6);
 
-                // Subtle inner glow
-                ctx.fillStyle = neon.color;
-                ctx.globalAlpha = 0.1;
-                ctx.fillRect(x + 10, 10, LANE_W - 20, H - 20);
-                ctx.globalAlpha = 1.0;
+                // INNER HIGHLIGHT (Depth)
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x + 8, 8, LANE_W - 16, H - 16);
 
-                // BEAT FLASH
+                // BEAT FLASH (Warm glow)
                 if (beatFlash > 0) {
-                    ctx.shadowBlur = 40;
-                    ctx.shadowColor = neon.color;
-                    ctx.fillStyle = neon.color;
-                    ctx.globalAlpha = beatFlash * 0.3;
+                    ctx.fillStyle = ingredient.color;
+                    ctx.globalAlpha = beatFlash * 0.2;
                     ctx.fillRect(x + 10, 10, LANE_W - 20, H - 20);
                     ctx.globalAlpha = 1.0;
-                    ctx.shadowBlur = 0;
                 }
 
-                // INPUT FEEDBACK
+                // INPUT FEEDBACK (Warm glow when pressed)
                 if (Input.held[i]) {
-                    ctx.shadowBlur = 40;
-                    ctx.shadowColor = neon.color;
-                    ctx.fillStyle = neon.color;
-                    ctx.globalAlpha = 0.4;
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = ingredient.color;
+                    ctx.fillStyle = ingredient.color;
+                    ctx.globalAlpha = 0.3;
                     ctx.fillRect(x + 10, 10, LANE_W - 20, H - 20);
                     ctx.globalAlpha = 1.0;
                     ctx.shadowBlur = 0;
                 }
 
-                // HIT ZONE (Bright Circle)
+                // HIT ZONE - VINTAGE CERAMIC PLATE
                 const plateX = x + LANE_W / 2;
                 const plateY = HIT_Y;
                 const plateRadius = LANE_W * 0.35;
 
-                // Shadow
-                ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+                // Plate shadow (3D effect)
+                ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
                 ctx.beginPath();
-                ctx.arc(plateX + 3, plateY + 3, plateRadius, 0, Math.PI * 2);
+                ctx.arc(plateX + 4, plateY + 4, plateRadius + 2, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Main circle (bright)
-                ctx.fillStyle = "#FFFFFF";
+                // Plate base (ceramic)
+                ctx.fillStyle = ingredient.plate;
                 ctx.beginPath();
                 ctx.arc(plateX, plateY, plateRadius, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Colored rim
-                ctx.strokeStyle = neon.color;
-                ctx.lineWidth = 6;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = neon.color;
+                // Plate decorative rim (gold)
+                ctx.strokeStyle = "#D4AF37";
+                ctx.lineWidth = 4;
                 ctx.beginPath();
                 ctx.arc(plateX, plateY, plateRadius, 0, Math.PI * 2);
                 ctx.stroke();
-                ctx.shadowBlur = 0;
 
-                // Active glow
+                // Inner decorative circle
+                ctx.strokeStyle = "#B8941F";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(plateX, plateY, plateRadius - 8, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Ingredient color indicator (center)
+                ctx.fillStyle = ingredient.color;
+                ctx.beginPath();
+                ctx.arc(plateX, plateY, plateRadius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Active glow (when pressed)
                 if (Input.held[i]) {
-                    ctx.shadowBlur = 35;
-                    ctx.shadowColor = neon.color;
-                    ctx.strokeStyle = neon.color;
-                    ctx.lineWidth = 8;
+                    ctx.shadowBlur = 40;
+                    ctx.shadowColor = ingredient.color;
+                    ctx.strokeStyle = ingredient.color;
+                    ctx.lineWidth = 6;
                     ctx.beginPath();
-                    ctx.arc(plateX, plateY, plateRadius + 8, 0, Math.PI * 2);
+                    ctx.arc(plateX, plateY, plateRadius + 10, 0, Math.PI * 2);
                     ctx.stroke();
                     ctx.shadowBlur = 0;
                 }
 
-                // Key hints (black on white background)
-                ctx.fillStyle = "#000";
+                // Key hints (vintage style)
+                ctx.fillStyle = "#1C1C1C";
                 ctx.textAlign = "center";
-                ctx.font = `bold ${LANE_W * 0.2}px Arial`;
+                ctx.font = `bold ${LANE_W * 0.2}px 'Bebas Neue', Impact`;
+                ctx.shadowBlur = 2;
+                ctx.shadowColor = "#D4AF37";
                 if (W > 600) ctx.fillText(["A", "S", "K", "L"][i], plateX, H - 20);
+                ctx.shadowBlur = 0;
             }
 
             // HIT LINE (Bright and visible)
@@ -1473,7 +2453,16 @@
             }
 
             document.getElementById('results').style.display = 'flex';
+
+            // Show name popup for leaderboard submission
+            showNamePopup({
+                score: Math.floor(score),
+                pizzas: pizzasMade,
+                grade: rank,
+                accuracy: accuracy
+            });
         }
+
 
         function loop(timestamp) {
             const dt = (timestamp - lastTime) / 1000; lastTime = timestamp;
@@ -1485,19 +2474,483 @@
             // Load high score
             const savedData = loadHighScore();
             document.getElementById('bestScore').innerText = highScore;
+            document.getElementById('lobbyBestScore').innerText = highScore;
+
+            // ===== LOBBY NAVIGATION =====
+            const lobby = document.getElementById('lobby');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const leaderboardPanel = document.getElementById('leaderboardPanel');
+            const tutorialPanel = document.getElementById('tutorialPanel');
+            const overlay = document.getElementById('overlay');
+
+            // Settings persistence
+            let gameSettings = {
+                difficulty: 'normal',
+                volume: 70
+            };
+
+            // Load settings from localStorage
+            const savedSettings = localStorage.getItem('pizzaHeroSettings');
+            if (savedSettings) {
+                gameSettings = JSON.parse(savedSettings);
+                document.getElementById('volumeSlider').value = gameSettings.volume;
+                document.getElementById('volumeValue').innerText = gameSettings.volume + '%';
+
+                // Set active difficulty button
+                document.querySelectorAll('.diff-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.difficulty === gameSettings.difficulty) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+
+            // Save settings to localStorage
+            function saveSettings() {
+                localStorage.setItem('pizzaHeroSettings', JSON.stringify(gameSettings));
+            }
+
+            // Panel navigation functions
+            function showPanel(panel) {
+                lobby.style.display = 'none';
+                settingsPanel.classList.remove('active');
+                leaderboardPanel.classList.remove('active');
+                tutorialPanel.classList.remove('active');
+
+                if (panel) {
+                    panel.classList.add('active');
+                }
+            }
+
+            function showLobby() {
+                settingsPanel.classList.remove('active');
+                leaderboardPanel.classList.remove('active');
+                tutorialPanel.classList.remove('active');
+                lobby.style.display = 'flex';
+            }
+
+            // Main menu buttons
+            document.getElementById('playBtn').addEventListener('click', () => {
+                lobby.style.display = 'none';
+                overlay.style.display = 'flex';
+            });
+
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                showPanel(settingsPanel);
+            });
+
+            document.getElementById('leaderboardBtn').addEventListener('click', () => {
+                showPanel(leaderboardPanel);
+                updateLeaderboard();
+            });
+
+            document.getElementById('tutorialBtn').addEventListener('click', () => {
+                showPanel(tutorialPanel);
+            });
+
+            // Close panel buttons
+            document.getElementById('closeSettings').addEventListener('click', showLobby);
+            document.getElementById('closeLeaderboard').addEventListener('click', showLobby);
+            document.getElementById('closeTutorial').addEventListener('click', showLobby);
+
+            // Settings - Difficulty selector
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameSettings.difficulty = btn.dataset.difficulty;
+                    saveSettings();
+                    console.log('Difficulty set to:', gameSettings.difficulty);
+                });
+            });
+
+            // Settings - Volume slider
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeValue = document.getElementById('volumeValue');
+
+            volumeSlider.addEventListener('input', (e) => {
+                const value = e.target.value;
+                volumeValue.innerText = value + '%';
+                gameSettings.volume = parseInt(value);
+                saveSettings();
+                // TODO: Apply volume to audio engine
+            });
+
+            // ===== LEADERBOARD SYSTEM =====
+            function getLeaderboardData() {
+                const data = localStorage.getItem('pizzaHeroLeaderboard');
+                if (data) {
+                    return JSON.parse(data);
+                }
+                // Default leaderboard
+                return [
+                    { score: 25000, pizzas: 15, grade: 'S' },
+                    { score: 18500, pizzas: 12, grade: 'A' },
+                    { score: 15200, pizzas: 10, grade: 'A' },
+                    { score: 12000, pizzas: 8, grade: 'B' },
+                    { score: 9500, pizzas: 7, grade: 'B' }
+                ];
+            }
+
+            function saveToLeaderboard(score, pizzas, grade) {
+                let leaderboard = getLeaderboardData();
+                leaderboard.push({ score, pizzas, grade });
+                leaderboard.sort((a, b) => b.score - a.score);
+                leaderboard = leaderboard.slice(0, 10); // Keep top 10
+                localStorage.setItem('pizzaHeroLeaderboard', JSON.stringify(leaderboard));
+            }
+
+            function updateLeaderboard() {
+                const leaderboard = getLeaderboardData();
+                const entriesContainer = document.getElementById('leaderboardEntries');
+                entriesContainer.innerHTML = '';
+
+                leaderboard.forEach((entry, index) => {
+                    const rank = index + 1;
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = `entry ${rank <= 3 ? 'rank-' + rank : ''}`;
+                    entryDiv.innerHTML = `
+                        <span>${rank}</span>
+                        <span>${entry.score.toLocaleString()}</span>
+                        <span>${entry.pizzas}</span>
+                        <span>${entry.grade}</span>
+                    `;
+                    entriesContainer.appendChild(entryDiv);
+                });
+
+                // Update player stats
+                updatePlayerStats();
+            }
+
+            function updatePlayerStats() {
+                const stats = getPlayerStats();
+                document.getElementById('statGames').innerText = stats.gamesPlayed;
+                document.getElementById('statBest').innerText = stats.bestScore.toLocaleString();
+                document.getElementById('statPizzas').innerText = stats.totalPizzas;
+                document.getElementById('statAccuracy').innerText = stats.avgAccuracy.toFixed(1) + '%';
+            }
+
+            function getPlayerStats() {
+                const data = localStorage.getItem('pizzaHeroPlayerStats');
+                if (data) {
+                    return JSON.parse(data);
+                }
+                return {
+                    gamesPlayed: 0,
+                    bestScore: 0,
+                    totalPizzas: 0,
+                    avgAccuracy: 0
+                };
+            }
+
+            function updatePlayerStats_AfterGame(score, pizzas, accuracy) {
+                let stats = getPlayerStats();
+                stats.gamesPlayed++;
+                stats.bestScore = Math.max(stats.bestScore, score);
+                stats.totalPizzas += pizzas;
+
+                // Calculate new average accuracy
+                const prevTotal = stats.avgAccuracy * (stats.gamesPlayed - 1);
+                stats.avgAccuracy = (prevTotal + accuracy) / stats.gamesPlayed;
+
+                localStorage.setItem('pizzaHeroPlayerStats', JSON.stringify(stats));
+            }
+
+            // Initialize leaderboard on load
+            updateLeaderboard();
+
+            // ===== SUPABASE INTEGRATION =====
+            let supabaseClient = null;
+            let isSupabaseConfigured = false;
+
+            // Initialize Supabase if configured
+            try {
+                if (typeof SUPABASE_CONFIG !== 'undefined' &&
+                    SUPABASE_CONFIG.url &&
+                    SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL_HERE') {
+
+                    supabaseClient = supabase.createClient(
+                        SUPABASE_CONFIG.url,
+                        SUPABASE_CONFIG.anonKey
+                    );
+                    isSupabaseConfigured = true;
+                    console.log('✅ Supabase connected successfully');
+                } else {
+                    console.log('ℹ️ Supabase not configured. Using local leaderboard only.');
+                    console.log('📖 See SUPABASE_SETUP.md for setup instructions');
+                }
+            } catch (error) {
+                console.warn('⚠️ Supabase initialization failed:', error);
+                isSupabaseConfigured = false;
+            }
+
+            // ===== NAME INPUT SYSTEM =====
+            const nameInputPopup = document.getElementById('nameInputPopup');
+            const playerNameInput = document.getElementById('playerNameInput');
+            const charCount = document.getElementById('charCount');
+            const submitNameBtn = document.getElementById('submitNameBtn');
+            const skipNameBtn = document.getElementById('skipNameBtn');
+
+            let currentGameData = null; // Store game data when popup shows
+
+            // Load saved player name
+            function getSavedPlayerName() {
+                return localStorage.getItem('pizzaHeroPlayerName') || '';
+            }
+
+            function savePlayerName(name) {
+                localStorage.setItem('pizzaHeroPlayerName', name);
+            }
+
+            // Pre-fill with saved name
+            const savedName = getSavedPlayerName();
+            if (savedName) {
+                playerNameInput.value = savedName;
+                charCount.textContent = savedName.length;
+            }
+
+            // Character counter
+            playerNameInput.addEventListener('input', (e) => {
+                const value = e.target.value;
+                charCount.textContent = value.length;
+
+                // Enable/disable submit button
+                const isValid = value.length >= 3 && value.length <= 15;
+                submitNameBtn.disabled = !isValid;
+            });
+
+            // Submit on Enter key
+            playerNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !submitNameBtn.disabled) {
+                    submitNameBtn.click();
+                }
+            });
+
+            // Show name popup (make it global so endGame can call it)
+            window.showNamePopup = function (gameData) {
+                currentGameData = gameData;
+                nameInputPopup.style.display = 'flex';
+                playerNameInput.focus();
+
+                // Pre-fill if we have a saved name
+                const saved = getSavedPlayerName();
+                if (saved) {
+                    playerNameInput.value = saved;
+                    charCount.textContent = saved.length;
+                    submitNameBtn.disabled = false;
+                }
+            }
+
+
+            // Hide name popup
+            function hideNamePopup() {
+                nameInputPopup.style.display = 'none';
+                playerNameInput.value = '';
+                charCount.textContent = '0';
+                currentGameData = null;
+            }
+
+            // Submit name and score
+            submitNameBtn.addEventListener('click', async () => {
+                const name = playerNameInput.value.trim().toUpperCase();
+
+                if (name.length < 3 || name.length > 15) {
+                    alert('Name must be 3-15 characters');
+                    return;
+                }
+
+                // Save name for next time
+                savePlayerName(name);
+
+                // Add to local leaderboard with name
+                saveToLeaderboard(
+                    name,
+                    currentGameData.score,
+                    currentGameData.pizzas,
+                    currentGameData.grade
+                );
+
+                // Submit to Supabase if configured
+                if (isSupabaseConfigured) {
+                    await submitToSupabase(name, currentGameData);
+                }
+
+                // Update stats
+                updatePlayerStats_AfterGame(
+                    currentGameData.score,
+                    currentGameData.pizzas,
+                    currentGameData.accuracy
+                );
+
+                hideNamePopup();
+                console.log(`✅ Score submitted for ${name}`);
+            });
+
+            // Skip button
+            skipNameBtn.addEventListener('click', () => {
+                // Still save to local without name
+                saveToLeaderboard(
+                    'ANONYMOUS',
+                    currentGameData.score,
+                    currentGameData.pizzas,
+                    currentGameData.grade
+                );
+
+                updatePlayerStats_AfterGame(
+                    currentGameData.score,
+                    currentGameData.pizzas,
+                    currentGameData.accuracy
+                );
+
+                hideNamePopup();
+            });
+
+            // ===== SUPABASE FUNCTIONS =====
+            async function submitToSupabase(name, gameData) {
+                if (!isSupabaseConfigured) return;
+
+                try {
+                    // Get country (optional)
+                    let country = 'XX';
+                    try {
+                        const response = await fetch('https://ipapi.co/json/');
+                        const data = await response.json();
+                        country = data.country_code || 'XX';
+                    } catch {
+                        // Ignore country detection errors
+                    }
+
+                    const { data, error } = await supabaseClient
+                        .from('leaderboard')
+                        .insert([{
+                            name: name,
+                            score: gameData.score,
+                            pizzas: gameData.pizzas,
+                            grade: gameData.grade,
+                            accuracy: gameData.accuracy,
+                            country: country
+                            // wallet_address: null // For future Web3 integration
+                        }]);
+
+                    if (error) {
+                        console.error('Supabase error:', error);
+                        throw error;
+                    }
+
+                    console.log('✅ Score submitted to global leaderboard');
+                    return data;
+                } catch (error) {
+                    console.error('Failed to submit to Supabase:', error);
+                    // Don't block the game if Supabase fails
+                }
+            }
+
+            async function getGlobalLeaderboard() {
+                if (!isSupabaseConfigured) return [];
+
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('leaderboard')
+                        .select('*')
+                        .order('score', { ascending: false })
+                        .limit(100);
+
+                    if (error) throw error;
+                    return data;
+                } catch (error) {
+                    console.error('Failed to fetch global leaderboard:', error);
+                    return [];
+                }
+            }
+
+            // ===== UPDATE LOCAL LEADERBOARD TO INCLUDE NAMES =====
+            function saveToLeaderboard(name, score, pizzas, grade) {
+                let leaderboard = getLeaderboardData();
+                leaderboard.push({ name, score, pizzas, grade, timestamp: Date.now() });
+                leaderboard.sort((a, b) => b.score - a.score);
+                leaderboard = leaderboard.slice(0, 10); // Keep top 10
+                localStorage.setItem('pizzaHeroLeaderboard', JSON.stringify(leaderboard));
+                updateLeaderboard(); // Refresh display
+            }
+
+            // Update leaderboard display to show names
+            function updateLeaderboard() {
+                const leaderboard = getLeaderboardData();
+                const entriesContainer = document.getElementById('leaderboardEntries');
+                entriesContainer.innerHTML = '';
+
+                leaderboard.forEach((entry, index) => {
+                    const rank = index + 1;
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = `entry ${rank <= 3 ? 'rank-' + rank : ''}`;
+
+                    // Show name if available
+                    const displayName = entry.name || 'ANONYMOUS';
+
+                    entryDiv.innerHTML = `
+                        <span>${rank}</span>
+                        <span style="text-align: left; font-weight: bold;">${displayName}</span>
+                        <span>${entry.score.toLocaleString()}</span>
+                        <span>${entry.pizzas}</span>
+                        <span>${entry.grade}</span>
+                    `;
+                    entriesContainer.appendChild(entryDiv);
+                });
+
+                // Update player stats
+                updatePlayerStats();
+            }
+
+            // Update leaderboard header to include name column
+            const leaderboardHeader = document.querySelector('.leaderboard-header');
+            if (leaderboardHeader) {
+                leaderboardHeader.innerHTML = `
+                    <span>RANK</span>
+                    <span>NAME</span>
+                    <span>SCORE</span>
+                    <span>PIZZAS</span>
+                    <span>GRADE</span>
+                `;
+                leaderboardHeader.style.gridTemplateColumns = '50px 1fr 100px 70px 60px';
+            }
+
+            // Update entry grid template
+            const style = document.createElement('style');
+            style.textContent = `
+                .entry {
+                    grid-template-columns: 50px 1fr 100px 70px 60px !important;
+                }
+            `;
+            document.head.appendChild(style);
+
 
             loadImages().then(() => {
                 console.log("Assets Loaded. Starting Game Loop.");
 
+                // Modified startBtn to handle overlay transition
                 document.getElementById('startBtn').addEventListener('click', () => {
                     if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume();
                     AudioEngine.init();
+
+                    // Apply difficulty setting to game
+                    // TODO: Pass gameSettings.difficulty to game logic
+
                     resetGame();
                 });
+
 
                 document.getElementById('restartBtn').addEventListener('click', () => {
                     resetGame();
                 });
+
+                document.getElementById('backToLobbyBtn').addEventListener('click', () => {
+                    // Hide results, show lobby
+                    document.getElementById('results').style.display = 'none';
+                    showLobby();
+                    // Update lobby high score
+                    document.getElementById('lobbyBestScore').innerText = highScore;
+                });
+
 
                 lastTime = performance.now();
                 requestAnimationFrame(loop);

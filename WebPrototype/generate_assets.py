@@ -2,10 +2,11 @@ import base64
 import os
 
 files = {
-    "tomato": "tomato.png",
-    "cheese": "cheese.png",
-    "mushroom": "mushroom.png",
-    "basil": "basil.png",
+    "bacon": "assets/ingredients/bacon.png",
+    "champiñones": "assets/ingredients/champiñones.png",
+    "mozarella": "assets/ingredients/mozarella.png",
+    "onions": "assets/ingredients/onions.png",
+    "pimientos": "assets/ingredients/pimientos.png",
     "pizza": "pizza_reward_v2.png"
 }
 
