@@ -10,11 +10,20 @@ namespace Pisadado.PhaseA
         [Header("Config")]
         public List<PizzaData> PossibleRecipes;
         
+        [Header("Pizza Progress")]
+        public int HitsPerPizza = 20;
+        public int PizzaCompletionBonus = 1000;
+        
+        private int _currentHitCount = 0;
         private PizzaData _currentTargetRecipe;
         private List<IngredientData> _currentIngredients = new List<IngredientData>();
         
         // For Phase B transfer
         public static List<PizzaData> CompletedPizzas = new List<PizzaData>();
+        
+        // Stats
+        public int TotalPizzasCompleted { get; private set; }
+        public float PizzaProgress => (float)_currentHitCount / HitsPerPizza;
 
         private void Start()
         {
@@ -35,6 +44,8 @@ namespace Pisadado.PhaseA
             if (evt.NewState == GameState.PhaseRhythm)
             {
                 CompletedPizzas.Clear();
+                TotalPizzasCompleted = 0;
+                _currentHitCount = 0;
                 SelectNewRecipe();
             }
         }
@@ -44,33 +55,49 @@ namespace Pisadado.PhaseA
             if (PossibleRecipes.Count == 0) return;
             _currentTargetRecipe = PossibleRecipes[Random.Range(0, PossibleRecipes.Count)];
             _currentIngredients.Clear();
-            Debug.Log($"Target Recipe: {_currentTargetRecipe.DisplayName}");
+            _currentHitCount = 0;
+            Debug.Log($"New Pizza Order: {_currentTargetRecipe.DisplayName}");
         }
 
         private void OnNoteHit(NoteHitEvent evt)
         {
-            if (evt.Ingredient == null) return; // Should pass ingredient in NoteHitEvent!
-
-            _currentIngredients.Add(evt.Ingredient);
+            // Count any hit towards pizza progress
+            _currentHitCount++;
             
-            CheckCompletion();
-        }
-
-        private void CheckCompletion()
-        {
-            // Simplified Logic: If we have enough ingredients, complete it.
-            // Improve: Match specific ingredients to recipe.
-            
-            if (_currentIngredients.Count >= _currentTargetRecipe.RequiredIngredients.Count)
+            // Optional: Track ingredient for visual feedback
+            if (evt.Ingredient != null)
             {
-                // Pizza Done!
-                Debug.Log($"Pizza Completed: {_currentTargetRecipe.DisplayName}");
-                CompletedPizzas.Add(_currentTargetRecipe);
-                
-                EventBus.Publish(new PizzaCompletedEvent { Pizza = _currentTargetRecipe, QualityScore = 100 });
-                
-                SelectNewRecipe();
+                _currentIngredients.Add(evt.Ingredient);
+            }
+            
+            // Check if pizza is complete
+            if (_currentHitCount >= HitsPerPizza)
+            {
+                CompletePizza();
             }
         }
+
+        private void CompletePizza()
+        {
+            TotalPizzasCompleted++;
+            
+            Debug.Log($"🍕 ORDER UP! Pizza #{TotalPizzasCompleted} Completed: {_currentTargetRecipe.DisplayName}");
+            
+            // Add to completed pizzas for Phase B
+            CompletedPizzas.Add(_currentTargetRecipe);
+            
+            // Publish event with bonus score
+            EventBus.Publish(new PizzaCompletedEvent 
+            { 
+                Pizza = _currentTargetRecipe, 
+                QualityScore = PizzaCompletionBonus 
+            });
+            
+            // Start next pizza
+            SelectNewRecipe();
+        }
+
+        public int GetCurrentHitCount() => _currentHitCount;
+        public int GetRemainingHits() => HitsPerPizza - _currentHitCount;
     }
 }

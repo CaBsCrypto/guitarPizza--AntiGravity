@@ -33,6 +33,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            height: 100dvh;
             width: 100vw;
         }
 
@@ -45,6 +46,8 @@
             background: #000;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
             overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-sizing: border-box;
         }
 
         canvas {
@@ -1517,12 +1520,29 @@
 
         function resize() {
             W = container.clientWidth;
+            // Use clientHeight which includes padding, but we want the draw area to be correct.
+            // Actually, canvas should fill the container.
             H = container.clientHeight;
             canvas.width = W;
             canvas.height = H;
 
             LANE_W = W / 4;
-            HIT_Y = H * 0.85;
+
+            // Adjust HIT_Y to be higher up. 
+            // Was 0.85 (85%). Let's try 0.82 (82%) to give more room at the bottom.
+            // Also consider the safe area padding if possible, but clientHeight includes it.
+            // If we have a large bottom padding (e.g. iPhone Home Bar), the effective game area is smaller.
+            // We want the hit line to be relative to the *visible* game area.
+
+            // Heuristic: If height is very tall (mobile), move it up a bit more.
+            // safe-area-inset-bottom is handled by CSS padding, pushing the content up? 
+            // No, padding pushes content *in*. Canvas fills the content box?
+            // If box-sizing is border-box, clientHeight includes padding? No, clientHeight is content + padding.
+            // We want to draw *above* the padding if possible, or just treat the padding as "dead zone".
+
+            // Let's just move the hit line up to 0.80 (80%) to be safe.
+            HIT_Y = H * 0.80;
+
             NOTE_SIZE = Math.min(LANE_W * 0.8, 90); // Slightly larger for sprites
         }
         window.addEventListener('resize', resize);

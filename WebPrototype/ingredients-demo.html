@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Ingredients 2.5D - Enhanced Demo</title>
+    <link rel="stylesheet" href="ingredients-2.5d.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #F1C40F;
+            font-size: 3.5rem;
+            text-shadow:
+                -4px -4px 0 #1C1C1C,
+                4px -4px 0 #1C1C1C,
+                -4px 4px 0 #1C1C1C,
+                4px 4px 0 #1C1C1C,
+                0 0 40px rgba(241, 196, 15, 0.8);
+            margin: 0;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes titlePulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .subtitle {
+            color: #ECF0F1;
+            font-size: 1.2rem;
+            margin-top: -20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .ingredients-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 50px;
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 30px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ingredient-demo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            transition: all 0.3s;
+        }
+
+        .ingredient-demo:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .ingredient-label {
+            color: #ECF0F1;
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-shadow:
+                -2px -2px 0 #1C1C1C,
+                2px -2px 0 #1C1C1C,
+                -2px 2px 0 #1C1C1C,
+                2px 2px 0 #1C1C1C;
+        }
+
+        .note-3d {
+            cursor: pointer;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: linear-gradient(180deg, #27AE60, #229954);
+            border: 4px solid #1C1C1C;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            text-shadow:
+                -2px -2px 0 #1C1C1C,
+                2px -2px 0 #1C1C1C,
+                -2px 2px 0 #1C1C1C,
+                2px 2px 0 #1C1C1C;
+            box-shadow:
+                0 6px 0 #1E7E34,
+                0 8px 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-4px);
+            box-shadow:
+                0 10px 0 #1E7E34,
+                0 12px 25px rgba(0, 0, 0, 0.6);
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow:
+                0 2px 0 #1E7E34,
+                0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        button.btn-hit {
+            background: linear-gradient(180deg, #E74C3C, #C0392B);
+            box-shadow: 0 6px 0 #8B0000, 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        button.btn-miss {
+            background: linear-gradient(180deg, #95A5A6, #7F8C8D);
+            box-shadow: 0 6px 0 #5D6D7E, 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        button.btn-sustain {
+            background: linear-gradient(180deg, #3498DB, #2874A6);
+            box-shadow: 0 6px 0 #1B4F72, 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        button.btn-perfect {
+            background: linear-gradient(180deg, #F39C12, #D68910);
+            box-shadow: 0 6px 0 #9A7D0A, 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .info {
+            color: #BDC3C7;
+            font-size: 0.9rem;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🍕 PIZZA HERO</h1>
+    <p class="subtitle">Ultra-Realistic CSS 2.5D Ingredients</p>
+
+    <div class="ingredients-grid">
+        <div class="ingredient-demo">
+            <div class="note-3d" id="pepperoni">
+                <div class="ingredient-pepperoni"></div>
+            </div>
+            <span class="ingredient-label">🍖 Pepperoni</span>
+        </div>
+
+        <div class="ingredient-demo">
+            <div class="note-3d" id="mozzarella">
+                <div class="ingredient-mozzarella"></div>
+            </div>
+            <span class="ingredient-label">🧀 Mozzarella</span>
+        </div>
+
+        <div class="ingredient-demo">
+            <div class="note-3d" id="olive">
+                <div class="ingredient-olive"></div>
+            </div>
+            <span class="ingredient-label">🫒 Aceituna</span>
+        </div>
+
+        <div class="ingredient-demo">
+            <div class="note-3d" id="pepper">
+                <div class="ingredient-pepper"></div>
+            </div>
+            <span class="ingredient-label">🫑 Pimiento</span>
+        </div>
+
+        <div class="ingredient-demo">
+            <div class="note-3d" id="mushroom">
+                <div class="ingredient-mushroom"></div>
+            </div>
+            <span class="ingredient-label">🍄 Champiñón</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-hit" onclick="testHit()">💥 Hit</button>
+        <button class="btn-perfect" onclick="testPerfect()">⭐ Perfect</button>
+        <button class="btn-miss" onclick="testMiss()">❌ Miss</button>
+        <button class="btn-sustain" onclick="testSustain()">✨ Sustain</button>
+        <button onclick="reset()">🔄 Reset</button>
+    </div>
+
+    <p class="info">
+        Click en cada ingrediente para animación individual •
+        Botones para probar todas las animaciones •
+        100% CSS puro, sin imágenes
+    </p>
+
+    <script>
+        function testHit() {
+            document.querySelectorAll('.note-3d').forEach(note => {
+                note.classList.remove('hit', 'miss', 'sustaining', 'perfect');
+                setTimeout(() => note.classList.add('hit'), 10);
+            });
+            setTimeout(reset, 600);
+        }
+
+        function testPerfect() {
+            document.querySelectorAll('.note-3d').forEach(note => {
+                note.classList.remove('hit', 'miss', 'sustaining', 'perfect');
+                setTimeout(() => note.classList.add('perfect'), 10);
+            });
+            setTimeout(reset, 700);
+        }
+
+        function testMiss() {
+            document.querySelectorAll('.note-3d').forEach(note => {
+                note.classList.remove('hit', 'miss', 'sustaining', 'perfect');
+                setTimeout(() => note.classList.add('miss'), 10);
+            });
+            setTimeout(reset, 800);
+        }
+
+        function testSustain() {
+            document.querySelectorAll('.note-3d').forEach(note => {
+                note.classList.remove('hit', 'miss', 'perfect');
+                note.classList.add('sustaining');
+            });
+        }
+
+        function reset() {
+            document.querySelectorAll('.note-3d').forEach(note => {
+                note.classList.remove('hit', 'miss', 'sustaining', 'perfect');
+            });
+        }
+
+        // Click individual ingredients
+        document.querySelectorAll('.note-3d').forEach(note => {
+            note.addEventListener('click', function () {
+                this.classList.remove('hit', 'miss', 'sustaining', 'perfect');
+                setTimeout(() => this.classList.add('hit'), 10);
+                setTimeout(() => this.classList.remove('hit'), 600);
+            });
+        });
+    </script>
+</body>
+
+</html>

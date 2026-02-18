@@ -20,6 +20,8 @@ namespace Pisadado.PhaseA
         
         private List<NoteObject> _activeNotes = new List<NoteObject>();
         private IGameInput _input;
+        private bool _isHeld = false;
+        private NoteObject _currentSustainedNote = null;
 
         private void Start()
         {
@@ -27,6 +29,7 @@ namespace Pisadado.PhaseA
             if (_input != null)
             {
                 _input.OnLanePressed += HandleLanePressed;
+                _input.OnLaneReleased += HandleLaneReleased;
             }
         }
 
@@ -35,10 +38,11 @@ namespace Pisadado.PhaseA
             if (_input != null)
             {
                 _input.OnLanePressed -= HandleLanePressed;
+                _input.OnLaneReleased -= HandleLaneReleased;
             }
         }
 
-        public void SpawnNote(float targetBeat)
+        public void SpawnNote(float targetBeat, bool isSustained = false, float sustainLength = 0f)
         {
             // In a real scenario, use an Object Pool here!
             GameObject go = Instantiate(NotePrefab, SpawnPoint.position, Quaternion.identity, transform);
@@ -49,7 +53,7 @@ namespace Pisadado.PhaseA
             float startY = SpawnPoint.localPosition.y;
             float endY = HitPoint.localPosition.y;
             
-            note.Initialize(targetBeat, LaneIndex, startY, endY);
+            note.Initialize(targetBeat, LaneIndex, startY, endY, isSustained, sustainLength);
             _activeNotes.Add(note);
         }
 
@@ -57,13 +61,29 @@ namespace Pisadado.PhaseA
         {
             if (laneIndex != LaneIndex) return;
 
+            _isHeld = true;
             CheckForHit();
+        }
+
+        private void HandleLaneReleased(int laneIndex)
+        {
+            if (laneIndex != LaneIndex) return;
+
+            _isHeld = false;
+            
+            // If we were sustaining a note, stop it
+            if (_currentSustainedNote != null && _currentSustainedNote.IsSustaining)
+            {
+                _currentSustainedNote.StopSustain();
+                _currentSustainedNote = null;
+            }
         }
 
         private void Update()
         {
             // Optional: Keyboard fallback if InputProvider isn't ready or for quick test
             if (UnityEngine.Input.GetKeyDown(DebugKey)) HandleLanePressed(LaneIndex);
+            if (UnityEngine.Input.GetKeyUp(DebugKey)) HandleLaneReleased(LaneIndex);
             
             // Cleanup missed notes
             // Iterating backwards to safely remove
@@ -103,15 +123,32 @@ namespace Pisadado.PhaseA
                     bool isPerfect = minDiff <= PerfectWindow;
                     Debug.Log($"Hit on Lane {LaneIndex}! Perfect: {isPerfect} (Diff: {minDiff})");
                     
-                    closestNote.Deactivate();
-                    _activeNotes.Remove(closestNote);
-                    
-                    // TODO: Notify ScoreManager / ComboSystem
-                    EventBus.Publish(new NoteHitEvent { 
-                        LaneIndex = LaneIndex, 
-                        IsPerfect = isPerfect, 
-                        Score = isPerfect ? 300 : 100 
-                    });
+                    // Check if it's a sustained note
+                    if (closestNote.IsSustained)
+                    {
+                        // Start sustaining
+                        closestNote.StartSustain();
+                        _currentSustainedNote = closestNote;
+                        
+                        // Still give initial hit score
+                        EventBus.Publish(new NoteHitEvent { 
+                            LaneIndex = LaneIndex, 
+                            IsPerfect = isPerfect, 
+                            Score = isPerfect ? 300 : 100 
+                        });
+                    }
+                    else
+                    {
+                        // Regular note - deactivate immediately
+                        closestNote.Deactivate();
+                        _activeNotes.Remove(closestNote);
+                        
+                        EventBus.Publish(new NoteHitEvent { 
+                            LaneIndex = LaneIndex, 
+                            IsPerfect = isPerfect, 
+                            Score = isPerfect ? 300 : 100 
+                        });
+                    }
                 }
                 else
                 {
