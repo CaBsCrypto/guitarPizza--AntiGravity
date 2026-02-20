@@ -27,6 +27,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
     let perfectStreak = 0;
     let secretIngredients = 0;
 
+    // --- ZK STATS (exported on game complete) ---
+    let feverTime = 0;       // seconds spent in fireMode
+    let totalTraps = 0;      // trap notes spawned
+    let trapsAvoided = 0;    // traps successfully dodged (let pass)
+
     let notes = [];
     let particles = [];
     let feedbackSystem = [];
@@ -98,6 +103,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         fireMode = false; difficultyMult = 0.6; difficultyTimer = 0;
         pizzaProgress = 0; pizzasMade = 0;
         perfectStreak = 0; secretIngredients = 0;
+        totalPerfectHits = 0; totalHits = 0;
+        feverTime = 0; totalTraps = 0; trapsAvoided = 0;
         notes = []; particles = []; feedbackSystem = [];
         gameTimer = 0; nextNoteTime = 0;
         inputLog = []; // Reset Log
@@ -275,6 +282,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         let tag, color;
 
         if (isTrap) {
+            totalTraps++;
             tag = TRAP_TAGS[Math.floor(Math.random() * TRAP_TAGS.length)];
             color = "#555555"; // Greyish/Burnt color for traps
         } else {
@@ -400,6 +408,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
             createFeedback("SPEED UP! ⚡", -1, H / 2);
         }
 
+        if (fireMode) feverTime += dt;  // accumulate seconds in fever/fire mode
         gameTimer += dt;
         if (gameTimer > nextNoteTime) spawnNote();
 
@@ -445,7 +454,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
                     createFeedback("DROPPED", n.lane, H - 50);
                     AudioEngine.playMiss();
                 } else {
-                    // Bonus for avoiding trap? Optional.
+                    // Bonus for avoiding trap
+                    trapsAvoided++;
                     createFeedback("DODGED!", n.lane, H - 50);
                     score += 50;
                 }
@@ -716,6 +726,15 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         gameState = STATE.RESULTS;
         showScreen('results');
         showScreen('results');
+        // Attach ZK stats to inputLog so the frontend can build a valid receipt
+        inputLog.stats = {
+            perfectHits:     totalPerfectHits,
+            totalHits:       totalHits,
+            feverSeconds:    Math.floor(feverTime),
+            pizzasCompleted: pizzasMade,
+            trapsAvoided:    trapsAvoided,
+            totalTraps:      totalTraps,
+        };
         if (onComplete) onComplete(score, inputLog);
     }
 
@@ -782,13 +801,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
     function loadImages() {
         return new Promise((resolve) => {
             const ASSET_PATHS = {
-                "pepperoni": "/game/assets/pepperoni.jpg",
-                "cheese": "/game/assets/mixta.jpg",
-                "bacon": "/game/assets/tomatos.jpg",
-                "onion": "/game/assets/veg.jpg",
-                "secret_sauce": "/game/assets/salsasecreta.jpg",
-                "hotdog": "/game/assets/hotdog.jpg",
-                "burger": "/game/assets/burger.jpg"
+                "pepperoni": "game/assets/pepperoni.jpg",
+                "cheese": "game/assets/mixta.jpg",
+                "bacon": "game/assets/tomatos.jpg",
+                "onion": "game/assets/veg.jpg",
+                "secret_sauce": "game/assets/salsasecreta.jpg",
+                "hotdog": "game/assets/hotdog.jpg",
+                "burger": "game/assets/burger.jpg"
             };
 
             const keys = Object.keys(ASSET_PATHS);

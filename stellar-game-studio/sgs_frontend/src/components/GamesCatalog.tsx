@@ -10,6 +10,13 @@ import './GamesCatalog.css';
 
 const games = [
   {
+    id: 'guitar-pizza',
+    title: 'Guitar Pizza Hero',
+    emoji: '🍕',
+    description: 'Rhythm game where you bake pizzas to the beat (ZK Verified).',
+    tags: ['Single player', 'Rhythm', 'ZK'],
+  },
+  {
     id: 'twenty-one',
     title: 'Twenty-One',
     emoji: '🃏',
@@ -29,13 +36,6 @@ const games = [
     emoji: '🎲',
     description: 'Roll two dice each and race for the highest total.',
     tags: ['2 players', 'Quick launch'],
-  },
-  {
-    id: 'guitar-pizza',
-    title: 'Guitar Pizza Hero',
-    emoji: '🍕',
-    description: 'Rhythm game where you bake pizzas to the beat (ZK Verified).',
-    tags: ['Single player', 'Rhythm', 'ZK'],
   },
 ];
 
@@ -144,7 +144,7 @@ export function GamesCatalog({ onBack }: GamesCatalogProps) {
         {games.map((game, index) => (
           <button
             key={game.id}
-            className="game-card"
+            className={`game-card ${game.id === 'guitar-pizza' ? 'featured-game' : ''}`}
             type="button"
             disabled={!isConnected}
             onClick={() => handleSelectGame(game.id)}

@@ -32,6 +32,27 @@ export function WalletStandalone() {
         </button>
       )}
 
+      {/* Demo Mode Button (Only visible when not connected) */}
+      {!isConnected && (
+        <button
+          className="wallet-standalone-button"
+          style={{
+            marginLeft: '10px',
+            background: '#ccc',
+            color: '#333',
+            borderColor: '#999'
+          }}
+          onClick={() => {
+            import('../store/walletSlice').then(({ useWalletStore }) => {
+              useWalletStore.getState().setWallet('G_DEMO_USER', 'dev-demo', 'dev');
+            });
+          }}
+          title="Play without connecting a real wallet"
+        >
+          🎭 Demo
+        </button>
+      )}
+
       {network && <div className="wallet-standalone-network">{network}</div>}
 
       {!isWalletAvailable && (

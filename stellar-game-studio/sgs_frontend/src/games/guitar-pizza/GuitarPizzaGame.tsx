@@ -1,9 +1,11 @@
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Settings, Volume2, VolumeX, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
 import { ProofGenerator } from '../../zk/ProofGenerator';
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
-import { MockStellarService } from '../../services/MockStellarService';
+import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
+import { useWallet } from '@/hooks/useWallet';
+import { Buffer } from 'buffer';
 
 // We'll import the game logic from a separate file or inline it here if feasible
 // For now, we assume the game logic is exposed globally via window.GuitarPizza or similar after loading scripts
@@ -21,25 +23,116 @@ interface GuitarPizzaGameProps {
     onBack?: () => void;
 }
 
+interface TxRecord {
+    hash: string;
+    type: string;   // e.g. "Score Submit", "Leaderboard"
+    score: number;
+    timestamp: number; // Date.now()
+}
+
+const EXPLORER_BASE = 'https://stellar.expert/explorer/testnet/tx';
+
 export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarPizzaGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     // Cleanup ref now holds the engine interface or null
     const engineRef = useRef<{ cleanup: () => void, setVolume: (v: number) => void, startGame?: () => void } | null>(null);
+    // Tracks the actual on-chain session ID (may differ from local if a session was reused)
+    const onChainSessionIdRef = useRef<number>(0);
 
     const [status, setStatus] = useState<string>('Initializing...');
     const [error, setError] = useState<string | null>(null);
 
+    // Wallet
+    const { getContractSigner, networkPassphrase, isConnected } = useWallet();
+
     // UI State
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
-    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'friends'>('lobby');
+    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard'>('lobby');
     const [isVerifying, setIsVerifying] = useState(false);
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
+    const [txHash, setTxHash] = useState<string | null>(null);
+
+    // TX pop-up after game completion
+    const [showTxPopup, setShowTxPopup] = useState(false);
+    const [popupTxs, setPopupTxs] = useState<TxRecord[]>([]);      // TXs of the current game
+    const [popupCountdown, setPopupCountdown] = useState(8);
+    const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const popupIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // TX history (persistent across games via localStorage)
+    const [txHistory, setTxHistory] = useState<TxRecord[]>(() => {
+        try { return JSON.parse(localStorage.getItem('gp_tx_history') ?? '[]'); }
+        catch { return []; }
+    });
+    // Hold the finalScore to pass to onGameComplete when the popup closes
+    const pendingFinalScoreRef = useRef<number>(0);
+
+    // On-chain verified score (shown only after contract confirmation)
+    const [onChainScore, setOnChainScore] = useState<number | null>(null);
+
+    // Leaderboard from zk-leaderboard contract
+    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player: string; score: number }>>([]);
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
     // Profile State (Persist to local storage later)
     const [chefName, setChefName] = useState("Chef Anon");
     const [xHandle, setXHandle] = useState("@");
+
+    // Results Screen State
+    const [resultParams, setResultParams] = useState({ bgImage: '' });
+
+    // ── TX popup helpers ──────────────────────────────────────────────────────
+    const closeTxPopup = useCallback(() => {
+        if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+        if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+        setShowTxPopup(false);
+        onGameComplete(pendingFinalScoreRef.current);
+    }, [onGameComplete]);
+
+    const openTxPopup = useCallback((txs: TxRecord[], finalScore: number) => {
+        pendingFinalScoreRef.current = finalScore;
+        setPopupTxs(txs);
+        setPopupCountdown(8);
+        setShowTxPopup(true);
+
+        // Countdown every second
+        popupIntervalRef.current = setInterval(() => {
+            setPopupCountdown(prev => {
+                if (prev <= 1) {
+                    if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        // Auto-close after 8s
+        popupTimerRef.current = setTimeout(() => {
+            if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+            setShowTxPopup(false);
+            onGameComplete(finalScore);
+        }, 8000);
+    }, [onGameComplete]);
+
+    // ── Leaderboard loader ────────────────────────────────────────────────────
+    const loadLeaderboard = useCallback(async () => {
+        setLeaderboardLoading(true);
+        try {
+            const entries = await StellarContractService.getLeaderboard(userAddress, 1);
+            const mapped = (entries as any[]).slice(0, 5).map((e: any, i: number) => ({
+                rank:   i + 1,
+                player: String(e.player ?? ''),
+                score:  Number(e.score ?? 0),
+            }));
+            setLeaderboard(mapped);
+        } catch {
+            // silently fail — leaderboard is best-effort
+        } finally {
+            setLeaderboardLoading(false);
+        }
+    }, [userAddress]);
 
     // Audio Toggle Handler
     const toggleAudio = () => {
@@ -50,36 +143,45 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
         }
     };
 
+    const addLog = (msg: string) => {
+        console.log(msg);
+    };
+
     const handleStartGame = () => {
         if (engineRef.current && engineRef.current.startGame) {
-            console.log("[GuitarPizza] Calling engine.startGame()");
+            addLog("[GuitarPizza] Calling engine.startGame()");
             engineRef.current.startGame();
         } else {
             console.warn("[GuitarPizza] Engine not ready yet.");
+            addLog("[WARN] Engine not ready yet.");
         }
     };
 
+    // Load leaderboard on mount
+    useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
+
     useEffect(() => {
-        console.log("[GuitarPizza] Component mounted.");
+        addLog("[GuitarPizza] Component mounted.");
 
         // Load game scripts dynamically
         const loadScript = (src: string) => {
             return new Promise((resolve, reject) => {
                 if (document.querySelector(`script[src="${src}"]`)) {
-                    console.log(`[GuitarPizza] Script already loaded: ${src}`);
+                    addLog(`[GuitarPizza] Script already loaded: ${src}`);
                     resolve(true);
                     return;
                 }
 
-                console.log(`[GuitarPizza] Loading script: ${src}`);
+                addLog(`[GuitarPizza] Loading script: ${src}`);
                 const script = document.createElement('script');
                 script.src = src;
                 script.onload = () => {
-                    console.log(`[GuitarPizza] Script loaded successfully: ${src}`);
+                    addLog(`[GuitarPizza] Script loaded successfully: ${src}`);
                     resolve(true);
                 };
                 script.onerror = (e) => {
                     console.error(`[GuitarPizza] Script load error: ${src}`, e);
+                    addLog(`[ERROR] Script load error: ${src}`);
                     reject(e);
                 };
                 document.body.appendChild(script);
@@ -90,33 +192,32 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             if (!canvasRef.current) {
                 console.error("[GuitarPizza] Canvas ref is null");
                 setError("Canvas not found");
+                addLog("[ERROR] Canvas ref is null");
                 return;
             }
 
             setStatus('Loading Assets (this may take a moment)...');
+            addLog("Status: Loading Assets...");
 
             // Load scripts
             try {
-                // Load assets first (large file)
-                if (typeof window.BASE64_ASSETS === 'undefined') {
-                    console.log("[GuitarPizza] BASE64_ASSETS undefined, loading assets.js...");
-                    await loadScript('/game/assets.js');
-                } else {
-                    console.log("[GuitarPizza] BASE64_ASSETS already defined.");
-                }
-
-                // Then load engine
                 if (!window.initGuitarPizza) {
-                    console.log("[GuitarPizza] initGuitarPizza undefined, loading engine...");
+                    addLog("[GuitarPizza] initGuitarPizza undefined, loading engine...");
                     setStatus('Loading Game Engine...');
-                    await loadScript('/game/guitar-pizza-engine.js');
+
+                    const baseUrl = import.meta.env.BASE_URL;
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js`.replace('//', '/');
+
+                    addLog(`[GuitarPizza] Loading engine from: ${primaryPath}`);
+                    await loadScript(primaryPath);
                 } else {
-                    console.log("[GuitarPizza] initGuitarPizza already defined.");
+                    addLog("[GuitarPizza] initGuitarPizza already defined.");
                 }
 
             } catch (err) {
                 console.error("[GuitarPizza] Failed to load game scripts:", err);
                 setError("Failed to load game scripts. Check console.");
+                addLog(`[ERROR] Failed to load scripts: ${err}`);
                 return;
             }
 
@@ -130,110 +231,255 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             }
 
             // Initialize the game instance
-            console.log("[GuitarPizza] Initializing game instance...");
+            addLog("[GuitarPizza] Initializing game instance...");
+
+            // Generate a random session ID as candidate (may be replaced by an existing active one)
+            const localSessionId = Math.floor(Math.random() * 1000000);
+            onChainSessionIdRef.current = localSessionId; // default; updated after on-chain call
+
+            // Start game session on-chain (fire and forget — non-blocking).
+            // score_goal = 5000: player must beat La Casa (house) by hitting 5000 pts.
+            // Guard: getContractSigner() throws if no wallet connected — catch silently.
+            // If player already has an open session (#4), startGame reuses it automatically.
+            try {
+                const signer = getContractSigner();
+                StellarContractService.startGame(userAddress, localSessionId, 1, signer, 5000)
+                    .then(result => {
+                        // Use the actual on-chain session ID (may be a reused one)
+                        onChainSessionIdRef.current = result.sessionId;
+                        if (!result.success) {
+                            console.warn("[GuitarPizza] On-chain session registration failed:", result.error);
+                        }
+                    })
+                    .catch(err => {
+                        console.warn("[GuitarPizza] On-chain session registration failed:", err);
+                    });
+            } catch {
+                console.warn("[GuitarPizza] No wallet connected — skipping on-chain session start.");
+            }
+
             setStatus('Starting Game...');
+            addLog("Status: Starting Game...");
 
             if (window.initGuitarPizza) {
                 try {
                     // Check if initGuitarPizza returns an object (new version) or function (old version fallback)
                     const result = window.initGuitarPizza(canvasRef.current, userAddress, async (finalScore: number, inputLog: any[] = []) => {
-                        console.log("[GuitarPizza] Game complete. Score:", finalScore);
-                        console.log("[GuitarPizza] Input Log captured:", inputLog.length, "entries");
+                        // Clear any lingering status when game completes, just in case
+                        setStatus('');
+                        setOnChainScore(null); // reset until confirmed from contract
+
+                        addLog(`GuitarPizza] Game complete. Score: ${finalScore}`);
+
+                        // Randomly select defeat/result background (50/50 chance as requested)
+                        // Paths are relative to the public/game folder or absolute from root
+                        const defeatImages = [
+                            '/game/assets/decoracion/DerrotaMiedo.jpg',
+                            '/game/assets/decoracion/DerrotaAlCielo.jpg'
+                        ];
+                        const randomBg = defeatImages[Math.floor(Math.random() * defeatImages.length)];
+                        setResultParams({ bgImage: randomBg });
 
                         // Start ZK Verification
                         setIsVerifying(true);
                         setProofStatus('generating');
 
                         try {
-                            // 1. ZK Circuit Simulation (Anti-Spam / Ghost Click)
-                            // In a real scenario, this happens inside the WASM prover, but here we simulate the logic first
+                            // 1. ZK Circuit Simulation
                             const zkResult = SimulatedZKCircuit.verifyTrace(inputLog, {}, finalScore);
 
                             if (!zkResult.verified) {
                                 throw new Error(`ZK Verification Failed: ${zkResult.reason}`);
                             }
 
-                            if (zkResult.penaltyCount > 0) {
-                                console.warn(`[ZK] Penalty applied for ${zkResult.penaltyCount} ghost clicks.`);
+                            // 2. Build session stats from input log + final score
+                            // The engine now attaches stats to inputLog.stats (fixed)
+                            const engineStats = (inputLog as any)?.stats ?? {};
+                            const hits     = engineStats.totalHits       ?? 0;
+                            const perfects = engineStats.perfectHits     ?? 0;
+                            const fever    = engineStats.feverSeconds    ?? 0;
+                            const pizzas   = engineStats.pizzasCompleted ?? 0;
+
+                            // Verified score: the score the Noir circuit can prove.
+                            // Formula must match circuits/guitar_pizza_proof/src/main.nr
+                            const verifiedScore = (hits * 100) + (perfects * 50) + (fever * 200) + (pizzas * 500);
+                            addLog(`[GuitarPizza] Engine score: ${finalScore} | ZK-verified score: ${verifiedScore}`);
+                            addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
+
+                            const sessionStats: GameSessionStats = {
+                                levelId:         1,
+                                score:           verifiedScore,  // ← verified score goes on-chain
+                                sessionId:       onChainSessionIdRef.current,
+                                perfectHits:     perfects,
+                                totalHits:       hits,
+                                trapsAvoided:    engineStats.trapsAvoided    ?? 0,
+                                totalTraps:      engineStats.totalTraps      ?? 0,
+                                feverSeconds:    fever,
+                                pizzasCompleted: pizzas,
+                                playerAddress:   userAddress,
+                            };
+
+                            // 3. Generate RISC Zero receipt (164 bytes: journal + seal)
+                            const { receipt } = await ProofGenerator.generateSessionReceipt(sessionStats);
+                            addLog(`[GuitarPizza] Receipt generated: ${receipt.length} bytes`);
+
+                            // DEMO / NO-WALLET CHECK: Skip blockchain submission when not connected
+                            if (userAddress === 'G_DEMO_USER' || !isConnected) {
+                                addLog(userAddress === 'G_DEMO_USER'
+                                    ? "[DEMO MODE] Skipping blockchain submission."
+                                    : "[GuitarPizza] No wallet connected — score verified locally only.");
+                                await new Promise(resolve => setTimeout(resolve, 800));
+                                addLog(`SUCCESS! Score verified locally.`);
+                                setProofStatus('success');
+                                setTimeout(() => { setIsVerifying(false); }, 2000);
+                                return;
                             }
 
-                            // 2. Proof Generation (Mock)
-                            const proofData = await ProofGenerator.generateLevelProof(1, finalScore, 0, 0);
-                            console.log("[GuitarPizza] Proof generated:", proofData);
+                            // 4. Submit all contracts in sequence via StellarContractService
+                            addLog("Receipt ready. Submitting to Stellar contracts...");
+                            setStatus('Submitting to Stellar...');
 
-                            // 3. Submit to Mock Stellar Contract
-                            const submission = await MockStellarService.submitVerifiedScore(userAddress, 1, finalScore, proofData.proof);
+                            const signer = getContractSigner();
+                            const result = await StellarContractService.postGameFlow(
+                                userAddress,
+                                sessionStats,
+                                signer,
+                            );
 
-                            if (!submission.success) {
-                                throw new Error(submission.message);
+                            // Log what happened on-chain
+                            if (result.scoreSubmitted) addLog('✅ Score verified on guitar-pizza contract');
+                            if (result.leaderboardRank) addLog(`🏆 Leaderboard rank: #${result.leaderboardRank}`);
+                            if (result.weeklyCompleted) addLog('🍕 Weekly recipe challenge completed!');
+                            if (result.achievementsClaimed.length > 0) {
+                                const names = ['Perfect Run', 'Trap Master', 'Fever God', 'Iron Chef'];
+                                result.achievementsClaimed.forEach(id => addLog(`🏅 Badge earned: ${names[id] ?? id}`));
+                            }
+                            if (result.errors.length > 0) {
+                                result.errors.forEach(e => console.warn('[StellarContract]', e));
                             }
 
+                            // Save tx hash for Stellar Explorer link
+                            if (result.txHash) {
+                                setTxHash(result.txHash);
+                                addLog(`🔗 TX: ${result.txHash}`);
+                            }
+
+                            // Read the score from the contract — this is the authoritative on-chain value
+                            setStatus('Reading on-chain score...');
+                            const sessionData = await StellarContractService.getSession(userAddress, sessionStats.sessionId);
+                            const confirmedScore = sessionData?.score ?? verifiedScore;
+                            setOnChainScore(confirmedScore);
+                            addLog(`✅ On-chain score confirmed: ${confirmedScore}`);
+
+                            // Refresh leaderboard now that the new score is recorded
+                            loadLeaderboard();
+
+                            addLog(`SUCCESS! Score verified on-chain.`);
+
+                            setStatus(''); // Clear submitting overlay
                             setProofStatus('success');
 
-                            // Emit the original callback after a small delay to show the success state
                             setTimeout(() => {
-                                setIsVerifying(false);
-                                onGameComplete(finalScore);
+                                setIsVerifying(false); // Close verification overlay
+
+                                // Build TxRecord list for this game's popup
+                                const gameTxs: TxRecord[] = [];
+                                if (result.txHash) {
+                                    gameTxs.push({ hash: result.txHash, type: 'Score Submit', score: confirmedScore, timestamp: Date.now() });
+                                }
+
+                                if (gameTxs.length > 0) {
+                                    // Persist to history (max 20 entries)
+                                    setTxHistory(prev => {
+                                        const updated = [...gameTxs, ...prev].slice(0, 20);
+                                        localStorage.setItem('gp_tx_history', JSON.stringify(updated));
+                                        return updated;
+                                    });
+                                    openTxPopup(gameTxs, confirmedScore);
+                                } else {
+                                    onGameComplete(confirmedScore);
+                                }
                             }, 2000);
 
                         } catch (err: any) {
                             console.error("[GuitarPizza] Verification failed:", err);
-                            setStatus(`Security Alert: ${err.message}`); // Show error on HUD
+                            setStatus(''); // Clear the submitting overlay on error too!
+                            let errorMessage = "Verification Failed";
+
+                            // Parse specific error types
+                            if (err.message) {
+                                if (err.message.includes("User declined") || err.message.includes("Rejected")) {
+                                    errorMessage = "Transaction Rejected by User";
+                                } else if (err.message.includes("HostError") || err.message.includes("UnreachableCodeReached")) {
+                                    errorMessage = "Contract Error: Level Not Configured?";
+                                } else if (err.message.includes("tx_bad_seq")) {
+                                    errorMessage = "Sequence Error: Refresh & Retry";
+                                } else {
+                                    // Clean up long stack traces if present
+                                    errorMessage = err.message.split('\n')[0];
+                                }
+                            }
+
+                            setStatus(errorMessage);
                             setProofStatus('failed');
-                            setTimeout(() => setIsVerifying(false), 4000);
+                            addLog(`[ERROR] ${errorMessage}`);
+
+                            // Still show full error in console for debugging, but clean UI
+                            setTimeout(() => {
+                                setIsVerifying(false); // Close verification overlay
+                                setStatus(''); // Clear persistent error overlay
+                            }, 4000);
                         }
                     });
 
                     if (typeof result === 'function') {
-                        // Old engine version fallback
                         engineRef.current = { cleanup: result, setVolume: () => { } };
                     } else {
-                        // New engine version
                         engineRef.current = result;
                     }
 
-                    setStatus(''); // Clear status on success
-                    console.log("[GuitarPizza] Game initialized successfully.");
+                    setStatus('');
+                    addLog("[GuitarPizza] Game initialized successfully.");
                 } catch (e) {
                     console.error("[GuitarPizza] Error during window.initGuitarPizza:", e);
                     setError("Game engine failed to start.");
+                    addLog(`[ERROR] Engine start failed: ${e}`);
                 }
             } else {
                 console.error("[GuitarPizza] window.initGuitarPizza is still undefined after loading scripts.");
                 setError("Game engine not found.");
+                addLog("[ERROR] window.initGuitarPizza undefined");
             }
         };
 
-        initGame();
+        const timer = setTimeout(initGame, 100); // Small delay to ensure render
 
         return () => {
-            console.log("[GuitarPizza] Cleanup called.");
-            // Cleanup game engine
+            clearTimeout(timer);
+            addLog("[GuitarPizza] Cleanup called.");
             if (engineRef.current) {
                 engineRef.current.cleanup();
                 engineRef.current = null;
             }
-            // Remove CSS
+            // Clear TX popup timers if component unmounts mid-countdown
+            if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+            if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
             const link = document.getElementById('mafia-theme-css');
             if (link) {
                 link.remove();
             }
         };
-    }, []); // userAddress is a dependency but we only want to run this ONCE on mount for now to avoid re-init loops
+    }, []);
 
     const handleBackToLobby = () => {
-        // Hide results
         const results = document.getElementById('results');
         if (results) results.style.display = 'none';
 
-        // Show overlay (Engine also handles this, but we force it to sync React state)
         const overlay = document.getElementById('overlay');
         if (overlay) overlay.style.display = 'flex';
 
-        // Reset view
         setView('lobby');
-
-        // Optional: Trigger engine reset if needed, but engine has its own listener on this ID
+        loadLeaderboard(); // refresh after returning from a game
     };
 
     return (
@@ -259,20 +505,59 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative' }}>
                 <div id="game-device-screen" className="game-container game-frame" ref={containerRef} style={{ width: 'auto', height: '100%', aspectRatio: '9/16', maxHeight: '100%', position: 'relative', overflow: 'hidden', border: '8px solid #000', borderRadius: '20px', boxShadow: '0 0 50px rgba(0,0,0,0.5)' }}>
 
-                    {/* Status & Errors */}
-                    {status && (
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', zIndex: 1000, textAlign: 'center' }}>
-                            <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--color-accent)' }}>{status}</h2>
-                        </div>
-                    )}
-                    {error && (
-                        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'var(--color-error)', zIndex: 1000, textAlign: 'center', background: 'rgba(0,0,0,0.8)', padding: '20px', borderRadius: 'var(--radius-md)' }}>
-                            <h2>Error</h2>
-                            <p>{error}</p>
+
+
+                    {/* Status & Errors Overlay */}
+                    {(status || error) && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 2000,
+                            textAlign: 'center',
+                            width: '80%',
+                            maxWidth: '400px',
+                            pointerEvents: 'none' // Let clicks pass through if needed, though usually blocking is fine
+                        }}>
+                            <div style={{
+                                background: 'rgba(0, 0, 0, 0.85)',
+                                backdropFilter: 'blur(10px)',
+                                padding: '1.5rem',
+                                borderRadius: '16px',
+                                border: '2px solid var(--color-accent)',
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
+                                {status && (
+                                    <h2 style={{
+                                        fontFamily: 'var(--font-display)',
+                                        color: 'var(--color-accent)',
+                                        fontSize: '1.4rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.1em',
+                                        margin: 0
+                                    }}>
+                                        {status}
+                                    </h2>
+                                )}
+                                {error && (
+                                    <p style={{
+                                        color: 'var(--color-error)',
+                                        fontSize: '0.9rem',
+                                        margin: 0,
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {error}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     )}
 
-                    {/* Settings Overlay */}
                     {/* Settings Overlay */}
                     {showSettings && (
                         <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
@@ -319,6 +604,65 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                             {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
                                         </button>
                                     </div>
+
+                                    {/* ── MY TXs HISTORY ───────────────────────────────── */}
+                                    <div style={{ marginBottom: '1rem', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                                            <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>⛓ My TXs</span>
+                                            <span style={{ fontSize: '0.75rem', color: '#999' }}>({txHistory.length})</span>
+                                        </div>
+
+                                        {txHistory.length === 0 ? (
+                                            <div style={{ textAlign: 'center', color: '#bbb', fontSize: '0.85rem', padding: '1rem', background: '#f9f9f9', borderRadius: '8px', border: '1px dashed #ddd' }}>
+                                                No transactions yet. Play a game to start!
+                                            </div>
+                                        ) : (
+                                            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e5e5e5' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                                    <thead>
+                                                        <tr style={{ background: '#f0f0f0', color: '#555', textAlign: 'left' }}>
+                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: '600' }}>Type</th>
+                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: '600', textAlign: 'right' }}>Score</th>
+                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: '600' }}>Date</th>
+                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: '600' }}>TX</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {txHistory.map((tx, i) => {
+                                                            const shortHash = `${tx.hash.slice(0, 6)}…${tx.hash.slice(-6)}`;
+                                                            const d = new Date(tx.timestamp);
+                                                            const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+                                                            return (
+                                                                <tr key={i} style={{ borderTop: '1px solid #eee', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                                                    <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
+                                                                        {tx.type}
+                                                                    </td>
+                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#555', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                                                        {tx.score.toLocaleString()}
+                                                                    </td>
+                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
+                                                                        {dateStr}
+                                                                    </td>
+                                                                    <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap' }}>
+                                                                        <a
+                                                                            href={`${EXPLORER_BASE}/${tx.hash}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            style={{ color: '#2980b9', textDecoration: 'none', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                                                            title={tx.hash}
+                                                                        >
+                                                                            {shortHash} 🔗
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+
                                 </div>
 
                                 <button className="close-btn" onClick={() => setShowSettings(false)} style={{ width: '100%' }}>BACK TO COOKING</button>
@@ -366,7 +710,40 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 <h1 className="main-logo">RHYTHM<br />SLICE</h1>
                                 <p className="subtitle">PIZZA KITCHEN</p>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '2rem', width: '80%', maxWidth: '300px' }}>
+
+                            {/* ── TOP SCORES (from zk-leaderboard contract) ── */}
+                            <div style={{ width: '85%', maxWidth: '300px', marginTop: '1rem' }}>
+                                {leaderboardLoading ? (
+                                    <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', padding: '0.5rem' }}>
+                                        Loading leaderboard...
+                                    </div>
+                                ) : leaderboard.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '0.6rem', background: 'rgba(0,0,0,0.35)', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.15)' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>No scores yet on-chain.</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--ph-gold)', marginTop: '0.2rem' }}>Be the first! 🍕</div>
+                                    </div>
+                                ) : (
+                                    <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0.7rem', background: 'rgba(0,0,0,0.4)', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                                            <span>⛓ Top Scores — On-Chain</span>
+                                            <button onClick={loadLeaderboard} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '0.65rem', padding: 0 }}>↺</button>
+                                        </div>
+                                        {leaderboard.map((entry, i) => {
+                                            const shortAddr = `${entry.player.slice(0, 5)}…${entry.player.slice(-4)}`;
+                                            const medals = ['🥇', '🥈', '🥉', '  4.', '  5.'];
+                                            return (
+                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0.7rem', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                                                    <span style={{ fontSize: '0.8rem' }}>{medals[i] ?? `${i + 1}.`}</span>
+                                                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', flex: 1, marginLeft: '0.4rem' }}>{shortAddr}</span>
+                                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>{entry.score.toLocaleString()}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem', width: '80%', maxWidth: '300px' }}>
                                 <button id="startBtn"
                                     onClick={handleStartGame}
                                     disabled={!engineRef.current}
@@ -380,9 +757,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <span className="btn-icon">🛒</span>
                                         <span className="btn-text">MARKET</span>
                                     </button>
-                                    <button className="secondary-btn lobby-nav-btn" onClick={() => setView('friends')}>
-                                        <span className="btn-icon">👥</span>
-                                        <span className="btn-text">CREW</span>
+                                    <button className="secondary-btn lobby-nav-btn" onClick={() => { loadLeaderboard(); setView('leaderboard'); }}>
+                                        <span className="btn-icon">🏆</span>
+                                        <span className="btn-text">LEADERBOARD</span>
                                     </button>
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => setShowSettings(true)}>
                                         <span className="btn-icon">⚙️</span>
@@ -435,33 +812,81 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             </div>
                         )}
 
-                        {view === 'friends' && (
+                        {view === 'leaderboard' && (
                             <div className="modal-backdrop" onClick={() => setView('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                                     <div className="modal-header">
                                         <div className="back-btn-circle" onClick={() => setView('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title">THE CREW</h2>
-                                        <div style={{ width: 40 }}></div>
+                                        <h2 className="modal-title">🏆 LEADERBOARD</h2>
+                                        <button
+                                            onClick={loadLeaderboard}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', width: 40, color: '#666' }}
+                                            title="Refresh"
+                                        >↺</button>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%', marginBottom: '1rem', flex: 1, overflowY: 'auto' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', padding: '0.8rem', borderRadius: '8px', border: '1px solid #eee' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd' }}></div>
-                                                <span style={{ fontWeight: 'bold' }}>Tony Slicer</span>
+
+                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
+                                        {leaderboardLoading ? (
+                                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+                                                <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
+                                                Loading on-chain scores...
                                             </div>
-                                            <span style={{ color: '#2ecc71', fontSize: '0.8rem', fontWeight: 'bold' }}>Online</span>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', padding: '0.8rem', borderRadius: '8px', border: '1px solid #eee' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#ddd' }}></div>
-                                                <span style={{ fontWeight: 'bold' }}>Vinnie Kneads</span>
+                                        ) : leaderboard.length === 0 ? (
+                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>No scores yet!</div>
+                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>Be the first chef on-chain.</div>
+                                                <button
+                                                    className="primary-btn"
+                                                    style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
+                                                    onClick={() => { setView('lobby'); handleStartGame(); }}
+                                                >🔥 FIRE UP OVEN</button>
                                             </div>
-                                            <span style={{ color: '#95a5a6', fontSize: '0.8rem' }}>Offline 2h</span>
-                                        </div>
+                                        ) : (
+                                            <div style={{ width: '100%' }}>
+                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
+                                                    ⛓ Scores verified on Stellar Testnet
+                                                </div>
+                                                {leaderboard.map((entry, i) => {
+                                                    const medals = ['🥇', '🥈', '🥉'];
+                                                    const medal = medals[i] ?? `${i + 1}.`;
+                                                    const shortAddr = `${entry.player.slice(0, 6)}…${entry.player.slice(-4)}`;
+                                                    const isMe = entry.player === userAddress;
+                                                    return (
+                                                        <div key={i} style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.75rem',
+                                                            padding: '0.75rem 0.5rem',
+                                                            borderBottom: '1px solid #eee',
+                                                            background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
+                                                            borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
+                                                        }}>
+                                                            <span style={{ fontSize: '1.3rem', minWidth: '2rem', textAlign: 'center' }}>{medal}</span>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div style={{ fontSize: '0.85rem', fontWeight: isMe ? 'bold' : 'normal', fontFamily: 'monospace', color: isMe ? '#27ae60' : '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {shortAddr}{isMe ? ' (you)' : ''}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#c0932f', whiteSpace: 'nowrap' }}>
+                                                                {entry.score.toLocaleString()} pts
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
-                                    <button className="secondary-btn" style={{ width: '100%', marginBottom: '0.5rem' }}>+ INVITE A FRIEND</button>
+
+                                    {leaderboard.length > 0 && (
+                                        <button
+                                            className="primary-btn"
+                                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
+                                            onClick={() => { setView('lobby'); handleStartGame(); }}
+                                        >🔥 CHALLENGE THE BOARD</button>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -546,41 +971,173 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                     </div>
 
-                    <div id="results" style={{ display: 'none' }}>
-                        <h1>SERVICE ENDED</h1>
-                        <div className="grade" id="resGrade">A</div>
-                        <div className="stat-row">SCORE: <span id="resScore">0</span></div>
-                        <button id="restartBtn">COOK AGAIN</button>
-                        <button id="backToLobbyBtn" onClick={handleBackToLobby}>EXIT KITCHEN</button>
+                    <div id="results" style={{
+                        display: 'none',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        zIndex: 20,
+                        background: 'rgba(0,0,0,0.6)',
+                        backdropFilter: 'blur(4px)',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        {/* Popup Card */}
+                        <div style={{
+                            width: '85%',
+                            maxWidth: '400px',
+                            minHeight: '500px',
+                            // Improved visibility: Lighter gradient at top to show image better
+                            backgroundImage: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.85) 70%), url(${resultParams.bgImage})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            borderRadius: '20px',
+                            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                            border: '4px solid var(--color-accent)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '2rem',
+                            color: 'white',
+                            position: 'relative',
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.4)', padding: '0.5rem 1rem', borderRadius: '10px', backdropFilter: 'blur(2px)' }}>
+                                <h1 style={{ fontFamily: 'var(--font-title)', fontSize: '2.5rem', margin: 0, textShadow: '2px 2px 4px black' }}>SERVICE ENDED</h1>
+                                <div style={{ width: '60px', height: '4px', background: 'var(--ph-gold)', margin: '0.5rem auto' }}></div>
+                            </div>
+
+                            <div style={{ textAlign: 'center' }}>
+                                <div className="grade" id="resGrade" style={{ fontSize: '7rem', fontWeight: 'bold', color: 'var(--ph-gold)', textShadow: '0 0 20px rgba(255,215,0,0.5)', lineHeight: 1 }}>S</div>
+                                <div className="stat-row" style={{ fontSize: '1.2rem', marginTop: '0.5rem', background: 'rgba(0,0,0,0.6)', padding: '0.2rem 1rem', borderRadius: '20px' }}>SCORE: <span id="resScore">0</span></div>
+                                {/* On-chain verified score — shown once confirmed from contract */}
+                                {onChainScore !== null && (
+                                    <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', background: 'rgba(39,174,96,0.2)', border: '1px solid #27ae60', borderRadius: '12px', padding: '0.2rem 0.8rem', color: '#27ae60', display: 'inline-block' }}>
+                                        ✅ On-chain: {onChainScore.toLocaleString()} pts
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Verification Status or Actions */}
+                            {isVerifying ? (
+                                <div style={{
+                                    background: 'rgba(0,0,0,0.8)',
+                                    padding: '1rem',
+                                    borderRadius: '10px',
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    border: '1px solid var(--ph-gold)'
+                                }}>
+                                    {proofStatus === 'generating' ? (
+                                        <>
+                                            <p style={{ color: 'var(--ph-gold)', fontWeight: 'bold', marginBottom: '0.5rem' }}>GENERATING PROOF...</p>
+                                            <div style={{ fontSize: '0.8rem', color: '#ccc' }}>Securing score with Zero-Knowledge</div>
+                                        </>
+                                    ) : proofStatus === 'success' ? (
+                                        <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '1rem' }}>
+                                            ✓ VERIFIED & SEALED ON-CHAIN
+                                        </div>
+                                    ) : (
+                                        <div style={{ color: '#e74c3c' }}>Verification Failed</div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
+                                    <button id="restartBtn" className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>COOK AGAIN</button>
+                                    <button id="backToLobbyBtn" onClick={handleBackToLobby} className="secondary-btn" style={{ width: '100%', padding: '0.8rem', opacity: 0.9 }}>EXIT KITCHEN</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* ZK VERIFICATION OVERLAY */}
-                    {isVerifying && (
-                        <div className="modal-backdrop" style={{ zIndex: 100, display: 'flex', flexDirection: 'column', color: 'white' }}>
-                            <div className="modal-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem' }}>
-                                {proofStatus === 'generating' ? (
-                                    <>
-                                        <Loader2 className="animate-spin mb-4" size={60} color="var(--ph-gold)" />
-                                        <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '1.8rem', color: '#333' }}>GENERATING PROOF</h2>
-                                        <p style={{ color: '#666', textAlign: 'center', marginTop: '1rem' }}>Securing your score with Zero-Knowledge magic...</p>
-                                    </>
-                                ) : proofStatus === 'success' ? (
-                                    <>
-                                        <div style={{ background: 'rgba(39, 174, 96, 0.1)', padding: '2rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
-                                            <ShieldCheck size={80} color="#27ae60" />
+                    {/* TX Sealed Pop-up — appears after on-chain submission, auto-closes in 8s */}
+                    {showTxPopup && (
+                        <div style={{
+                            position: 'absolute', top: 0, left: 0,
+                            width: '100%', height: '100%',
+                            zIndex: 30,
+                            background: 'rgba(0,0,0,0.75)',
+                            backdropFilter: 'blur(6px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <div style={{
+                                background: 'linear-gradient(160deg, #1a1a2e 0%, #0f0f1a 100%)',
+                                border: '2px solid #27ae60',
+                                borderRadius: '16px',
+                                padding: '1.5rem',
+                                width: '88%',
+                                maxWidth: '360px',
+                                boxShadow: '0 0 40px rgba(39,174,96,0.3)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1rem',
+                            }}>
+                                {/* Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
+                                            ⛓ SEALED ON STELLAR
                                         </div>
-                                        <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '1.8rem', color: '#333' }}>SCORE VERIFIED</h2>
-                                        <p style={{ color: '#27ae60', fontWeight: 'bold', marginTop: '0.5rem' }}>Submission valid & sealed.</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div style={{ background: 'rgba(192, 57, 43, 0.1)', padding: '2rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
-                                            <VolumeX size={80} color="#c0392b" />
+                                        <div style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '2px' }}>
+                                            Score verified on-chain
                                         </div>
-                                        <h2 style={{ fontFamily: 'var(--font-title)', fontSize: '1.8rem', color: '#333' }}>VERIFICATION FAILED</h2>
-                                        <p style={{ color: '#c0392b', marginTop: '1rem' }}>Something went wrong with the recipe.</p>
-                                    </>
-                                )}
+                                    </div>
+                                    <button
+                                        onClick={closeTxPopup}
+                                        style={{ background: 'none', border: '1px solid #555', borderRadius: '50%', width: 28, height: 28, color: '#aaa', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                    >✕</button>
+                                </div>
+
+                                {/* TX rows */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {popupTxs.map((tx, i) => {
+                                        const shortHash = `${tx.hash.slice(0, 8)}…${tx.hash.slice(-6)}`;
+                                        return (
+                                            <div key={i} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                background: 'rgba(39,174,96,0.08)',
+                                                border: '1px solid rgba(39,174,96,0.3)',
+                                                borderRadius: '8px',
+                                                padding: '0.5rem 0.75rem',
+                                                gap: '0.5rem',
+                                            }}>
+                                                <div>
+                                                    <div style={{ color: '#27ae60', fontSize: '0.78rem', fontWeight: 'bold' }}>✅ {tx.type}</div>
+                                                    <div style={{ color: '#888', fontSize: '0.7rem', fontFamily: 'monospace' }}>{shortHash}</div>
+                                                </div>
+                                                <a
+                                                    href={`${EXPLORER_BASE}/${tx.hash}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ color: '#27ae60', fontSize: '1.2rem', textDecoration: 'none', flexShrink: 0 }}
+                                                    title="View on Stellar Explorer"
+                                                >🔗</a>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Actions */}
+                                <button
+                                    onClick={closeTxPopup}
+                                    className="primary-btn"
+                                    style={{ width: '100%', padding: '0.8rem', fontSize: '1rem' }}
+                                >
+                                    🍕 COOK AGAIN
+                                </button>
+
+                                {/* Countdown */}
+                                <div style={{ textAlign: 'center', color: '#555', fontSize: '0.72rem' }}>
+                                    Auto-closing in {popupCountdown}s
+                                </div>
                             </div>
                         </div>
                     )}

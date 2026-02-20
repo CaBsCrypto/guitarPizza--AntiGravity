@@ -3,6 +3,17 @@ import { useWalletStore } from '../store/walletSlice';
 import { devWalletService, DevWalletService } from '../services/devWalletService';
 import { NETWORK, NETWORK_PASSPHRASE } from '../utils/constants';
 import type { ContractSigner } from '../types/signer';
+import { StellarWalletsKit } from '@creit-tech/stellar-wallets-kit/sdk';
+import { defaultModules } from '@creit-tech/stellar-wallets-kit/modules/utils';
+import { Networks } from '@creit-tech/stellar-wallets-kit/types';
+
+// Helper to ensure kit is initialized if needed (though usually initialized by WalletConnect)
+function resolveNetwork(passphrase?: string): Networks {
+  if (passphrase && Object.values(Networks).includes(passphrase as Networks)) {
+    return passphrase as Networks;
+  }
+  return NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+}
 
 export function useWallet() {
   const {
@@ -95,7 +106,7 @@ export function useWallet() {
    * Returns functions that the Stellar SDK TS bindings can use for signing
    */
   const getContractSigner = useCallback((): ContractSigner => {
-    if (!isConnected || !publicKey || !walletType) {
+    if (!isConnected || !publicKey) {
       throw new Error('Wallet not connected');
     }
 
@@ -103,10 +114,52 @@ export function useWallet() {
       // Dev wallet uses the dev wallet service's signer
       return devWalletService.getSigner();
     } else {
-      // For real wallet integration, implement Freighter or other wallet signing here
-      throw new Error('Real wallet signing not yet implemented. Use dev wallet for now.');
+      // Real wallet signing using StellarWalletsKit
+      return {
+        signTransaction: async (
+          xdr: string,
+          opts?: { networkPassphrase?: string; address?: string; submit?: boolean; submitUrl?: string }
+        ) => {
+          // Ensure kit uses current network
+          const currentPassphrase = opts?.networkPassphrase || networkPassphrase || NETWORK_PASSPHRASE;
+          // Best effort init in case it wasn't
+          StellarWalletsKit.init({
+            modules: defaultModules(),
+            network: resolveNetwork(currentPassphrase)
+          });
+
+          const result = await StellarWalletsKit.signTransaction(xdr, {
+            networkPassphrase: currentPassphrase,
+            address: opts?.address || publicKey,
+            submit: opts?.submit,
+            submitUrl: opts?.submitUrl,
+          });
+
+          return {
+            signedTxXdr: result.signedTxXdr || xdr,
+            signerAddress: result.signerAddress || publicKey,
+          };
+        },
+        signAuthEntry: async (authEntry: string, opts?: { networkPassphrase?: string; address?: string }) => {
+          const currentPassphrase = opts?.networkPassphrase || networkPassphrase || NETWORK_PASSPHRASE;
+          StellarWalletsKit.init({
+            modules: defaultModules(),
+            network: resolveNetwork(currentPassphrase)
+          });
+
+          const result = await StellarWalletsKit.signAuthEntry(authEntry, {
+            networkPassphrase: currentPassphrase,
+            address: opts?.address || publicKey,
+          });
+
+          return {
+            signedAuthEntry: result.signedAuthEntry || authEntry,
+            signerAddress: result.signerAddress || publicKey,
+          };
+        }
+      };
     }
-  }, [isConnected, publicKey, walletType]);
+  }, [isConnected, publicKey, walletType, networkPassphrase]);
 
   /**
    * Check if dev mode is available

@@ -7,6 +7,21 @@ export class MockStellarService {
     }
 
     /**
+     * Start a game session (Mock).
+     */
+    static async startGameSession(
+        userAddress: string,
+        sessionId: number
+    ): Promise<{ success: boolean; message: string }> {
+        console.log(`[MockStellar] Starting game session: ${sessionId} for ${userAddress}`);
+        await this.delay();
+
+        // In a real implementation, this would call the mock-game-hub contract.
+        // For now, we simulate success to allow the game to proceed.
+        return { success: true, message: "Session started on Mock Hub" };
+    }
+
+    /**
      * Submit a verified score to the mock contract.
      */
     static async submitVerifiedScore(

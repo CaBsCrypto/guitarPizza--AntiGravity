@@ -84,8 +84,9 @@ bun run publish my-game --build       # Export + build production frontend
 - Dev wallets are generated during `bun run setup` and stored in the root `.env`.
 - Production builds read runtime config from `public/game-studio-config.js`.
 
-Interface for game hub:
-```
+### Game Hub Interface
+
+```rust
 #[contractclient(name = "GameHubClient")]
 pub trait GameHub {
     fn start_game(
@@ -105,6 +106,107 @@ pub trait GameHub {
     );
 }
 ```
+
+### Single-Player pattern: La Casa vs Player
+
+For single-player games like Guitar Pizza, use the **La Casa** (house) pattern:
+
+- `player1` = admin / contract address (La Casa — the house)
+- `player2` = the human player address
+- `player1_points` = score goal the human must reach
+- `end_game(session_id, player1_won)`:
+  - `player1_won = false` → human beats La Casa ✅
+  - `player1_won = true`  → La Casa wins (player didn't meet the goal)
+
+---
+
+## Guitar Pizza — ZK Architecture
+
+### Deployed Contracts (Stellar Testnet)
+
+| Contract | Address |
+|---|---|
+| Game Hub | `CB4VZAT2U3UC6XFK3N23SKRF2NDCMP3QHJYMCHHFMZO7MRQO6DQ2EMYG` |
+| guitar-pizza | `CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH` |
+| zk-leaderboard | `CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV` |
+| daily-recipe | `CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN` |
+| achievement-vault | `CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC` |
+
+### ZK Proof Flow
+
+```
+Player finishes session
+        │
+        ▼
+[Browser] ProofGenerator.generateSessionReceipt(stats)
+  → Builds 164-byte receipt: journal(100 bytes) + seal(64 bytes)
+  → Journal encodes: level_id, score, song_hash, hits, traps, fever, pizzas,
+                     keccak256(player_addr), session_id
+        │
+        ▼
+[Browser] StellarContractService.postGameFlow(player, stats, signer)
+  1. guitar-pizza.submit_score()  — verifies receipt, calls GameHub.end_game()
+                                    score ≥ goal → player wins; else La Casa wins
+  2. zk-leaderboard.submit_score() — ZK-gated top-10 ranking
+  3. daily-recipe.claim_weekly()   — claim weekly pizza challenge badge
+  4. achievement-vault.claim_achievement() — mint PerfectRun/TrapMaster/FeverGod/IronChef
+        │
+        ▼
+[Soroban] On-chain state updated, events emitted
+```
+
+### RISC Zero Journal Layout
+
+| Bytes | Field | Type |
+|---|---|---|
+| 0–3 | level_id | u32 BE |
+| 4–7 | score | u32 BE |
+| 8–39 | song_hash | [u8;32] |
+| 40–43 | perfect_hits | u32 BE |
+| 44–47 | total_hits | u32 BE |
+| 48–51 | traps_avoided | u32 BE |
+| 52–55 | total_traps | u32 BE |
+| 56–59 | fever_seconds | u32 BE |
+| 60–63 | pizzas_completed | u32 BE |
+| 64–95 | keccak256(player_addr) | [u8;32] |
+| 96–99 | session_id | u32 BE |
+| 100–163 | seal (ZK proof) | [u8;64] |
+
+### Noir ZK Circuit
+
+The circuit lives in `circuits/guitar_pizza_proof/src/main.nr` and enforces:
+
+**Private inputs:** score, perfect_hits, total_hits, total_notes, traps_avoided, total_traps, fever_seconds, pizzas_completed
+
+**Public inputs:** level_id, session_id, score_goal
+
+**Constraints:**
+- `total_hits ≤ total_notes` (can't hit more notes than exist)
+- `perfect_hits ≤ total_hits` (can't have impossible accuracy)
+- `traps_avoided ≤ total_traps` (can't dodge more traps than spawned)
+- `fever_seconds ≤ 300` (5-minute level cap)
+- `pizzas_completed ≤ 20` (session cap)
+- `score == hits×100 + perfects×50 + fever×200 + pizzas×500` (score integrity)
+- `score ≥ score_goal` (victory condition encoded in proof)
+
+**Compile & prove:**
+```bash
+cd circuits/guitar_pizza_proof
+nargo compile
+bb write_vk_ultra_honk -b target/guitar_pizza_proof.json -o target/vk
+bb prove_ultra_honk -b target/guitar_pizza_proof.json -w target/witness.gz -o target/proof
+```
+
+### Achievements
+
+| ID | Name | Condition |
+|---|---|---|
+| 0 | PerfectRun | perfect_hits == total_hits AND total_hits > 0 |
+| 1 | TrapMaster | traps_avoided == total_traps AND total_traps > 0 |
+| 2 | FeverGod | fever_seconds ≥ 30 |
+| 3 | IronChef | pizzas_completed ≥ 5 |
+
+---
 
 ## Studio Reference
 

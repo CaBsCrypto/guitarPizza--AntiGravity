@@ -1,6 +1,5 @@
 [workspace]
 resolver = "2"
-version = "0.1.2"
 members = [
   "contracts/mock-game-hub",
   "contracts/twenty-one",
@@ -8,6 +7,9 @@ members = [
   "contracts/dice-duel",
   "contracts/guitar-pizza",
   "contracts/pizza-recipe",
+  "contracts/zk-leaderboard",
+  "contracts/daily-recipe",
+  "contracts/achievement-vault",
 ]
 
 [workspace.dependencies]

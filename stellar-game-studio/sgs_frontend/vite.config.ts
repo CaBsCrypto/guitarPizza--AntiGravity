@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
-  base: "/guitarPizza--AntiGravity/",
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? "/guitarPizza--AntiGravity/" : "/",
   plugins: [react()],
   // Load .env files from the parent directory (repo root)
   envDir: '..',
@@ -34,4 +34,4 @@ export default defineConfig({
     port: 3000,
     open: true
   }
-})
+}))
