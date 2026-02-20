@@ -7,6 +7,18 @@ import { getRuntimeConfig } from './runtimeConfig';
 
 const runtimeConfig = getRuntimeConfig();
 
+// ─── Testnet contract IDs (hardcoded fallback for production/GitHub Pages) ──
+const TESTNET_CONTRACT_IDS: Record<string, string> = {
+  'guitar-pizza':      'CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH',
+  'zk-leaderboard':    'CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV',
+  'daily-recipe':      'CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN',
+  'achievement-vault': 'CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC',
+  'mock-game-hub':     '',
+  'twenty-one':        'CBF4YBMZRCGBSRJRANL6T6NKKF7SQDX6KYDBD4UYYEEEYGN56ULRIL5X',
+  'number-guess':      'CDEHY5HFXD5L776YOVKKX6KG5IGKNE7ZMR46E4KGM2CBPGO6D27BXEJL',
+  'dice-duel':         'CC7WRKO7VCA36V3PLYEKXECIN7Q53VIBURVPSBBVYO34QGTK43YEM5OO',
+};
+
 export const SOROBAN_RPC_URL =
   runtimeConfig?.rpcUrl || import.meta.env.VITE_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org';
 export const RPC_URL = SOROBAN_RPC_URL; // Alias for compatibility
@@ -26,7 +38,7 @@ export function getContractId(crateName: string): string {
   const runtimeId = runtimeConfig?.contractIds?.[crateName];
   if (runtimeId) return runtimeId;
   const env = import.meta.env as unknown as Record<string, string>;
-  return env[contractEnvKey(crateName)] || '';
+  return env[contractEnvKey(crateName)] || TESTNET_CONTRACT_IDS[crateName] || '';
 }
 
 export function getAllContractIds(): Record<string, string> {
@@ -48,6 +60,13 @@ export function getAllContractIds(): Record<string, string> {
     const crateName = envKey.toLowerCase().replace(/_/g, '-');
     if (!out[crateName]) {
       out[crateName] = value;
+    }
+  }
+
+  // Fallback: hardcoded testnet IDs for production (GitHub Pages)
+  for (const [crateName, id] of Object.entries(TESTNET_CONTRACT_IDS)) {
+    if (!out[crateName] && id) {
+      out[crateName] = id;
     }
   }
 
