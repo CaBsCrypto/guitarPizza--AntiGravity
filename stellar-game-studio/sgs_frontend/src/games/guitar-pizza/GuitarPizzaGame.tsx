@@ -304,9 +304,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             const fever = engineStats.feverSeconds ?? 0;
                             const pizzas = engineStats.pizzasCompleted ?? 0;
 
-                            // Verified score: the score the Noir circuit can prove.
-                            // Formula must match circuits/guitar_pizza_proof/src/main.nr
-                            const verifiedScore = (hits * 100) + (perfects * 50) + (fever * 200) + (pizzas * 500);
+                            // Use the engine's final score directly — it is the authoritative value
+                            // the player sees on screen. The ZK stats are kept for the receipt/proof
+                            // structure but the score field is taken from the engine to avoid
+                            // any mismatch between the recalculation formula and the actual gameplay.
+                            const verifiedScore = finalScore;
                             addLog(`[GuitarPizza] Engine score: ${finalScore} | ZK-verified score: ${verifiedScore}`);
                             addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
 
