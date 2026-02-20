@@ -122,9 +122,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
         try {
             const entries = await StellarContractService.getLeaderboard(userAddress, 1);
             const mapped = (entries as any[]).slice(0, 5).map((e: any, i: number) => ({
-                rank:   i + 1,
+                rank: i + 1,
                 player: String(e.player ?? ''),
-                score:  Number(e.score ?? 0),
+                score: Number(e.score ?? 0),
             }));
             setLeaderboard(mapped);
         } catch {
@@ -295,10 +295,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             // 2. Build session stats from input log + final score
                             // The engine now attaches stats to inputLog.stats (fixed)
                             const engineStats = (inputLog as any)?.stats ?? {};
-                            const hits     = engineStats.totalHits       ?? 0;
-                            const perfects = engineStats.perfectHits     ?? 0;
-                            const fever    = engineStats.feverSeconds    ?? 0;
-                            const pizzas   = engineStats.pizzasCompleted ?? 0;
+                            const hits = engineStats.totalHits ?? 0;
+                            const perfects = engineStats.perfectHits ?? 0;
+                            const fever = engineStats.feverSeconds ?? 0;
+                            const pizzas = engineStats.pizzasCompleted ?? 0;
 
                             // Verified score: the score the Noir circuit can prove.
                             // Formula must match circuits/guitar_pizza_proof/src/main.nr
@@ -307,16 +307,16 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
 
                             const sessionStats: GameSessionStats = {
-                                levelId:         1,
-                                score:           verifiedScore,  // ← verified score goes on-chain
-                                sessionId:       onChainSessionIdRef.current,
-                                perfectHits:     perfects,
-                                totalHits:       hits,
-                                trapsAvoided:    engineStats.trapsAvoided    ?? 0,
-                                totalTraps:      engineStats.totalTraps      ?? 0,
-                                feverSeconds:    fever,
+                                levelId: 1,
+                                score: verifiedScore,  // ← verified score goes on-chain
+                                sessionId: onChainSessionIdRef.current,
+                                perfectHits: perfects,
+                                totalHits: hits,
+                                trapsAvoided: engineStats.trapsAvoided ?? 0,
+                                totalTraps: engineStats.totalTraps ?? 0,
+                                feverSeconds: fever,
                                 pizzasCompleted: pizzas,
-                                playerAddress:   userAddress,
+                                playerAddress: userAddress,
                             };
 
                             // 3. Generate RISC Zero receipt (164 bytes: journal + seal)
@@ -631,7 +631,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                         {txHistory.map((tx, i) => {
                                                             const shortHash = `${tx.hash.slice(0, 6)}…${tx.hash.slice(-6)}`;
                                                             const d = new Date(tx.timestamp);
-                                                            const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+                                                            const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
                                                             return (
                                                                 <tr key={i} style={{ borderTop: '1px solid #eee', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                                                                     <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
@@ -711,37 +711,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 <p className="subtitle">PIZZA KITCHEN</p>
                             </div>
 
-                            {/* ── TOP SCORES (from zk-leaderboard contract) ── */}
-                            <div style={{ width: '85%', maxWidth: '300px', marginTop: '1rem' }}>
-                                {leaderboardLoading ? (
-                                    <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', padding: '0.5rem' }}>
-                                        Loading leaderboard...
-                                    </div>
-                                ) : leaderboard.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '0.6rem', background: 'rgba(0,0,0,0.35)', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.15)' }}>
-                                        <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>No scores yet on-chain.</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--ph-gold)', marginTop: '0.2rem' }}>Be the first! 🍕</div>
-                                    </div>
-                                ) : (
-                                    <div style={{ background: 'rgba(0,0,0,0.5)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0.7rem', background: 'rgba(0,0,0,0.4)', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                                            <span>⛓ Top Scores — On-Chain</span>
-                                            <button onClick={loadLeaderboard} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '0.65rem', padding: 0 }}>↺</button>
-                                        </div>
-                                        {leaderboard.map((entry, i) => {
-                                            const shortAddr = `${entry.player.slice(0, 5)}…${entry.player.slice(-4)}`;
-                                            const medals = ['🥇', '🥈', '🥉', '  4.', '  5.'];
-                                            return (
-                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.35rem 0.7rem', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                                                    <span style={{ fontSize: '0.8rem' }}>{medals[i] ?? `${i + 1}.`}</span>
-                                                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', flex: 1, marginLeft: '0.4rem' }}>{shortAddr}</span>
-                                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>{entry.score.toLocaleString()}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
+                            {/* ── TOP SCORES REMOVED ── */}
+
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem', width: '80%', maxWidth: '300px' }}>
                                 <button id="startBtn"
