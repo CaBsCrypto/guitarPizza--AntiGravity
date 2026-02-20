@@ -272,4 +272,33 @@ verifier.verify(&image_id, &receipt); // panics on invalid proof
 
 ---
 
+
+---
+
+## 🛑 Deployment Troubleshooting & Lessons Learned
+
+(Bitacora for future agents)
+
+### 1. "Naked" Styles / 404 Assets on GitHub Pages
+**Symptom**: The app loads but looks unstyled, or images are missing when deployed to a subdirectory (e.g. `username.github.io/repo-name/`).
+**Cause**: The code uses absolute paths like `/assets/image.png`, which resolve to the root of the domain instead of the repo folder.
+**Fix**:
+- **Code**: Always prefix public assets with `import.meta.env.BASE_URL` in TS/JS files.
+- **Example**:
+  ```typescript
+  // BAD
+  img.src = '/game/assets/pic.jpg';
+  
+  // GOOD
+  const baseUrl = import.meta.env.BASE_URL;
+  img.src = `${baseUrl}game/assets/pic.jpg`.replace('//', '/');
+  ```
+- **CSS**: Use relative paths (`./image.png`) or ensure Vite injects the base tag correctly.
+
+### 2. Canvas Context Errors
+**Symptom**: "Canvas ref is null" in logs.
+**Fix**: Ensure `initGuitarPizza` is called only after the component mounts and the `<canvas>` element exists in the DOM. Use `useEffect` with a small timeout if necessary to strictly order initialization.
+
+---
+
 Built with ❤️ for **Stellar Hacks: ZK Gaming** | $10,000 Prize Pool

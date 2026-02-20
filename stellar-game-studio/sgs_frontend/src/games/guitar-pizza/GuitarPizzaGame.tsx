@@ -221,12 +221,15 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                 return;
             }
 
-            // Load CSS
+
+            // Load CSS with correct public path
+            const publicUrl = import.meta.env.BASE_URL; // e.g. /guitarPizza--AntiGravity/
+
             if (!document.getElementById('mafia-theme-css')) {
                 const link = document.createElement('link');
                 link.id = 'mafia-theme-css';
                 link.rel = 'stylesheet';
-                link.href = '/mafia-theme.css';
+                link.href = `${publicUrl}mafia-theme.css`.replace('//', '/');
                 document.head.appendChild(link);
             }
 
@@ -272,10 +275,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                         addLog(`GuitarPizza] Game complete. Score: ${finalScore}`);
 
                         // Randomly select defeat/result background (50/50 chance as requested)
-                        // Paths are relative to the public/game folder or absolute from root
+                        // Paths must be prefixed with publicUrl for proper deployment
+                        const publicUrl = import.meta.env.BASE_URL;
                         const defeatImages = [
-                            '/game/assets/decoracion/DerrotaMiedo.jpg',
-                            '/game/assets/decoracion/DerrotaAlCielo.jpg'
+                            `${publicUrl}game/assets/decoracion/DerrotaMiedo.jpg`.replace('//', '/'),
+                            `${publicUrl}game/assets/decoracion/DerrotaAlCielo.jpg`.replace('//', '/')
                         ];
                         const randomBg = defeatImages[Math.floor(Math.random() * defeatImages.length)];
                         setResultParams({ bgImage: randomBg });
