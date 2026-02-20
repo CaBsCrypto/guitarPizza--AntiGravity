@@ -7,8 +7,8 @@ target/
 # Deployment info
 deployment.json
 
-# Bindings
-bindings/
+# Bindings (tracked - needed for CI build)
+# bindings/
 
 # Environment
 .env
