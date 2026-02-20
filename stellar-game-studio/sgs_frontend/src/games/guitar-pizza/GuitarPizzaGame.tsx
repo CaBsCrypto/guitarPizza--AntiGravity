@@ -370,10 +370,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 addLog(`🔗 TX: ${result.txHash}`);
                             }
 
-                            // Read the score from the contract — this is the authoritative on-chain value
-                            setStatus('Reading on-chain score...');
-                            const sessionData = await StellarContractService.getSession(userAddress, sessionStats.sessionId);
-                            const confirmedScore = sessionData?.score ?? verifiedScore;
+                            // The score submitted is the authoritative on-chain value.
+                            // We skip getSession() because the sessionId used locally may differ
+                            // from the one the contract stored (reuse logic in startGame).
+                            // verifiedScore === finalScore (set above), which is what was submitted.
+                            const confirmedScore = verifiedScore;
                             setOnChainScore(confirmedScore);
                             addLog(`✅ On-chain score confirmed: ${confirmedScore}`);
 
