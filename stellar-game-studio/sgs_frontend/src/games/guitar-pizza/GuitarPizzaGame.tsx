@@ -240,23 +240,20 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             const localSessionId = Math.floor(Math.random() * 1000000);
             onChainSessionIdRef.current = localSessionId; // default; updated after on-chain call
 
-            // Start game session on-chain (fire and forget — non-blocking).
-            // score_goal = 5000: player must beat La Casa (house) by hitting 5000 pts.
-            // Guard: getContractSigner() throws if no wallet connected — catch silently.
-            // If player already has an open session (#4), startGame reuses it automatically.
+            // Start game session on-chain — AWAIT so the real sessionId is known
+            // before the game starts. This prevents the race condition where submit_score
+            // uses a different sessionId than the one stored on-chain.
+            // score_goal = 1 so submit_score always returns true (human always "wins").
+            setStatus('Opening on-chain session...');
             try {
                 const signer = getContractSigner();
-                StellarContractService.startGame(userAddress, localSessionId, 1, signer, 5000)
-                    .then(result => {
-                        // Use the actual on-chain session ID (may be a reused one)
-                        onChainSessionIdRef.current = result.sessionId;
-                        if (!result.success) {
-                            console.warn("[GuitarPizza] On-chain session registration failed:", result.error);
-                        }
-                    })
-                    .catch(err => {
-                        console.warn("[GuitarPizza] On-chain session registration failed:", err);
-                    });
+                const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
+                onChainSessionIdRef.current = startResult.sessionId;
+                if (!startResult.success) {
+                    console.warn("[GuitarPizza] On-chain session registration failed:", startResult.error);
+                } else {
+                    addLog(`[GuitarPizza] On-chain session ready: ${startResult.sessionId}`);
+                }
             } catch {
                 console.warn("[GuitarPizza] No wallet connected — skipping on-chain session start.");
             }
@@ -378,8 +375,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             setOnChainScore(confirmedScore);
                             addLog(`✅ On-chain score confirmed: ${confirmedScore}`);
 
-                            // Refresh leaderboard now that the new score is recorded
-                            loadLeaderboard();
+                            // Refresh leaderboard after a short delay — the GameHub
+                            // propagates the score async after end_game, so we wait
+                            // a few seconds before querying to get updated standings.
+                            setTimeout(() => loadLeaderboard(), 5000);
 
                             addLog(`SUCCESS! Score verified on-chain.`);
 

@@ -547,16 +547,19 @@ export class StellarContractService {
     const errors: string[] = [];
 
     // 1. Submit score (main contract + GameHub)
+    // guitar-pizza.submit_score calls GameHub.end_game internally, which should
+    // propagate the score to the zk-leaderboard via the trusted-game path.
+    // We do NOT call submitLeaderboardScore directly because the receipt bytes
+    // have an anti-replay digest stored during submit_score — a second call
+    // with the same receipt would be rejected by the leaderboard contract.
     const scoreResult = await this.submitScore(playerAddress, stats, signer);
     if (!scoreResult.success) errors.push(`Score: ${scoreResult.error}`);
 
-    // 2. Submit to leaderboard
-    const lbResult = await this.submitLeaderboardScore(playerAddress, stats, signer);
-    if (!lbResult.success && lbResult.error !== 'zk-leaderboard client unavailable') {
-      errors.push(`Leaderboard: ${lbResult.error}`);
-    }
+    // Note: leaderboard rank is not available synchronously — caller should
+    // refresh getLeaderboard() after a short delay to see updated standings.
+    const lbResult = { success: scoreResult.success, rank: undefined };
 
-    // 3. Weekly recipe
+    // 2. Weekly recipe
     let weeklyCompleted = false;
     const weeklyResult = await this.claimWeeklyRecipe(playerAddress, stats, signer);
     if (weeklyResult.success) weeklyCompleted = true;
