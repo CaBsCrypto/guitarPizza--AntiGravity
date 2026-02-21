@@ -38,10 +38,12 @@ export const ACHIEVEMENT = {
 export interface GameSessionStats {
   perfectHits:     number;
   totalHits:       number;
+  totalNotes:      number;   // non-trap notes spawned — ZK circuit private input
   trapsAvoided:    number;
   totalTraps:      number;
   feverSeconds:    number;
   pizzasCompleted: number;
+  comboBonus:      number;   // score - base_score — ZK circuit private input
   score:           number;
   levelId:         number;
   sessionId:       number;

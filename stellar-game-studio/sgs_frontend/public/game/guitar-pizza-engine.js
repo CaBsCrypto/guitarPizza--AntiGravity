@@ -31,6 +31,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
     let feverTime = 0;       // seconds spent in fireMode
     let totalTraps = 0;      // trap notes spawned
     let trapsAvoided = 0;    // traps successfully dodged (let pass)
+    let totalNotes = 0;      // non-trap notes spawned (for ZK total_notes bound)
 
     let notes = [];
     let particles = [];
@@ -104,7 +105,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         pizzaProgress = 0; pizzasMade = 0;
         perfectStreak = 0; secretIngredients = 0;
         totalPerfectHits = 0; totalHits = 0;
-        feverTime = 0; totalTraps = 0; trapsAvoided = 0;
+        feverTime = 0; totalTraps = 0; trapsAvoided = 0; totalNotes = 0;
         notes = []; particles = []; feedbackSystem = [];
         gameTimer = 0; nextNoteTime = 0;
         inputLog = []; // Reset Log
@@ -286,6 +287,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
             tag = TRAP_TAGS[Math.floor(Math.random() * TRAP_TAGS.length)];
             color = "#555555"; // Greyish/Burnt color for traps
         } else {
+            totalNotes++; // count playable notes for ZK total_notes witness
             const isGolden = perfectStreak >= 10 && Math.random() < 0.3;
             tag = isGolden ? GOLDEN_TAG : TAGS[lane];
         }
@@ -726,14 +728,29 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         gameState = STATE.RESULTS;
         showScreen('results');
         showScreen('results');
-        // Attach ZK stats to inputLog so the frontend can build a valid receipt
+        // Attach ZK stats to inputLog so the frontend can build a valid Noir proof.
+        //
+        // comboBonus = score - base_score
+        // base_score = hits*100 + perfect*50 + pizzas*1000 + traps_avoided*50
+        //            (the deterministic part the Noir circuit verifies exactly)
+        // comboBonus captures all dynamic extras: combo multipliers, fever 2x,
+        // sustain ticks, secret sauce (5000), minus trap-hit penalties (-500 each).
+        // It must be >= 0; if negative the player lost badly and won't submit anyway.
+        const _baseScore = totalHits * 100
+                         + totalPerfectHits * 50
+                         + pizzasMade * 1000
+                         + trapsAvoided * 50;
+        const _comboBonus = Math.max(0, Math.floor(score) - _baseScore);
+
         inputLog.stats = {
             perfectHits:     totalPerfectHits,
             totalHits:       totalHits,
+            totalNotes:      Math.min(totalNotes, 200), // capped at circuit bound
             feverSeconds:    Math.floor(feverTime),
             pizzasCompleted: pizzasMade,
             trapsAvoided:    trapsAvoided,
             totalTraps:      totalTraps,
+            comboBonus:      _comboBonus,
         };
         if (onComplete) onComplete(score, inputLog);
     }
