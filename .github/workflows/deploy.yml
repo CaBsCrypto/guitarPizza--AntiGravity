@@ -24,7 +24,7 @@ jobs:
 
       - name: Install Dependencies
         working-directory: ./stellar-game-studio/sgs_frontend
-        run: npm install
+        run: rm -f package-lock.json && npm install
 
       - name: Build
         working-directory: ./stellar-game-studio/sgs_frontend
