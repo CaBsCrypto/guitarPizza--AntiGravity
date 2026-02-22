@@ -1,5 +1,5 @@
 // ============================================================
-//  Guitar Pizza - Noir ZK Circuit  (v2 - engine-aligned)
+//  Guitar Pizza - Noir ZK Circuit  (v2 - engine-aligned, ASCII-clean)
 //  guitar_pizza_proof / src / main.nr
 // ============================================================
 //
