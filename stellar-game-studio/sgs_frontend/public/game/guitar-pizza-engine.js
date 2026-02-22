@@ -270,7 +270,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
             [root, root * 1.5, root * 2].forEach(freq => this.playTone(freq, "sawtooth", 0.05, 0.3));
         },
         playMiss: function () { this.playTone(60, "sawtooth", 0.05, 0.2); },
-        playOvenBell: function () { this.playTone(880, "sine", 0.01, 0.8); this.playTone(1760, "sine", 0.01, 0.6); }
+        playOvenBell: function () {
+            // Better "Order Up" sound
+            this.playTone(880, "sine", 0.01, 1.2);
+            this.playTone(1108.73, "sine", 0.01, 1.0); // C# (Major 3rd)
+            this.playTone(1318.51, "sine", 0.01, 0.8); // E (Fifth)
+            this.playTone(1760, "sine", 0.01, 0.6); // Octave
+        }
     };
 
     // --- GAME LOGIC ---
@@ -718,6 +724,20 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
             ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
             ctx.restore();
         });
+        ctx.globalAlpha = 1.0;
+
+        // Render Pizza Completion Character Popup
+        if (pizzaPopup.active) {
+            const img = ASSETS["super_pizza"];
+            if (img) {
+                ctx.save();
+                ctx.globalAlpha = pizzaPopup.alpha;
+                const charSize = Math.min(W * 0.8, 400) * pizzaPopup.scale;
+                ctx.translate(W / 2, H * 0.35); // Position higher (35% from top)
+                ctx.drawImage(img, -charSize / 2, -charSize / 2, charSize, charSize);
+                ctx.restore();
+            }
+        }
 
         ctx.restore(); // Undo Camera Zoom
 
@@ -837,7 +857,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
                 "onion": "game/assets/veg.jpg",
                 "secret_sauce": "game/assets/salsasecreta.jpg",
                 "hotdog": "game/assets/hotdog.jpg",
-                "burger": "game/assets/burger.jpg"
+                "burger": "game/assets/burger.jpg",
+                "super_pizza": "game/assets/decoracion/SuperPizza.png"
             };
 
             const keys = Object.keys(ASSET_PATHS);
