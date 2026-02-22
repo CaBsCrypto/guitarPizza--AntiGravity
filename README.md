@@ -360,14 +360,19 @@ const url = '/game/assets/image.jpg';
 
 ### Branch Strategy
 ```
-dev/ui    ──┐
-             ├──► staging ──► main ──► 🚀 Pages
-dev/web3  ──┘
+dev/ui      ──┐
+               ├──► Antigravity ──► main ──► 🚀 Pages
+dev/web3    ──┘
+Claude (AI) ──┘
 ```
 - `dev/ui` — UI, CSS, components
 - `dev/web3` — contracts, bindings, StellarContractService
-- `staging` — integration testing
-- `main` — production (auto-deploys to Pages on push)
+- `Antigravity` — main team integration branch
+- `Claude` — AI-assisted changes (merge into Antigravity or main)
+- `main` — production (auto-deploys to Pages on push via GitHub Actions)
+
+### CI / GitHub Pages Deploy
+The deploy workflow (`deploy.yml`) uses Node 22 and runs `rm -f package-lock.json && npm install` before building. This is intentional — the lockfile is generated on Windows (npm 11) and lacks Linux-specific optional packages (`@rollup/rollup-linux-x64-gnu`). Deleting it lets npm resolve the correct platform binaries on the ubuntu runner.
 
 ---
 
