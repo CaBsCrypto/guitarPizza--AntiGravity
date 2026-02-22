@@ -165,7 +165,9 @@ function isValidStellarAddress(addr: string): boolean {
  *
  * Address: Stellar Friendbot / testnet infrastructure account — always exists.
  */
-const TESTNET_SIM_SOURCE = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+// 56-char G-address of the contract deployer (admin) — always funded on testnet.
+// Used as simulation source for read-only Soroban calls when player wallet isn't funded yet.
+const TESTNET_SIM_SOURCE = 'GC23RLRUYXKBRPPVIWDF7UKSPPBGGIUYGDGJP7M4UQLE6Q35BNSAM3XD';
 
 function simSource(playerAddress: string): string {
   return isValidStellarAddress(playerAddress) ? playerAddress : TESTNET_SIM_SOURCE;
