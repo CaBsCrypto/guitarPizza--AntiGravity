@@ -110,6 +110,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         gameTimer = 0; nextNoteTime = 0;
         inputLog = []; // Reset Log
         gameState = STATE.GAME;
+        lastTime = performance.now(); // RESET TIME TO PREVENT HUGE DT JUMP
         AudioEngine.init(); // Ensure audio is ready
     }
 
@@ -400,7 +401,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         if (beatFlash > 0) beatFlash -= dt * 2.0;
 
         if (health <= 0) {
-            endGame();
+            // ROBUSTNESS: Only end if we actually have dimensions initialized.
+            // Occasionally resize() hasn't fired yet on first frames.
+            if (W > 0 && H > 0) {
+                endGame();
+            }
             return;
         }
 
@@ -716,12 +721,19 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
 
         ctx.restore(); // Undo Camera Zoom
 
-        // HUD (Simplified)
+        // HUD (Mafia Style)
         const hudH = Math.min(H * 0.13, 110);
         const fontSize = Math.min(30, W * 0.08); // Responsive font
-        ctx.font = `bold ${fontSize}px Impact`;
-        ctx.fillStyle = "#FFD700"; ctx.fillText(Math.floor(score), 20, hudH * 0.75);
-        ctx.fillStyle = "#009246"; ctx.fillText(`🍕 x${pizzasMade}`, 20, hudH * 0.75 + fontSize + 5);
+        ctx.font = `bold ${fontSize}px var(--font-display, Impact)`;
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.5)";
+
+        ctx.fillStyle = "#FFD700"; // Neon Gold
+        ctx.fillText(Math.floor(score), 20, hudH * 0.75);
+
+        ctx.fillStyle = "#ff7675"; // Mafia Red
+        ctx.font = `bold ${fontSize * 0.8}px var(--font-display, Impact)`;
+        ctx.fillText(`🍕 x${pizzasMade}`, 20, hudH * 0.75 + fontSize + 5);
+        ctx.shadowBlur = 0;
     }
 
     function endGame() {
@@ -925,7 +937,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         },
         setVolume: (v) => AudioEngine.setVolume(v),
         startGame: () => {
-            if (gameState === STATE.MENU) {
+            if (gameState === STATE.MENU || gameState === STATE.RESULTS) {
                 startGame();
             }
         }
