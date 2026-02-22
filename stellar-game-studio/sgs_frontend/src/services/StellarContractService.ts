@@ -152,6 +152,25 @@ export function buildProofData(stats: GameSessionStats): Buffer {
   return Buffer.from(buf);
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+/** Returns true only for properly formatted G-addresses (56 chars starting with G). */
+function isValidStellarAddress(addr: string): boolean {
+  return typeof addr === 'string' && addr.length === 56 && addr.startsWith('G');
+}
+
+/**
+ * For read-only Soroban simulations the source account must be a valid G-address,
+ * but does NOT need to be funded on-chain. We use a well-known testnet address as
+ * fallback when the player hasn't connected a wallet yet.
+ *
+ * Address: Stellar Friendbot / testnet infrastructure account — always exists.
+ */
+const TESTNET_SIM_SOURCE = 'GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN';
+
+function simSource(playerAddress: string): string {
+  return isValidStellarAddress(playerAddress) ? playerAddress : TESTNET_SIM_SOURCE;
+}
+
 // ─── Client factory ─────────────────────────────────────────────────────────
 function makeGuitarClient(publicKey: string): GuitarPizzaClient {
   return new GuitarPizzaClient({
@@ -168,7 +187,10 @@ async function loadZkLeaderboardClient(publicKey: string) {
   try {
     const mod = await import('../../../bindings/zk_leaderboard/src/index');
     return new mod.Client({ networkPassphrase: NETWORK_PASS, contractId: CONTRACT_IDS.zkLeaderboard, rpcUrl: RPC_URL, publicKey });
-  } catch { return null; }
+  } catch (err) {
+    console.error('[StellarContract] Failed to load zk-leaderboard client:', err);
+    return null;
+  }
 }
 
 async function loadDailyRecipeClient(publicKey: string) {
@@ -476,23 +498,41 @@ export class StellarContractService {
   }
 
   // ─── 7. Query: leaderboard ──────────────────────────────────────────────
+  /**
+   * Read-only: returns the top-10 board for a level.
+   * Uses a stable testnet fallback address for the simulation source so this
+   * works even before the player has connected a wallet.
+   */
   static async getLeaderboard(playerAddress: string, levelId: number) {
     try {
-      const client = await loadZkLeaderboardClient(playerAddress);
-      if (!client) return [];
+      // simSource() ensures a valid G-address even when playerAddress is '' or 'G_DEMO_USER'
+      const client = await loadZkLeaderboardClient(simSource(playerAddress));
+      if (!client) {
+        console.warn('[StellarContract] getLeaderboard: client unavailable');
+        return [];
+      }
       const tx = await client.get_leaderboard({ level_id: levelId });
-      return tx.result ?? [];
-    } catch { return []; }
+      const result = tx.result ?? [];
+      console.log(`[StellarContract] getLeaderboard(level=${levelId}): ${(result as any[]).length} entries`);
+      return result;
+    } catch (err) {
+      console.error('[StellarContract] getLeaderboard failed:', err);
+      return [];
+    }
   }
 
-  // ─── 7. Query: personal best ────────────────────────────────────────────
+  // ─── 8. Query: personal best ────────────────────────────────────────────
   static async getPersonalBest(playerAddress: string, levelId: number) {
     try {
+      if (!isValidStellarAddress(playerAddress)) return null;
       const client = await loadZkLeaderboardClient(playerAddress);
       if (!client) return null;
       const tx = await client.get_personal_best({ player: playerAddress, level_id: levelId });
       return tx.result ?? null;
-    } catch { return null; }
+    } catch (err) {
+      console.error('[StellarContract] getPersonalBest failed:', err);
+      return null;
+    }
   }
 
   // ─── 8. Query: weekly challenge ─────────────────────────────────────────
@@ -543,6 +583,7 @@ export class StellarContractService {
     scoreSubmitted: boolean;
     txHash?: string;
     leaderboardRank?: number;
+    leaderboardSubmitted: boolean;
     weeklyCompleted: boolean;
     achievementsClaimed: number[];
     errors: string[];
@@ -583,6 +624,7 @@ export class StellarContractService {
       scoreSubmitted: scoreResult.success,
       txHash: scoreResult.txHash,
       leaderboardRank: lbResult.rank,
+      leaderboardSubmitted: lbResult.success,
       weeklyCompleted,
       achievementsClaimed: achResult.claimed,
       errors,
