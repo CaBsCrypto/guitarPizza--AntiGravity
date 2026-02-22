@@ -22,6 +22,19 @@ jobs:
         with:
           node-version: 22
 
+      - name: Create env file (public contract addresses only — no secrets)
+        working-directory: ./stellar-game-studio
+        run: |
+          cat > .env << 'EOF'
+          VITE_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+          VITE_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+          VITE_MOCK_GAME_HUB_CONTRACT_ID=CB4VZAT2U3UC6XFK3N23SKRF2NDCMP3QHJYMCHHFMZO7MRQO6DQ2EMYG
+          VITE_GUITAR_PIZZA_CONTRACT_ID=CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH
+          VITE_ZK_LEADERBOARD_CONTRACT_ID=CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV
+          VITE_ACHIEVEMENT_VAULT_CONTRACT_ID=CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC
+          VITE_DAILY_RECIPE_CONTRACT_ID=CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN
+          EOF
+
       - name: Install Dependencies
         working-directory: ./stellar-game-studio/sgs_frontend
         run: rm -f package-lock.json && npm install
