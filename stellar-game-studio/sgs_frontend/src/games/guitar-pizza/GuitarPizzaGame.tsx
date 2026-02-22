@@ -46,6 +46,13 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     // Wallet
     const { getContractSigner, networkPassphrase, isConnected } = useWallet();
 
+    // Refs so the game-completion closure always reads the LATEST wallet state
+    // (the main useEffect has [] deps — without refs it captures stale values)
+    const isConnectedRef = useRef(isConnected);
+    const getContractSignerRef = useRef(getContractSigner);
+    useEffect(() => { isConnectedRef.current = isConnected; }, [isConnected]);
+    useEffect(() => { getContractSignerRef.current = getContractSigner; }, [getContractSigner]);
+
     // UI State
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
@@ -172,6 +179,35 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
         }
     };
 
+    // Called when the player clicks "Cook Again" on the results screen.
+    // Hides the results panel, resets UI state, starts a new on-chain session
+    // (async, non-blocking), then tells the engine to begin a fresh game.
+    const handleCookAgain = async () => {
+        const results = document.getElementById('results');
+        if (results) results.style.display = 'none';
+        setIsVerifying(false);
+        setProofStatus('none');
+        setOnChainScore(null);
+        setLbSubmitStatus('none');
+
+        // Start the game immediately — don't block on the on-chain call
+        if (engineRef.current?.startGame) {
+            engineRef.current.startGame();
+        }
+
+        // Open a fresh on-chain session in the background
+        const localSessionId = Math.floor(Math.random() * 1000000);
+        onChainSessionIdRef.current = localSessionId;
+        try {
+            const signer = getContractSignerRef.current();
+            const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
+            onChainSessionIdRef.current = startResult.sessionId;
+            addLog(`[GuitarPizza] On-chain session ready (replay): ${startResult.sessionId}`);
+        } catch {
+            console.warn("[GuitarPizza] No wallet for replay on-chain session — skipping.");
+        }
+    };
+
     // Load leaderboard on mount
     useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
 
@@ -261,7 +297,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             // score_goal = 1 so submit_score always returns true (human always "wins").
             setStatus('Opening on-chain session...');
             try {
-                const signer = getContractSigner();
+                const signer = getContractSignerRef.current();
                 const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
                 onChainSessionIdRef.current = startResult.sessionId;
                 if (!startResult.success) {
@@ -344,7 +380,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             addLog(`[GuitarPizza] Receipt generated: ${receipt.length} bytes`);
 
                             // DEMO / NO-WALLET CHECK: Skip blockchain submission when not connected
-                            if (userAddress === 'G_DEMO_USER' || !isConnected) {
+                            if (userAddress === 'G_DEMO_USER' || !isConnectedRef.current) {
                                 addLog(userAddress === 'G_DEMO_USER'
                                     ? "[DEMO MODE] Skipping blockchain submission."
                                     : "[GuitarPizza] No wallet connected — score verified locally only.");
@@ -359,7 +395,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             addLog("Receipt ready. Submitting to Stellar contracts...");
                             setStatus('Submitting to Stellar...');
 
-                            const signer = getContractSigner();
+                            const signer = getContractSignerRef.current();
                             const result = await StellarContractService.postGameFlow(
                                 userAddress,
                                 sessionStats,
@@ -1071,7 +1107,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
-                                    <button id="restartBtn" className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>COOK AGAIN</button>
+                                    <button id="restartBtn" onClick={handleCookAgain} className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>COOK AGAIN</button>
                                     <button id="backToLobbyBtn" onClick={handleBackToLobby} className="secondary-btn" style={{ width: '100%', padding: '0.8rem', opacity: 0.9 }}>EXIT KITCHEN</button>
                                 </div>
                             )}
