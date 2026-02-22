@@ -493,7 +493,7 @@ button {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.85);
-    z-index: 100;
+    z-index: 3000; /* Must be above status overlay (2000) so modals always render on top */
     display: flex;
     justify-content: center;
     align-items: flex-end;
