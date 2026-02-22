@@ -75,6 +75,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     // Leaderboard from zk-leaderboard contract
     const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player: string; score: number }>>([]);
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+    const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+    // Status of the leaderboard submission from the last game
+    const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
 
     // Profile State (Persist to local storage later)
     const [chefName, setChefName] = useState("Chef Anon");
@@ -119,16 +122,26 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     // ── Leaderboard loader ────────────────────────────────────────────────────
     const loadLeaderboard = useCallback(async () => {
         setLeaderboardLoading(true);
+        setLeaderboardError(null);
         try {
             const entries = await StellarContractService.getLeaderboard(userAddress, 1);
-            const mapped = (entries as any[]).slice(0, 5).map((e: any, i: number) => ({
-                rank: i + 1,
-                player: String(e.player ?? ''),
-                score: Number(e.score ?? 0),
-            }));
+            const arr = entries as any[];
+            const mapped = arr.slice(0, 10).map((e: any, i: number) => {
+                // e.player may be an Address object or already a string
+                const playerStr = typeof e.player === 'string'
+                    ? e.player
+                    : (e.player?.toString?.() ?? String(e.player ?? ''));
+                // e.score is u64 (BigInt) or number
+                const scoreNum = typeof e.score === 'bigint' ? Number(e.score) : Number(e.score ?? 0);
+                return { rank: i + 1, player: playerStr, score: scoreNum };
+            });
             setLeaderboard(mapped);
-        } catch {
-            // silently fail — leaderboard is best-effort
+            if (arr.length === 0) {
+                console.warn('[Leaderboard] No entries returned — board may be empty or query failed.');
+            }
+        } catch (err) {
+            console.error('[Leaderboard] Failed to load:', err);
+            setLeaderboardError('Could not load leaderboard. Check console.');
         } finally {
             setLeaderboardLoading(false);
         }
@@ -148,6 +161,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     };
 
     const handleStartGame = () => {
+        // Reset leaderboard submission status for the new game
+        setLbSubmitStatus('none');
         if (engineRef.current && engineRef.current.startGame) {
             addLog("[GuitarPizza] Calling engine.startGame()");
             engineRef.current.startGame();
@@ -377,10 +392,14 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             setOnChainScore(confirmedScore);
                             addLog(`✅ On-chain score confirmed: ${confirmedScore}`);
 
-                            // Refresh leaderboard after a short delay — the GameHub
-                            // propagates the score async after end_game, so we wait
-                            // a few seconds before querying to get updated standings.
-                            setTimeout(() => loadLeaderboard(), 5000);
+                            // Track leaderboard submission result for UI feedback
+                            setLbSubmitStatus(result.leaderboardSubmitted ? 'ok' : 'fail');
+
+                            // Refresh leaderboard at 4s, 9s, 18s after game ends —
+                            // multiple attempts handle eventual consistency on Stellar testnet.
+                            setTimeout(() => loadLeaderboard(), 4000);
+                            setTimeout(() => loadLeaderboard(), 9000);
+                            setTimeout(() => loadLeaderboard(), 18000);
 
                             addLog(`SUCCESS! Score verified on-chain.`);
 
@@ -806,11 +825,35 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         >↺</button>
                                     </div>
 
+                                    {/* Leaderboard submission badge from last game */}
+                                    {lbSubmitStatus !== 'none' && (
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '0.4rem 0.8rem',
+                                            marginBottom: '0.5rem',
+                                            borderRadius: '8px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold',
+                                            background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
+                                            color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
+                                            border: `1px solid ${lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c'}`,
+                                        }}>
+                                            {lbSubmitStatus === 'ok' ? '✅ Your score was submitted to the board!' : '⚠️ Leaderboard submission failed — see console'}
+                                        </div>
+                                    )}
+
                                     <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
                                         {leaderboardLoading ? (
                                             <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
                                                 <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
                                                 Loading on-chain scores...
+                                            </div>
+                                        ) : leaderboardError ? (
+                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
+                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
+                                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
+                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={loadLeaderboard}>Try Again</button>
                                             </div>
                                         ) : leaderboard.length === 0 ? (
                                             <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -826,12 +869,14 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         ) : (
                                             <div style={{ width: '100%' }}>
                                                 <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
-                                                    ⛓ Scores verified on Stellar Testnet
+                                                    ⛓ Scores verified on Stellar Testnet · {leaderboard.length} entr{leaderboard.length === 1 ? 'y' : 'ies'}
                                                 </div>
                                                 {leaderboard.map((entry, i) => {
                                                     const medals = ['🥇', '🥈', '🥉'];
                                                     const medal = medals[i] ?? `${i + 1}.`;
-                                                    const shortAddr = `${entry.player.slice(0, 6)}…${entry.player.slice(-4)}`;
+                                                    const shortAddr = entry.player.length >= 10
+                                                        ? `${entry.player.slice(0, 6)}…${entry.player.slice(-4)}`
+                                                        : entry.player;
                                                     const isMe = entry.player === userAddress;
                                                     return (
                                                         <div key={i} style={{
