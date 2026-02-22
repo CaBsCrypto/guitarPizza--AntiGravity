@@ -12,7 +12,7 @@
  */
 
 import { Buffer } from 'buffer';
-import { keccak_256 } from '@noble/hashes/sha3';
+import { keccak_256 } from '@noble/hashes/sha3.js';
 import { Client as GuitarPizzaClient } from '../contracts/guitar-pizza';
 import { getContractId } from '../utils/constants';
 
