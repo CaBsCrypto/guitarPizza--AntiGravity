@@ -737,20 +737,20 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         // sustain ticks, secret sauce (5000), minus trap-hit penalties (-500 each).
         // It must be >= 0; if negative the player lost badly and won't submit anyway.
         const _baseScore = totalHits * 100
-                         + totalPerfectHits * 50
-                         + pizzasMade * 1000
-                         + trapsAvoided * 50;
+            + totalPerfectHits * 50
+            + pizzasMade * 1000
+            + trapsAvoided * 50;
         const _comboBonus = Math.max(0, Math.floor(score) - _baseScore);
 
         inputLog.stats = {
-            perfectHits:     totalPerfectHits,
-            totalHits:       totalHits,
-            totalNotes:      Math.min(totalNotes, 200), // capped at circuit bound
-            feverSeconds:    Math.floor(feverTime),
+            perfectHits: totalPerfectHits,
+            totalHits: totalHits,
+            totalNotes: Math.min(totalNotes, 200), // capped at circuit bound
+            feverSeconds: Math.floor(feverTime),
             pizzasCompleted: pizzasMade,
-            trapsAvoided:    trapsAvoided,
-            totalTraps:      totalTraps,
-            comboBonus:      _comboBonus,
+            trapsAvoided: trapsAvoided,
+            totalTraps: totalTraps,
+            comboBonus: _comboBonus,
         };
         if (onComplete) onComplete(score, inputLog);
     }
@@ -778,6 +778,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
     function startGame() {
         console.log("Starting Game from Engine API");
         resetGame();
+        lastTime = performance.now(); // MUST reset time before entering GAME state
         showScreen('game');
     }
 
@@ -819,7 +820,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         return new Promise((resolve) => {
             const ASSET_PATHS = {
                 "pepperoni": "game/assets/pepperoni.jpg",
-                "cheese": "game/assets/mixta.jpg",
+                "cheese": "game/assets/mozzarella.png",
                 "bacon": "game/assets/tomatos.jpg",
                 "onion": "game/assets/veg.jpg",
                 "secret_sauce": "game/assets/salsasecreta.jpg",
