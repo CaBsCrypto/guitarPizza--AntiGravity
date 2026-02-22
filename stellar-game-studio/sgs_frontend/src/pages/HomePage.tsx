@@ -1,194 +1,167 @@
 import { useWallet } from '@/hooks/useWallet';
 import type { Page } from '../types/navigation';
-import '../components/GamesCatalog.css';
+import './HomePage.css';
 
 interface HomePageProps {
   onNavigate: (page: Page) => void;
 }
 
+const BADGES = [
+  { icon: '🎯', name: 'Perfect Run', desc: 'Zero misses — proven by ZK' },
+  { icon: '🪤', name: 'Trap Master', desc: 'Every trap dodged — proven by ZK' },
+  { icon: '🔥', name: 'Fever God', desc: '30s+ Fever Mode — proven by ZK' },
+  { icon: '🍕', name: 'Iron Chef', desc: '5 full pizzas — proven by ZK' },
+];
+
+const ZK_FACTS = [
+  { label: 'Score', detail: 'Mathematically derived from every input' },
+  { label: 'Trap Avoidance', detail: 'Proves you didn\'t press — novel mechanic' },
+  { label: 'Fever Time', detail: 'Circuit-verified, not server-trusted' },
+  { label: 'Pizza Count', detail: 'Ingredient hits audited in the proof' },
+];
+
 export function HomePage({ onNavigate }: HomePageProps) {
-  const { isConnected, isConnecting, error } = useWallet();
+  const { isConnected } = useWallet();
 
   return (
-    <div className="studio-home">
-      <section className="hero">
-        <div className="hero-content">
-          <h2>Development Tools For Web3 Game Builders On Stellar</h2>
-          <p>
-            Ecosystem ready tools, templates and examples ready to scaffold into into your Stellar game development workflow
-          </p>
-          <div className="hero-actions">
-            <button type="button" onClick={() => onNavigate('games')}>
-              Explore Games
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => onNavigate('docs')}>
-              Open Docs
-            </button>
-            <a
-              className="button btn-secondary"
-              href="https://github.com/jamesbachini/Stellar-Game-Studio"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Fork on GitHub
-            </a>
+    <div className="rs-home">
+
+      {/* ── HERO ── */}
+      <section className="rs-hero">
+        <div className="rs-hero-eyebrow">NEW YORK · 1984 · THE FIVE FAMILIES CONTROL THE CHEESE</div>
+        <h1 className="rs-hero-title">
+          <span className="rs-title-main">RHYTHM</span>
+          <span className="rs-title-accent">SLICE</span>
+        </h1>
+        <p className="rs-hero-tagline">
+          A ZK-verified rhythm game where every score is <em>proven</em>, not just recorded.<br />
+          Hit notes. Complete pizzas. Show the receipt.
+        </p>
+
+        <div className="rs-hero-cta">
+          <button
+            type="button"
+            className="rs-cta-primary"
+            onClick={() => onNavigate('games')}
+          >
+            ▶ PLAY NOW
+          </button>
+          <a
+            className="rs-cta-secondary"
+            href="https://github.com/CaBsCrypto/guitarPizza--AntiGravity"
+            target="_blank"
+            rel="noreferrer"
+          >
+            VIEW SOURCE
+          </a>
+        </div>
+
+        {!isConnected && (
+          <p className="rs-hero-hint">↑ Connect your Freighter wallet (Testnet) to submit scores on-chain</p>
+        )}
+      </section>
+
+      {/* ── HOW ZK WORKS ── */}
+      <section className="rs-section">
+        <h2 className="rs-section-title">How the Zero-Knowledge Proof Works</h2>
+        <p className="rs-section-sub">
+          Every game session generates a RISC Zero receipt. The smart contract verifies it before touching the blockchain.
+          No proof → no score. No exceptions.
+        </p>
+
+        <div className="rs-flow">
+          <div className="rs-flow-step">
+            <span className="rs-flow-num">01</span>
+            <strong>Play the game</strong>
+            <span>Every key press and timing delta is logged client-side</span>
+          </div>
+          <div className="rs-flow-arrow">→</div>
+          <div className="rs-flow-step">
+            <span className="rs-flow-num">02</span>
+            <strong>zkVM runs</strong>
+            <span>RISC Zero processes the log deterministically, produces a receipt</span>
+          </div>
+          <div className="rs-flow-arrow">→</div>
+          <div className="rs-flow-step">
+            <span className="rs-flow-num">03</span>
+            <strong>Contract verifies</strong>
+            <span>Soroban checks the receipt, reads the journal, stores the score</span>
+          </div>
+          <div className="rs-flow-arrow">→</div>
+          <div className="rs-flow-step">
+            <span className="rs-flow-num">04</span>
+            <strong>Trusted on-chain</strong>
+            <span>Leaderboard, badges, and weekly challenge — all ZK-gated</span>
           </div>
         </div>
-        <div className="hero-panel">
-          <div className="panel-title">Dev-to-Publish Pipeline</div>
-          <ol className="panel-steps">
-            <li>Fork and clone the repo</li>
-            <li>Deploy contracts to testnet</li>
-            <li>Build the standalone game frontend</li>
-            <li>Publish with a production wallet flow</li>
-          </ol>
-          <pre>
-            <code>{`bun run setup\nbun run create my-game\nbun run dev:game my-game\nbun run build my-game\nbun run deploy my-game\nbun run publish my-game --build`}</code>
-          </pre>
+
+        <div className="rs-zk-facts">
+          {ZK_FACTS.map(f => (
+            <div key={f.label} className="rs-zk-fact">
+              <span className="rs-zk-label">{f.label}</span>
+              <span className="rs-zk-detail">{f.detail}</span>
+            </div>
+          ))}
         </div>
       </section>
 
-      {!isConnected && (
-        <div className="card wallet-banner">
-          {error ? (
-            <>
-              <h3>Wallet Connection Error</h3>
-              <p>{error}</p>
-            </>
-          ) : (
-              <>
-              <h3>{isConnecting ? 'Connecting...' : 'Connect a Dev Wallet'}</h3>
-              <p>Use the switcher above to auto-connect and swap between demo players.</p>
-            </>
-          )}
-        </div>
-      )}
-
-      <section id="quickstart" className="quickstart-section">
-        <div className="section-header">
-          <h3>Quickstart</h3>
-          <p>Deploy contracts, generate bindings, and start the studio frontend in minutes.</p>
-        </div>
-        <div className="quickstart-grid">
-          <div className="quickstart-card">
-            <h4>1. Setup</h4>
-            <p>Install dependencies, build, and deploy contracts.</p>
-            <code>bun run setup</code>
-          </div>
-          <div className="quickstart-card">
-            <h4>2. Create Game</h4>
-            <p>Scaffold a new contract and standalone frontend.</p>
-            <code>bun run create my-game</code>
-          </div>
-          <div className="quickstart-card">
-            <h4>3. Run Dev Environment</h4>
-            <p>Run up a local development environment to build your game.</p>
-            <code>bun run dev:game my-game</code>
-          </div>
+      {/* ── BADGES ── */}
+      <section className="rs-section">
+        <h2 className="rs-section-title">ZK-Proven Badges</h2>
+        <p className="rs-section-sub">
+          Minted on-chain only when the ZK circuit confirms you earned it. Immutable forever.
+        </p>
+        <div className="rs-badges">
+          {BADGES.map(b => (
+            <div key={b.name} className="rs-badge-card">
+              <span className="rs-badge-icon">{b.icon}</span>
+              <strong className="rs-badge-name">{b.name}</strong>
+              <span className="rs-badge-desc">{b.desc}</span>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section id="ai-ready" className="ai-ready-section">
-        <div className="ai-ready-shell">
-          <div className="ai-ready-header">
-            <div>
-              <span className="ai-ready-pill">AI Ready</span>
-              <h3>AI Ready</h3>
-              <p>
-                This repo ships with <code>AGENTS.md</code> and <code>CLAUDE.md</code> to guide Codex and Claude
-                through the exact contract, bindings, and frontend steps required to build a Stellar game.
-              </p>
-            </div>
-            <div className="ai-ready-panel">
-              <div className="ai-ready-panel-title">What the AI gets right, fast</div>
-              <p>
-                Repo map, Game Hub rules, deterministic randomness guidance, bindings workflow, frontend wiring,
-                and QA steps are all encoded so assistants stay consistent with studio conventions.
-              </p>
-              <div className="ai-ready-tags">
-                <span>Repo Map</span>
-                <span>ECOSYSTEM CONSTRAINTS</span>
-                <span>Deterministic RNG</span>
-                <span>Bindings</span>
-              </div>
-            </div>
+      {/* ── CONTRACTS ── */}
+      <section className="rs-section rs-contracts-section">
+        <h2 className="rs-section-title">Live on Stellar Testnet</h2>
+        <div className="rs-contracts">
+          <div className="rs-contract-row">
+            <span className="rs-contract-name">guitar-pizza</span>
+            <code className="rs-contract-addr">CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH</code>
           </div>
-          <div className="ai-ready-grid">
-            <div className="ai-ready-card">
-              <div className="ai-ready-card-header">
-                <span className="ai-ready-chip">Codex</span>
-                <h4>AGENTS.md</h4>
-              </div>
-              <p>
-                A Codex-focused playbook with repo navigation, contract checklist, TTL rules, deterministic RNG
-                patterns, and frontend wiring notes.
-              </p>
-              <div className="ai-ready-footer">Built for precise, step-by-step automation.</div>
-            </div>
-            <div className="ai-ready-card">
-              <div className="ai-ready-card-header">
-                <span className="ai-ready-chip">Claude</span>
-                <h4>CLAUDE.md</h4>
-              </div>
-              <p>
-                The same authoritative guidance tuned for Claude, keeping game logic, bindings, and studio
-                integration aligned with repo standards.
-              </p>
-              <div className="ai-ready-footer">Reduces missed steps during assisted builds.</div>
-            </div>
-            <div className="ai-ready-card ai-ready-benefits">
-              <h4>Why it helps game devs</h4>
-              <p>
-                Faster onboarding, fewer integration mistakes, and a consistent Game Hub lifecycle so teams can
-                focus on gameplay instead of plumbing.
-              </p>
-              <div className="ai-ready-benefit-row">
-                <span>Speed</span>
-                <span>Consistency</span>
-                <span>Confidence</span>
-              </div>
-            </div>
+          <div className="rs-contract-row">
+            <span className="rs-contract-name">zk-leaderboard</span>
+            <code className="rs-contract-addr">CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV</code>
+          </div>
+          <div className="rs-contract-row">
+            <span className="rs-contract-name">achievement-vault</span>
+            <code className="rs-contract-addr">CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC</code>
+          </div>
+          <div className="rs-contract-row">
+            <span className="rs-contract-name">daily-recipe</span>
+            <code className="rs-contract-addr">CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN</code>
+          </div>
+          <div className="rs-contract-row rs-contract-hub">
+            <span className="rs-contract-name">game-hub ✓</span>
+            <code className="rs-contract-addr">CB4VZAT2U3UC6XFK3N23SKRF2NDCMP3QHJYMCHHFMZO7MRQO6DQ2EMYG</code>
           </div>
         </div>
       </section>
 
-      <section id="commands" className="commands-section">
-        <div className="section-header">
-          <h3>Bun Commands</h3>
-          <p>Automate contracts, bindings, and standalone builds.</p>
-        </div>
-        <div className="commands-grid">
-          <div className="command-card">
-            <h4>All-in-one setup</h4>
-            <p>Build contracts, deploy to testnet, generate bindings, and start the studio.</p>
-            <code>bun run setup</code>
-          </div>
-          <div className="command-card">
-            <h4>Contracts only</h4>
-            <p>Build all Soroban contracts or a single game.</p>
-            <code>bun run build my-game</code>
-          </div>
-          <div className="command-card">
-            <h4>Deploy + IDs</h4>
-            <p>Deploy contracts to testnet (all or one) and write contract IDs.</p>
-            <code>bun run deploy my-game</code>
-          </div>
-          <div className="command-card">
-            <h4>Generate bindings</h4>
-            <p>Create TypeScript bindings for all or one contract.</p>
-            <code>bun run bindings my-game</code>
-          </div>
-          <div className="command-card">
-            <h4>Create a game</h4>
-            <p>Scaffold a new contract and standalone frontend.</p>
-            <code>bun run create my-game</code>
-          </div>
-          <div className="command-card">
-            <h4>Publish frontend</h4>
-            <p>Export a standalone build for hosting.</p>
-            <code>bun run publish my-game</code>
-          </div>
-        </div>
+      {/* ── LORE CLOSER ── */}
+      <section className="rs-lore">
+        <blockquote className="rs-lore-quote">
+          "New York, 1984. The Five Families control the cheese.<br />
+          To earn your rank in the kitchen, you must <em>prove</em> your rhythm — not just claim it."
+        </blockquote>
+        <button
+          type="button"
+          className="rs-cta-primary rs-lore-cta"
+          onClick={() => onNavigate('games')}
+        >
+          ▶ SHOW THE RECEIPT
+        </button>
       </section>
 
     </div>
