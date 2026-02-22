@@ -820,7 +820,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete) {
         return new Promise((resolve) => {
             const ASSET_PATHS = {
                 "pepperoni": "game/assets/pepperoni.jpg",
-                "cheese": "game/assets/mozzarella.png",
+                "cheese": "game/assets/mozzarella.jpg",
                 "bacon": "game/assets/tomatos.jpg",
                 "onion": "game/assets/veg.jpg",
                 "secret_sauce": "game/assets/salsasecreta.jpg",
