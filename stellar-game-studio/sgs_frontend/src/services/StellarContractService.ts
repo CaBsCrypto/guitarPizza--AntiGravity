@@ -171,6 +171,16 @@ function simSource(playerAddress: string): string {
   return isValidStellarAddress(playerAddress) ? playerAddress : TESTNET_SIM_SOURCE;
 }
 
+/** Returns true when a Soroban RPC error indicates the account doesn't exist on-chain. */
+function isAccountNotFound(err: unknown): boolean {
+  const msg = String((err as any)?.message ?? err);
+  return (
+    msg.includes('Account not found') ||
+    msg.includes('account does not exist') ||
+    msg.includes('sourceAccount') && msg.includes('Not Found')
+  );
+}
+
 // ─── Client factory ─────────────────────────────────────────────────────────
 function makeGuitarClient(publicKey: string): GuitarPizzaClient {
   return new GuitarPizzaClient({
@@ -230,6 +240,37 @@ async function signAndSend(tx: any, signer: SignerFn, playerAddress: string): Pr
 // ═══════════════════════════════════════════════════════════════════════════
 
 export class StellarContractService {
+  // ─── 0a. Friendbot: fund account on testnet ─────────────────────────────
+  /**
+   * Calls Stellar Friendbot to fund an unfunded testnet account.
+   * Returns true when the account is ready (funded or already existed).
+   * Waits 2 s for ledger propagation before returning.
+   */
+  static async ensureAccountFunded(address: string): Promise<boolean> {
+    try {
+      console.log(`[StellarContract] Funding ${address} via Friendbot…`);
+      const res = await fetch(
+        `https://friendbot.stellar.org/?addr=${encodeURIComponent(address)}`,
+      );
+      if (res.ok) {
+        console.log('[StellarContract] Friendbot funded account ✅ — waiting 2 s for propagation…');
+        await new Promise(r => setTimeout(r, 2000));
+        return true;
+      }
+      const body = await res.text().catch(() => '');
+      // HTTP 400 usually means "createAccountAlreadyExist" — account is fine
+      if (res.status === 400 && (body.includes('already') || body.includes('exist'))) {
+        console.log('[StellarContract] Friendbot: account already exists ✅');
+        return true;
+      }
+      console.warn('[StellarContract] Friendbot returned', res.status, body);
+      return false;
+    } catch (err) {
+      console.error('[StellarContract] Friendbot request failed:', err);
+      return false;
+    }
+  }
+
   // ─── 0. Query: get active session for a player ──────────────────────────
   /**
    * Returns the active session_id for this player, or null if none.
@@ -284,6 +325,7 @@ export class StellarContractService {
     levelId: number,
     signer: SignerFn,
     scoreGoal: number = 5000,
+    _retried = false,
   ): Promise<{ success: boolean; sessionId: number; error?: string }> {
     try {
       const client = makeGuitarClient(playerAddress);
@@ -314,6 +356,14 @@ export class StellarContractService {
           return { success: true, sessionId: existing };
         }
       }
+      // Auto-fund via Friendbot and retry once when account not found on testnet
+      if (isAccountNotFound(err) && !_retried) {
+        console.warn('[StellarContract] start_game: account not found — attempting Friendbot fund...');
+        const funded = await StellarContractService.ensureAccountFunded(playerAddress);
+        if (funded) {
+          return StellarContractService.startGame(playerAddress, sessionId, levelId, signer, scoreGoal, true);
+        }
+      }
       console.error('[StellarContract] start_game failed:', err);
       return { success: false, sessionId, error: msg };
     }
@@ -328,6 +378,7 @@ export class StellarContractService {
     playerAddress: string,
     stats: GameSessionStats,
     signer: SignerFn,
+    _retried = false,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const receipt = buildReceipt(stats);
@@ -342,6 +393,11 @@ export class StellarContractService {
       console.log(`[StellarContract] Score ${stats.score} submitted on-chain ✅${txHash ? ` (tx: ${txHash})` : ''}`);
       return { success: true, txHash };
     } catch (err: any) {
+      if (isAccountNotFound(err) && !_retried) {
+        console.warn('[StellarContract] submit_score: account not found — attempting Friendbot fund...');
+        const funded = await StellarContractService.ensureAccountFunded(playerAddress);
+        if (funded) return StellarContractService.submitScore(playerAddress, stats, signer, true);
+      }
       console.error('[StellarContract] submit_score failed:', err);
       return { success: false, error: err?.message ?? String(err) };
     }
@@ -356,6 +412,7 @@ export class StellarContractService {
     playerAddress: string,
     stats: GameSessionStats,
     signer: SignerFn,
+    _retried = false,
   ): Promise<{ success: boolean; rank?: number; error?: string }> {
     try {
       const receipt = buildReceipt(stats);
@@ -375,6 +432,11 @@ export class StellarContractService {
       console.log(`[StellarContract] Leaderboard score submitted ✅`);
       return { success: true };
     } catch (err: any) {
+      if (isAccountNotFound(err) && !_retried) {
+        console.warn('[StellarContract] leaderboard submit_score: account not found — Friendbot fund...');
+        const funded = await StellarContractService.ensureAccountFunded(playerAddress);
+        if (funded) return StellarContractService.submitLeaderboardScore(playerAddress, stats, signer, true);
+      }
       console.error('[StellarContract] leaderboard submit_score failed:', err);
       return { success: false, error: err?.message ?? String(err) };
     }
@@ -388,6 +450,7 @@ export class StellarContractService {
     playerAddress: string,
     stats: GameSessionStats,
     signer: SignerFn,
+    _retried = false,
   ): Promise<{ success: boolean; weeklyTarget?: number; error?: string }> {
     try {
       const receipt = buildReceipt(stats);
@@ -410,6 +473,11 @@ export class StellarContractService {
       }
       if (msg.includes('AlreadyCompleted') || msg.includes('Error(Contract, #2)')) {
         return { success: false, error: 'AlreadyCompleted' };
+      }
+      if (isAccountNotFound(err) && !_retried) {
+        console.warn('[StellarContract] claim_weekly: account not found — Friendbot fund...');
+        const funded = await StellarContractService.ensureAccountFunded(playerAddress);
+        if (funded) return StellarContractService.claimWeeklyRecipe(playerAddress, stats, signer, true);
       }
       console.error('[StellarContract] claim_weekly failed:', err);
       return { success: false, error: msg };
@@ -505,8 +573,9 @@ export class StellarContractService {
    */
   static async getLeaderboard(playerAddress: string, levelId: number) {
     try {
-      // simSource() ensures a valid G-address even when playerAddress is '' or 'G_DEMO_USER'
-      const client = await loadZkLeaderboardClient(simSource(playerAddress));
+      // Always use TESTNET_SIM_SOURCE for reads — the connected wallet may not be funded yet.
+      // TESTNET_SIM_SOURCE is the Stellar Friendbot account which is always funded on testnet.
+      const client = await loadZkLeaderboardClient(TESTNET_SIM_SOURCE);
       if (!client) {
         console.warn('[StellarContract] getLeaderboard: client unavailable');
         return [];
@@ -525,7 +594,8 @@ export class StellarContractService {
   static async getPersonalBest(playerAddress: string, levelId: number) {
     try {
       if (!isValidStellarAddress(playerAddress)) return null;
-      const client = await loadZkLeaderboardClient(playerAddress);
+      // Use stable sim source for the RPC client; player address still passed to the contract call.
+      const client = await loadZkLeaderboardClient(TESTNET_SIM_SOURCE);
       if (!client) return null;
       const tx = await client.get_personal_best({ player: playerAddress, level_id: levelId });
       return tx.result ?? null;
