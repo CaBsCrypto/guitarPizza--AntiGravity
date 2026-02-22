@@ -22,12 +22,9 @@ jobs:
         with:
           node-version: 22
 
-      - name: Upgrade npm
-        run: npm install -g npm@11
-
       - name: Install Dependencies
         working-directory: ./stellar-game-studio/sgs_frontend
-        run: npm ci
+        run: npm install
 
       - name: Build
         working-directory: ./stellar-game-studio/sgs_frontend
