@@ -1,0 +1,81 @@
+name: Compile Noir Circuit
+
+# Compiles the Guitar Pizza Noir ZK circuit and commits the artifact
+# to the repo so the frontend can bundle it for browser proof generation.
+#
+# Triggers:
+#   - On push to dev/ui or staging when main.nr changes
+#   - Manual trigger (workflow_dispatch)
+
+on:
+  push:
+    paths:
+      - 'stellar-game-studio/circuits/guitar_pizza_proof/src/main.nr'
+      - 'stellar-game-studio/circuits/guitar_pizza_proof/Nargo.toml'
+    branches: [dev/ui, staging, main]
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit the artifact back
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install noirup
+        run: |
+          curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
+          echo "$HOME/.nargo/bin" >> $GITHUB_PATH
+
+      - name: Install nargo (latest stable)
+        run: noirup
+
+      - name: Verify nargo
+        run: nargo --version
+
+      - name: Compile Guitar Pizza circuit
+        working-directory: stellar-game-studio/circuits/guitar_pizza_proof
+        run: |
+          nargo compile
+          echo "=== Compiled artifact ==="
+          ls -lh target/
+          echo "=== ABI parameters ==="
+          cat target/guitar_pizza_proof.json | python3 -c "
+          import json, sys
+          a = json.load(sys.stdin)
+          params = a.get('abi', {}).get('parameters', [])
+          for p in params:
+            vis = p.get('visibility', 'private')
+            print(f\"  {vis:8} {p['name']}: {p['type']['kind']}\")
+          "
+
+      - name: Copy artifact to frontend src/zk
+        run: |
+          mkdir -p stellar-game-studio/sgs_frontend/src/zk
+          cp stellar-game-studio/circuits/guitar_pizza_proof/target/guitar_pizza_proof.json \
+             stellar-game-studio/sgs_frontend/src/zk/guitar_pizza_proof.json
+          echo "Artifact copied to frontend."
+
+      - name: Commit artifact
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # -f required: target/ is listed in stellar-game-studio/.gitignore
+          git add -f \
+            stellar-game-studio/circuits/guitar_pizza_proof/target/guitar_pizza_proof.json \
+            stellar-game-studio/sgs_frontend/src/zk/guitar_pizza_proof.json
+          git diff --cached --quiet && echo "No changes to commit." || \
+            git commit -m "ci(zk): compile Noir circuit - update artifact JSON
+
+          Compiled by nargo $(nargo --version | head -1).
+          Public inputs: score, level_id, session_id, score_goal
+          Private inputs: perfect_hits, total_hits, total_notes, traps_avoided,
+                          total_traps, fever_seconds, pizzas_completed, combo_bonus
+
+          Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
+      - name: Push artifact
+        run: git push

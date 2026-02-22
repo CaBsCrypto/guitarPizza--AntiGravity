@@ -13,39 +13,42 @@
 
 import { Buffer } from 'buffer';
 import { keccak_256 } from '@noble/hashes/sha3';
-import { Client as GuitarPizzaClient, networks as gpNetworks } from '../contracts/guitar-pizza';
+import { Client as GuitarPizzaClient } from '../contracts/guitar-pizza';
+import { getContractId } from '../utils/constants';
 
-// ─── Contract IDs (Testnet) ────────────────────────────────────────────────
+// ─── Contract IDs (Resolved dynamically or via Testnet fallback) ───────────
 const CONTRACT_IDS = {
-  guitarPizza:       'CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH',
-  zkLeaderboard:     'CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV',
-  dailyRecipe:       'CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN',
-  achievementVault:  'CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC',
+  guitarPizza: getContractId('guitar-pizza'),
+  zkLeaderboard: getContractId('zk-leaderboard'),
+  dailyRecipe: getContractId('daily-recipe'),
+  achievement_vault: getContractId('achievement-vault'),
 } as const;
 
-const RPC_URL         = 'https://soroban-testnet.stellar.org';
-const NETWORK_PASS    = 'Test SDF Network ; September 2015';
+const RPC_URL = 'https://soroban-testnet.stellar.org';
+const NETWORK_PASS = 'Test SDF Network ; September 2015';
 
 // ─── Achievement type constants (mirrors achievement-vault contract) ────────
 export const ACHIEVEMENT = {
-  PERFECT_RUN:  0,
-  TRAP_MASTER:  1,
-  FEVER_GOD:    2,
-  IRON_CHEF:    3,
+  PERFECT_RUN: 0,
+  TRAP_MASTER: 1,
+  FEVER_GOD: 2,
+  IRON_CHEF: 3,
 } as const;
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 export interface GameSessionStats {
-  perfectHits:     number;
-  totalHits:       number;
-  trapsAvoided:    number;
-  totalTraps:      number;
-  feverSeconds:    number;
+  perfectHits: number;
+  totalHits: number;
+  totalNotes: number;   // non-trap notes spawned — ZK circuit private input
+  trapsAvoided: number;
+  totalTraps: number;
+  feverSeconds: number;
   pizzasCompleted: number;
-  score:           number;
-  levelId:         number;
-  sessionId:       number;
-  playerAddress?:  string;   // Stellar G-address — used to compute player_addr_hash in journal
+  comboBonus: number;   // score - base_score — ZK circuit private input
+  score: number;
+  levelId: number;
+  sessionId: number;
+  playerAddress?: string;   // Stellar G-address — used to compute player_addr_hash in journal
 }
 
 export interface SignerFn {
@@ -73,8 +76,8 @@ export interface SignerFn {
  */
 export function buildReceipt(stats: GameSessionStats): Buffer {
   const journal = new ArrayBuffer(100);
-  const view    = new DataView(journal);
-  let offset    = 0;
+  const view = new DataView(journal);
+  let offset = 0;
 
   const writeU32 = (v: number) => { view.setUint32(offset, v, false); offset += 4; };
 
@@ -96,7 +99,7 @@ export function buildReceipt(stats: GameSessionStats): Buffer {
   // player.to_string() on a Stellar G-address returns the raw strkey string (e.g. "GCQ36V6U...").
   const playerStr = stats.playerAddress ?? '';
   const addrBytes = new TextEncoder().encode(playerStr);
-  const addrHash  = playerStr.length > 0
+  const addrHash = playerStr.length > 0
     ? keccak_256(addrBytes)          // Uint8Array(32)
     : new Uint8Array(32);            // zeros if no address (won't pass contract, but safe locally)
   const journalArr = new Uint8Array(journal);
@@ -133,13 +136,13 @@ export function buildReceipt(stats: GameSessionStats): Buffer {
  *   [36..40] reserved         u32 (0)
  */
 export function buildProofData(stats: GameSessionStats): Buffer {
-  const buf  = new ArrayBuffer(40);
+  const buf = new ArrayBuffer(40);
   const view = new DataView(buf);
-  view.setUint32(0,  stats.perfectHits,     false);
-  view.setUint32(4,  stats.totalHits,       false);
-  view.setUint32(8,  stats.trapsAvoided,    false);
-  view.setUint32(12, stats.totalTraps,      false);
-  view.setUint32(16, stats.feverSeconds,    false);
+  view.setUint32(0, stats.perfectHits, false);
+  view.setUint32(4, stats.totalHits, false);
+  view.setUint32(8, stats.trapsAvoided, false);
+  view.setUint32(12, stats.totalTraps, false);
+  view.setUint32(16, stats.feverSeconds, false);
   view.setUint32(20, stats.pizzasCompleted, false);
   // u64 score as two u32 halves
   view.setUint32(24, Math.floor(stats.score / 0x100000000), false);
@@ -153,8 +156,8 @@ export function buildProofData(stats: GameSessionStats): Buffer {
 function makeGuitarClient(publicKey: string): GuitarPizzaClient {
   return new GuitarPizzaClient({
     networkPassphrase: NETWORK_PASS,
-    contractId:        CONTRACT_IDS.guitarPizza,
-    rpcUrl:            RPC_URL,
+    contractId: CONTRACT_IDS.guitarPizza,
+    rpcUrl: RPC_URL,
     publicKey,
   });
 }
@@ -178,7 +181,7 @@ async function loadDailyRecipeClient(publicKey: string) {
 async function loadAchievementVaultClient(publicKey: string) {
   try {
     const mod = await import('../../../bindings/achievement_vault/src/index');
-    return new mod.Client({ networkPassphrase: NETWORK_PASS, contractId: CONTRACT_IDS.achievementVault, rpcUrl: RPC_URL, publicKey });
+    return new mod.Client({ networkPassphrase: NETWORK_PASS, contractId: CONTRACT_IDS.achievement_vault, rpcUrl: RPC_URL, publicKey });
   } catch { return null; }
 }
 
@@ -272,8 +275,8 @@ export class StellarContractService {
 
       const tx = await client.start_game({
         session_id: sessionId,
-        player:     playerAddress,
-        level_id:   levelId,
+        player: playerAddress,
+        level_id: levelId,
         score_goal: scoreGoal,
       });
       await signAndSend(tx, signer, playerAddress);
@@ -306,11 +309,11 @@ export class StellarContractService {
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const receipt = buildReceipt(stats);
-      const client  = makeGuitarClient(playerAddress);
+      const client = makeGuitarClient(playerAddress);
 
       const tx = await client.submit_score({
         session_id: stats.sessionId,
-        player:     playerAddress,
+        player: playerAddress,
         receipt,
       });
       const txHash = await signAndSend(tx, signer, playerAddress);
@@ -334,15 +337,15 @@ export class StellarContractService {
   ): Promise<{ success: boolean; rank?: number; error?: string }> {
     try {
       const receipt = buildReceipt(stats);
-      const client  = await loadZkLeaderboardClient(playerAddress);
+      const client = await loadZkLeaderboardClient(playerAddress);
       if (!client) return { success: false, error: 'zk-leaderboard client unavailable' };
 
       const tx = await client.submit_score({
-        caller:          playerAddress,
-        player:          playerAddress,
-        level_id:        stats.levelId,
-        score:           BigInt(stats.score),
-        perfect_hits:    stats.perfectHits,
+        caller: playerAddress,
+        player: playerAddress,
+        level_id: stats.levelId,
+        score: BigInt(stats.score),
+        perfect_hits: stats.perfectHits,
         pizzas_completed: stats.pizzasCompleted,
         receipt,
       });
@@ -366,11 +369,11 @@ export class StellarContractService {
   ): Promise<{ success: boolean; weeklyTarget?: number; error?: string }> {
     try {
       const receipt = buildReceipt(stats);
-      const client  = await loadDailyRecipeClient(playerAddress);
+      const client = await loadDailyRecipeClient(playerAddress);
       if (!client) return { success: false, error: 'daily-recipe client unavailable' };
 
       const tx = await client.claim_weekly({
-        player:          playerAddress,
+        player: playerAddress,
         pizzas_completed: stats.pizzasCompleted,
         receipt,
       });
@@ -402,7 +405,7 @@ export class StellarContractService {
     signer: SignerFn,
   ): Promise<{ claimed: number[]; errors: string[] }> {
     const claimed: number[] = [];
-    const errors:  string[] = [];
+    const errors: string[] = [];
 
     const qualifies = (type: number): boolean => {
       switch (type) {
@@ -428,16 +431,16 @@ export class StellarContractService {
       if (!qualifies(type)) continue;
 
       try {
-        const receipt   = buildReceipt(stats);
+        const receipt = buildReceipt(stats);
         const proofData = buildProofData(stats);
-        const client    = await loadAchievementVaultClient(playerAddress);
+        const client = await loadAchievementVaultClient(playerAddress);
         if (!client) { errors.push(`achievement-vault unavailable`); continue; }
 
         const tx = await client.claim_achievement({
-          player:           playerAddress,
+          player: playerAddress,
           achievement_type: type,
-          level_id:         stats.levelId,
-          proof_data:       proofData,
+          level_id: stats.levelId,
+          proof_data: proofData,
           receipt,
         });
         await signAndSend(tx, signer, playerAddress);
@@ -462,11 +465,11 @@ export class StellarContractService {
   static async getSession(playerAddress: string, sessionId: number): Promise<{ score: number; playerWon: boolean } | null> {
     try {
       const client = makeGuitarClient(playerAddress);
-      const tx     = await client.get_session({ session_id: sessionId });
+      const tx = await client.get_session({ session_id: sessionId });
       const session = tx.result as any;
       if (!session) return null;
       return {
-        score:     Number(session.score ?? 0),
+        score: Number(session.score ?? 0),
         playerWon: Boolean(session.player_won ?? false),
       };
     } catch { return null; }
@@ -477,7 +480,7 @@ export class StellarContractService {
     try {
       const client = await loadZkLeaderboardClient(playerAddress);
       if (!client) return [];
-      const tx     = await client.get_leaderboard({ level_id: levelId });
+      const tx = await client.get_leaderboard({ level_id: levelId });
       return tx.result ?? [];
     } catch { return []; }
   }
@@ -487,7 +490,7 @@ export class StellarContractService {
     try {
       const client = await loadZkLeaderboardClient(playerAddress);
       if (!client) return null;
-      const tx     = await client.get_personal_best({ player: playerAddress, level_id: levelId });
+      const tx = await client.get_personal_best({ player: playerAddress, level_id: levelId });
       return tx.result ?? null;
     } catch { return null; }
   }
@@ -497,7 +500,7 @@ export class StellarContractService {
     try {
       const client = await loadDailyRecipeClient(playerAddress);
       if (!client) return null;
-      const tx     = await client.get_current_challenge();
+      const tx = await client.get_current_challenge();
       return tx.result ?? null;
     } catch { return null; }
   }
@@ -507,7 +510,7 @@ export class StellarContractService {
     try {
       const client = await loadDailyRecipeClient(playerAddress);
       if (!client) return null;
-      const tx     = await client.get_player_progress({ player: playerAddress });
+      const tx = await client.get_player_progress({ player: playerAddress });
       return tx.result ?? null;
     } catch { return null; }
   }
@@ -517,7 +520,7 @@ export class StellarContractService {
     try {
       const client = await loadAchievementVaultClient(playerAddress);
       if (!client) return [];
-      const tx     = await client.get_all_badges({ player: playerAddress });
+      const tx = await client.get_all_badges({ player: playerAddress });
       return tx.result ?? [];
     } catch { return []; }
   }
@@ -537,10 +540,10 @@ export class StellarContractService {
     stats: GameSessionStats,
     signer: SignerFn,
   ): Promise<{
-    scoreSubmitted:   boolean;
-    txHash?:          string;
+    scoreSubmitted: boolean;
+    txHash?: string;
     leaderboardRank?: number;
-    weeklyCompleted:  boolean;
+    weeklyCompleted: boolean;
     achievementsClaimed: number[];
     errors: string[];
   }> {
@@ -555,11 +558,16 @@ export class StellarContractService {
     const scoreResult = await this.submitScore(playerAddress, stats, signer);
     if (!scoreResult.success) errors.push(`Score: ${scoreResult.error}`);
 
-    // Note: leaderboard rank is not available synchronously — caller should
-    // refresh getLeaderboard() after a short delay to see updated standings.
-    const lbResult = { success: scoreResult.success, rank: undefined };
+    // 2. Submit to leaderboard (Explicit call)
+    // We call this explicitly to ensure the score reaches the leaderboard
+    // even if the GameHub orchestration has delays or is mocked.
+    let leaderboardRank: number | undefined;
+    const lbResult = await this.submitLeaderboardScore(playerAddress, stats, signer);
+    if (!lbResult.success) {
+      console.warn('[StellarContract] Standalone leaderboard submission failed:', lbResult.error);
+    }
 
-    // 2. Weekly recipe
+    // 3. Weekly recipe
     let weeklyCompleted = false;
     const weeklyResult = await this.claimWeeklyRecipe(playerAddress, stats, signer);
     if (weeklyResult.success) weeklyCompleted = true;
@@ -572,9 +580,9 @@ export class StellarContractService {
     if (achResult.errors.length) errors.push(...achResult.errors);
 
     return {
-      scoreSubmitted:      scoreResult.success,
-      txHash:              scoreResult.txHash,
-      leaderboardRank:     lbResult.rank,
+      scoreSubmitted: scoreResult.success,
+      txHash: scoreResult.txHash,
+      leaderboardRank: lbResult.rank,
       weeklyCompleted,
       achievementsClaimed: achResult.claimed,
       errors,

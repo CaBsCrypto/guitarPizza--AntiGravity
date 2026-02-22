@@ -11,9 +11,9 @@ import './GamesCatalog.css';
 const games = [
   {
     id: 'guitar-pizza',
-    title: 'Guitar Pizza Hero',
+    title: 'Rhythm Slice',
     emoji: '🍕',
-    description: 'Rhythm game where you bake pizzas to the beat (ZK Verified).',
+    description: 'ZK-verified rhythm game — hit notes, complete pizzas, seal your score on Stellar.',
     tags: ['Single player', 'Rhythm', 'ZK'],
   },
   {

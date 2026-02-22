@@ -315,10 +315,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 sessionId: onChainSessionIdRef.current,
                                 perfectHits: perfects,
                                 totalHits: hits,
+                                totalNotes: engineStats.totalNotes ?? hits,
                                 trapsAvoided: engineStats.trapsAvoided ?? 0,
                                 totalTraps: engineStats.totalTraps ?? 0,
                                 feverSeconds: fever,
                                 pizzasCompleted: pizzas,
+                                comboBonus: engineStats.comboBonus ?? 0,
                                 playerAddress: userAddress,
                             };
 

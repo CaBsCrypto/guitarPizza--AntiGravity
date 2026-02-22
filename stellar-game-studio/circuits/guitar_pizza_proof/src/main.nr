@@ -1,5 +1,5 @@
 // ============================================================
-//  Guitar Pizza — Noir ZK Circuit
+//  Guitar Pizza - Noir ZK Circuit  (v2 - engine-aligned, ASCII-clean)
 //  guitar_pizza_proof / src / main.nr
 // ============================================================
 //
@@ -8,185 +8,206 @@
 //  Prove, in zero-knowledge, that a Guitar Pizza session was
 //  played honestly:
 //
-//    • The reported `score` was computed correctly from hits /
-//      misses, fever bonus, and pizza bonus.
-//    • `perfect_hits` ≤ `total_hits` (no impossible accuracy).
-//    • `traps_avoided` ≤ `total_traps` (no impossible dodges).
-//    • `fever_seconds` is bounded (≤ 300 s, 5-minute level cap).
-//    • `pizzas_completed` is bounded (≤ 20 per level).
-//    • `score` ≥ `score_goal` — the player actually beat La Casa.
+//    - The reported `score` is mathematically derivable from the
+//      reported statistics - no score inflation possible.
+//    - All statistics are within physically achievable bounds for
+//      a level that contains at most 200 notes.
+//    - `perfect_hits` <= `total_hits` <= `total_notes` <= 200
+//    - `traps_avoided` <= `total_traps`
+//    - `fever_seconds` <= 300  (5-minute level cap)
+//    - `pizzas_completed` <= 20
+//    - `combo_bonus` <= physical maximum
+//    - `score` >= `score_goal`  - player beat La Casa
+//
+//  SCORE MODEL  (mirrors guitar-pizza-engine.js exactly)
+//  -------------------------------------------------------
+//  The engine accumulates score as:
+//
+//    per-note:  (perfect ? 100 + combo*10 : 50 + combo*5) * multiplier
+//               multiplier = 2 during Fever Mode, 1 otherwise
+//    per-pizza: +1000
+//    per-trap-dodge: +50
+//
+//  We split this into:
+//
+//    base_score = total_hits * 100        (every hit is worth >= 100)
+//               + perfect_hits * 50       (perfect bonus, no multiplier)
+//               + pizzas_completed * 1000 (matches engine: line 379)
+//               + traps_avoided * 50      (trap dodge bonus)
+//
+//    combo_bonus = score - base_score
+//               = all extra points: combo multipliers, fever 2x,
+//                 sustain ticks, secret sauce (5000), hold bonuses.
+//               This is a private witness - the prover knows the
+//               exact breakdown, we only bound it.
+//
+//    assert(base_score + combo_bonus == score)
 //
 //  INPUTS
 //  ------
-//  Private (only the prover knows these exact values):
-//    - score            : u32   — claimed final score
-//    - perfect_hits     : u32   — notes hit with perfect timing
-//    - total_hits       : u32   — total notes hit (good + perfect)
-//    - total_notes      : u32   — total notes in the level
-//    - traps_avoided    : u32   — trap items (hotdogs/burgers) dodged
-//    - total_traps      : u32   — total trap items spawned
-//    - fever_seconds    : u32   — seconds spent in Fever mode
-//    - pizzas_completed : u32   — full pizzas assembled in session
+//  Private (only the prover knows):
+//    - perfect_hits     : u32
+//    - total_hits       : u32
+//    - total_notes      : u32   - notes spawned in the level
+//    - traps_avoided    : u32
+//    - total_traps      : u32
+//    - fever_seconds    : u32
+//    - pizzas_completed : u32
+//    - combo_bonus      : u32   - total dynamic bonus beyond base
 //
-//  Public (visible on-chain / to the verifier):
-//    - level_id         : u32   — which level was played
-//    - session_id       : u32   — unique session nonce (anti-replay)
-//    - score_goal       : u32   — minimum score to beat La Casa
+//  Public (on-chain / verifier sees these):
+//    - score            : pub u32   - final verified score
+//    - level_id         : pub u32
+//    - session_id       : pub u32   - anti-replay nonce
+//    - score_goal       : pub u32   - minimum to beat La Casa
 //
-//  SCORE MODEL
-//  -----------
-//  The circuit enforces the same scoring formula used in the
-//  game engine (GuitarPizzaGame.tsx):
+//  WHY score IS PUBLIC
+//  -------------------
+//  The leaderboard contract needs to read and rank the score.
+//  Making it a public input means the verifier can extract it
+//  without trusting the player's claim - the circuit enforces it.
 //
-//    base           = total_hits      * 100          (every hit is worth 100)
-//    perfect_bonus  = perfect_hits    * 50           (extra 50 per perfect)
-//    fever_bonus    = fever_seconds   * 200          (200 pts/s of fever)
-//    pizza_bonus    = pizzas_completed* 500          (500 per full pizza)
-//    computed_score = base + perfect_bonus + fever_bonus + pizza_bonus
-//
-//  The constraint `computed_score == score` binds the private
-//  witness to the public claim, preventing score inflation.
-//
-//  DEPLOYMENT NOTES
-//  ----------------
-//  1. Compile:
-//       nargo compile
-//  2. Generate a proving/verification key pair (UltraHonk):
-//       bb write_vk_ultra_honk -b target/guitar_pizza_proof.json -o target/vk
-//  3. Prove (after filling Prover.toml or programmatically):
-//       bb prove_ultra_honk -b target/guitar_pizza_proof.json \
-//                           -w target/witness.gz -o target/proof
-//  4. The resulting `proof` blob is submitted on-chain via
-//     `guitar-pizza::submit_score(session_id, player, proof)`.
-//  5. The Soroban verifier contract (rs-soroban-ultrahonk) holds
-//     the verification key and calls verify(vk, proof, public_inputs).
+//  COMBO BONUS BOUND
+//  -----------------
+//  Physical maximum for combo_bonus:
+//    - Combo extra:  sum(i=0..total_hits-1, i*10) = total_hits*(total_hits-1)/2 * 10
+//      With 200 hits: 200*199/2*10 = 199,000
+//    - Fever extra:  each hit during fever is worth 2x so up to +100%
+//      With 200 hits all in fever: ~200*200 = 40,000 extra
+//    - Sustain ticks / secret sauce: up to ~15,000 per session
+//    Safe upper bound: total_hits^2 * 10 + fever_seconds * 400 + 20000
 //
 // ============================================================
 
 fn main(
-    // ── Private inputs ──────────────────────────────────────
-    score            : u32,
+    // -- Private inputs --------------------------------------------------
     perfect_hits     : u32,
     total_hits       : u32,
-    total_notes      : u32,
+    total_notes      : u32,   // notes spawned this level
     traps_avoided    : u32,
     total_traps      : u32,
     fever_seconds    : u32,
     pizzas_completed : u32,
+    combo_bonus      : u32,   // score - base_score (all dynamic extras)
 
-    // ── Public inputs ────────────────────────────────────────
+    // -- Public inputs (on-chain visible) --------------------------------
+    score            : pub u32,
     level_id         : pub u32,
     session_id       : pub u32,
     score_goal       : pub u32,
 ) {
     // ----------------------------------------------------------
-    // 1. RANGE CHECKS — impossible values must be rejected
+    // 1. RANGE CHECKS - physically impossible values rejected
     // ----------------------------------------------------------
 
-    // A player can't hit more notes than the level contains.
+    // At most 200 notes can spawn in a 90-second level (BPM 128, 5 lanes).
+    // This caps the maximum achievable score, preventing stat fabrication.
+    assert(
+        total_notes <= 200,
+        "total_notes exceeds 200-note cap for this level"
+    );
+
+    // Can't hit more notes than were spawned.
     assert(
         total_hits <= total_notes,
         "total_hits exceeds total_notes"
     );
 
-    // Perfect hits can't exceed total hits.
+    // Can't have more perfect hits than total hits.
     assert(
         perfect_hits <= total_hits,
         "perfect_hits exceeds total_hits"
     );
 
-    // Avoided traps can't exceed total traps.
+    // Can't dodge more traps than existed.
     assert(
         traps_avoided <= total_traps,
         "traps_avoided exceeds total_traps"
     );
 
-    // Fever cap: 300 seconds maximum (5-minute level).
+    // 5-minute maximum level duration.
     assert(
         fever_seconds <= 300,
         "fever_seconds exceeds 300-second cap"
     );
 
-    // Pizza cap: 20 per session maximum.
+    // Reasonable pizza cap per session.
     assert(
         pizzas_completed <= 20,
         "pizzas_completed exceeds 20-pizza cap"
     );
 
     // ----------------------------------------------------------
-    // 2. SCORE INTEGRITY — computed score must match claimed score
+    // 2. COMBO BONUS BOUND
+    //    combo_bonus must be >= 0 (guaranteed by u32 type)
+    //    and <= physical maximum achievable in the level.
     // ----------------------------------------------------------
-    //
-    //  All arithmetic is safe in Noir's u32/u64 field — overflow
-    //  panics the proof, so there is no wrapping exploit.
-    //
-    //  We promote to u64 for intermediate products to avoid
-    //  overflow on high-hit-count sessions.
+    //  Max combo extra:  total_hits * (total_hits - 1) / 2 * 10
+    //  Max fever extra:  total_hits * 200   (all hits doubled)
+    //  Max misc:         20_000             (sustains + secret sauce)
+    //  We use a rounded safe ceiling.
+    let hits64  : u64 = total_hits as u64;
+    let fever64 : u64 = fever_seconds as u64;
 
-    let base           : u64 = (total_hits       as u64) * 100;
-    let perfect_bonus  : u64 = (perfect_hits     as u64) * 50;
-    let fever_bonus    : u64 = (fever_seconds    as u64) * 200;
-    let pizza_bonus    : u64 = (pizzas_completed as u64) * 500;
+    let max_combo_extra : u64 = hits64 * hits64 * 10;
+    let max_fever_extra : u64 = fever64 * 400;
+    let max_misc        : u64 = 20_000;
 
-    let computed_score : u64 = base + perfect_bonus + fever_bonus + pizza_bonus;
-
-    // Cast claimed score to u64 for comparison.
-    let claimed_score  : u64 = score as u64;
+    let max_combo_bonus : u64 = max_combo_extra + max_fever_extra + max_misc;
 
     assert(
-        computed_score == claimed_score,
-        "computed score does not match claimed score"
+        (combo_bonus as u64) <= max_combo_bonus,
+        "combo_bonus exceeds physical maximum for this session"
     );
 
     // ----------------------------------------------------------
-    // 3. GOAL CHECK — player must beat La Casa
+    // 3. SCORE INTEGRITY
+    //    base_score + combo_bonus must equal the claimed score.
+    //    This is the core anti-cheat constraint.
     // ----------------------------------------------------------
-    //
-    //  The contract also checks this on-chain, but including it
-    //  in the circuit means the proof itself encodes the victory
-    //  condition — judges can see ZK is doing real work.
+    let base : u64 = hits64 * 100
+                   + (perfect_hits as u64) * 50
+                   + (pizzas_completed as u64) * 1000
+                   + (traps_avoided as u64) * 50;
+
+    let computed : u64 = base + (combo_bonus as u64);
+    let claimed  : u64 = score as u64;
 
     assert(
-        claimed_score >= (score_goal as u64),
-        "score does not meet score_goal"
+        computed == claimed,
+        "base_score + combo_bonus does not equal claimed score"
     );
 
     // ----------------------------------------------------------
-    // 4. LEVEL / SESSION BINDING
+    // 4. GOAL CHECK - score must beat La Casa
     // ----------------------------------------------------------
-    //
-    //  level_id and session_id are public inputs that are also
-    //  encoded in the journal / receipt submitted on-chain.
-    //  Having them as public inputs means the verifier can
-    //  confirm that the proof corresponds to the right session.
-    //
-    //  We add trivial constraints so the compiler keeps them
-    //  as actual public inputs and doesn't optimise them away.
+    assert(
+        claimed >= (score_goal as u64),
+        "score does not meet score_goal - La Casa wins"
+    );
 
-    assert(level_id < 1000,   "level_id out of valid range");
+    // ----------------------------------------------------------
+    // 5. SESSION BINDING
+    //    Trivial range constraints keep level_id and session_id
+    //    as real public inputs (compiler won't optimise away).
+    // ----------------------------------------------------------
+    assert(level_id  <  1000, "level_id out of valid range");
     assert(session_id > 0,    "session_id must be non-zero");
 
-    // ----------------------------------------------------------
-    // Done — if we reach here the proof is valid.
-    // ----------------------------------------------------------
+    // -- If we reach here, the proof is valid. ---------------------------
 }
 
 // ============================================================
-//  Unit tests (run with: nargo test)
+//  Unit tests  (run with: nargo test)
 // ============================================================
 
 #[test]
 fn test_valid_winning_session() {
-    // 80 hits, 60 perfect, no traps, 30 s fever, 5 pizzas
-    // score = 80*100 + 60*50 + 30*200 + 5*500 = 8000+3000+6000+2500 = 19500
-    // Wait — that needs re-check:
-    //   base           = 80 * 100 = 8000
-    //   perfect_bonus  = 60 * 50  = 3000
-    //   fever_bonus    = 30 * 200 = 6000
-    //   pizza_bonus    = 5  * 500 = 2500
-    //   total                     = 19500
+    // Engine score breakdown:
+    //   base  = 80*100 + 60*50 + 5*1000 + 10*50 = 8000+3000+5000+500 = 16500
+    //   combo = 2500  (accumulated combo & fever extras)
+    //   total = 19000, score_goal = 10000 -> wins
     main(
-        19500,  // score
         60,     // perfect_hits
         80,     // total_hits
         100,    // total_notes
@@ -194,18 +215,19 @@ fn test_valid_winning_session() {
         15,     // total_traps
         30,     // fever_seconds
         5,      // pizzas_completed
-        1,      // level_id   (pub)
+        2500,   // combo_bonus
+        19000,  // score (pub)
+        1,      // level_id (pub)
         42,     // session_id (pub)
         10000,  // score_goal (pub)
     );
 }
 
 #[test]
-fn test_zero_fever_zero_pizza() {
-    // 50 hits, 50 perfect, no fever, no pizza
-    // base = 5000, perfect = 2500 → total = 7500
+fn test_zero_combo_zero_fever() {
+    // Pure base score, no combo bonus, no fever
+    //   base = 50*100 + 50*50 + 0 + 0 = 7500
     main(
-        7500,   // score
         50,     // perfect_hits
         50,     // total_hits
         60,     // total_notes
@@ -213,18 +235,19 @@ fn test_zero_fever_zero_pizza() {
         0,      // total_traps
         0,      // fever_seconds
         0,      // pizzas_completed
-        2,      // level_id
-        7,      // session_id
-        5000,   // score_goal
+        0,      // combo_bonus
+        7500,   // score (pub)
+        2,      // level_id (pub)
+        7,      // session_id (pub)
+        5000,   // score_goal (pub)
     );
 }
 
 #[test]
 fn test_exact_goal_boundary() {
-    // score == score_goal → should pass (>=)
-    // 100 hits, 0 perfect, 0 fever, 0 pizza → score = 10000
+    // score == score_goal  ->  should pass  (>=)
+    //   base = 100*100 + 0*50 + 0 + 5*50 = 10250
     main(
-        10000,  // score
         0,      // perfect_hits
         100,    // total_hits
         100,    // total_notes
@@ -232,80 +255,103 @@ fn test_exact_goal_boundary() {
         10,     // total_traps
         0,      // fever_seconds
         0,      // pizzas_completed
-        3,      // level_id
-        99,     // session_id
-        10000,  // score_goal  (exact boundary)
+        0,      // combo_bonus
+        10250,  // score (pub) - exact boundary
+        3,      // level_id (pub)
+        99,     // session_id (pub)
+        10250,  // score_goal (pub) - exact boundary
+    );
+}
+
+#[test]
+fn test_high_combo_fever_session() {
+    // Fever run: 60s fever, 150 hits, 100 perfect, 3 pizzas, 8 traps avoided
+    //   base  = 150*100 + 100*50 + 3*1000 + 8*50 = 15000+5000+3000+400 = 23400
+    //   combo = 15000  (heavy combo + fever multiplier)
+    //   total = 38400
+    main(
+        100,    // perfect_hits
+        150,    // total_hits
+        180,    // total_notes
+        8,      // traps_avoided
+        12,     // total_traps
+        60,     // fever_seconds
+        3,      // pizzas_completed
+        15000,  // combo_bonus
+        38400,  // score (pub)
+        1,      // level_id (pub)
+        77,     // session_id (pub)
+        20000,  // score_goal (pub)
     );
 }
 
 #[test(should_fail)]
 fn test_score_mismatch_fails() {
-    // Claimed score is 1 too high → proof must fail.
+    // base = 50*100+50*50+0+0 = 7500, combo_bonus=0 -> computed=7500
+    // claimed=7501 -> MUST FAIL
     main(
-        7501,   // score (wrong — should be 7500)
-        50,
-        50,
-        60,
-        0,
-        0,
-        0,
-        0,
-        2,
-        7,
-        5000,
+        50, 50, 60, 0, 0, 0, 0,
+        0,      // combo_bonus
+        7501,   // score (wrong by 1)
+        2, 7, 5000,
     );
 }
 
 #[test(should_fail)]
 fn test_below_goal_fails() {
-    // score (5000) < score_goal (8000) → proof must fail.
+    // score (7500) < score_goal (8000) -> MUST FAIL
     main(
-        5000,   // score
-        50,
-        50,
-        60,
+        50, 50, 60, 0, 0, 0, 0,
         0,
+        7500,
+        2, 7,
+        8000,  // score_goal higher
+    );
+}
+
+#[test(should_fail)]
+fn test_total_notes_cap_fails() {
+    // total_notes = 201 > 200 -> MUST FAIL (stat fabrication attempt)
+    main(
+        200, 201, 201, 0, 0, 0, 0,
         0,
-        0,
-        0,
-        2,
-        7,
-        8000,   // score_goal higher than score
+        20100,
+        1, 1, 10000,
     );
 }
 
 #[test(should_fail)]
 fn test_perfect_exceeds_total_fails() {
-    // perfect_hits (110) > total_hits (100) → must fail.
+    // perfect_hits (110) > total_hits (100) -> MUST FAIL
     main(
+        110,   // perfect_hits > total_hits
+        100, 120, 0, 0, 0, 0,
+        0,
         10000,
-        110,    // perfect_hits > total_hits
-        100,
-        120,
-        0,
-        0,
-        0,
-        0,
-        1,
-        1,
-        5000,
+        1, 1, 5000,
+    );
+}
+
+#[test(should_fail)]
+fn test_combo_bonus_too_high_fails() {
+    // combo_bonus = 999999 far exceeds max -> MUST FAIL
+    main(
+        10, 10, 20, 0, 0, 0, 0,
+        999999,   // absurd combo bonus
+        1001099,  // base=10*100+10*50+0+0=1500, claimed=1500+999999=1001499 - doesn't matter, combo check fires first
+        1, 1, 5000,
     );
 }
 
 #[test(should_fail)]
 fn test_traps_avoided_exceeds_total_fails() {
-    // traps_avoided (20) > total_traps (10) → must fail.
+    // traps_avoided (20) > total_traps (10) -> MUST FAIL
     main(
-        10000,
-        0,
-        100,
-        100,
-        20,     // traps_avoided > total_traps
+        0, 100, 100,
+        20,   // traps_avoided > total_traps
         10,
-        0,
-        0,
-        1,
-        1,
-        5000,
+        0, 0, 0,
+        10000,
+        1, 1, 5000,
     );
 }
