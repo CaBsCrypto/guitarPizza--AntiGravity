@@ -22,8 +22,8 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
           <WalletStandalone />
           <button
             type="button"
-            className={`rs-play-btn ${currentPage === 'games' ? 'active' : ''}`}
-            onClick={() => onNavigate('games')}
+            className={`rs-play-btn ${currentPage === 'game' ? 'active' : ''}`}
+            onClick={() => onNavigate('game')}
           >
             ▶ PLAY
           </button>

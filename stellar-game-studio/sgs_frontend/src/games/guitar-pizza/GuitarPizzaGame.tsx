@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Settings, Volume2, VolumeX, ArrowLeft, ShieldCheck, Loader2 } from 'lucide-react';
+import { Settings, Volume2, VolumeX, ArrowLeft, ShieldCheck, Loader2, Globe } from 'lucide-react';
 import { ProofGenerator } from '../../zk/ProofGenerator';
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
@@ -32,6 +32,115 @@ interface TxRecord {
 
 const EXPLORER_BASE = 'https://stellar.expert/explorer/testnet/tx';
 
+const TRANSLATIONS = {
+    es: {
+        initializing: 'Inicializando...',
+        loadingAssets: 'Cargando Objetos (puede tardar un momento)...',
+        loadingEngine: 'Cargando Motor del Juego...',
+        openingSession: 'Abriendo sesión en cadena...',
+        startingGame: 'Iniciando Juego...',
+        market: 'MERCADO',
+        marketSub: 'Artículos ilícitos para el aspirante a Don.',
+        ranking: 'RANKING',
+        legend: 'LEYENDA',
+        rules: 'REGLAS',
+        setup: 'AJUSTES',
+        fireUp: 'ENCENDER HORNO',
+        heatingUp: 'CALENTANDO...',
+        chefName: 'Nombre del Chef',
+        xHandle: 'Usuario X',
+        wallet: 'Billetera Conectada',
+        volume: 'Volumen Maestro',
+        myTxs: 'Mis Transacciones',
+        noTxs: 'Sin transacciones aún. ¡Juega para empezar!',
+        backToCooking: 'VOLVER A LA COCINA',
+        serviceEnded: 'SERVICIO FINALIZADO',
+        score: 'PUNTAJE',
+        cookAgain: 'COCINAR DE NUEVO',
+        exitKitchen: 'SALIR DE LA COCINA',
+        verifying: 'GENERANDO PRUEBA...',
+        securing: 'Asegurando puntaje con Zero-Knowledge',
+        verified: '✓ VERIFICADO Y SELLADO',
+        failed: 'Verificación Fallida',
+        sealed: 'SELLADO EN STELLAR',
+        scoreVerified: 'Puntaje verificado en cadena',
+        autoClose: 'Cierre automático en',
+        challenge: 'DESAFIAR AL TABLERO',
+        noScores: '¡Sin puntajes aún!',
+        beFirst: 'Sé el primero en la cadena.',
+        refresh: 'Refrescar',
+        back: 'Atrás',
+        storyIntro: 'Nueva York, 1984. Las Cinco Familias controlan el queso... Tú eres el único con el Ritmo para romper su corteza.',
+        storyBody: 'Demuestra tu valía en la cocina. Toca las notas, hornea las pizzas perfectas y conviértete en el...',
+        don: 'DON DE LA MASA',
+        controls: 'CONTROLES',
+        controlsDesc: 'Toca las teclas cuando los ingredientes lleguen al plato.',
+        baking: 'HORNEANDO',
+        precision: 'Precisión',
+        precisionDesc: 'Los aciertos llenan tu medidor.',
+        combo: 'Combo / Fiebre',
+        comboDesc: '¡No falles! Activa el Modo Fiebre.',
+        orders: 'Pedidos',
+        ordersDesc: 'Completa pizzas para ganar más.',
+        rewards: 'RECOMPENSA',
+        rewardsDesc: '¡Sube en el ranking y desbloquea herramientas!',
+        language: 'Idioma'
+    },
+    en: {
+        initializing: 'Initializing...',
+        loadingAssets: 'Loading Assets (this may take a moment)...',
+        loadingEngine: 'Loading Game Engine...',
+        openingSession: 'Opening on-chain session...',
+        startingGame: 'Starting Game...',
+        market: 'MARKET',
+        marketSub: 'Illicit goods for the aspiring Don.',
+        ranking: 'BOARD',
+        legend: 'LEGEND',
+        rules: 'RULES',
+        setup: 'SETUP',
+        fireUp: 'FIRE UP OVEN',
+        heatingUp: 'HEATING UP...',
+        chefName: 'Chef Name',
+        xHandle: 'X Handle',
+        wallet: 'Connected Wallet',
+        volume: 'Master Volume',
+        myTxs: 'My TXs',
+        noTxs: 'No transactions yet. Play a game to start!',
+        backToCooking: 'BACK TO COOKING',
+        serviceEnded: 'SERVICE ENDED',
+        score: 'SCORE',
+        cookAgain: 'COOK AGAIN',
+        exitKitchen: 'EXIT KITCHEN',
+        verifying: 'GENERATING PROOF...',
+        securing: 'Securing score with Zero-Knowledge',
+        verified: '✓ VERIFIED & SEALED',
+        failed: 'Verification Failed',
+        sealed: 'SEALED ON STELLAR',
+        scoreVerified: 'Score verified on-chain',
+        autoClose: 'Auto-closing in',
+        challenge: 'CHALLENGE THE BOARD',
+        noScores: 'No scores yet!',
+        beFirst: 'Be the first chef on-chain.',
+        refresh: 'Refresh',
+        back: 'Back',
+        storyIntro: 'New York, 1984. The Five Families control the cheese... You are the only one with the Rhythm to break their crust.',
+        storyBody: 'Prove your worth in the kitchen. Hit the notes, bake the perfect pies, and become the...',
+        don: 'DON OF DOUGH',
+        controls: 'CONTROLES',
+        controlsDesc: 'Tap the keys as ingredients reach the plate at the bottom.',
+        baking: 'BAKING',
+        precision: 'Precision',
+        precisionDesc: 'Hits fill your Pizza Meter.',
+        combo: 'Combo / Fever',
+        comboDesc: "Don't miss! Activate Fever Mode.",
+        orders: 'Orders',
+        ordersDesc: 'Finish pies to increase tips.',
+        rewards: 'REWARD',
+        rewardsDesc: 'Climb the ranks and unlock market tools!',
+        language: 'Language'
+    }
+};
+
 export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarPizzaGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -40,7 +149,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     // Tracks the actual on-chain session ID (may differ from local if a session was reused)
     const onChainSessionIdRef = useRef<number>(0);
 
-    const [status, setStatus] = useState<string>('Initializing...');
+    const [status, setStatus] = useState<string>(TRANSLATIONS['es'].initializing); // Default to es for init
     const [error, setError] = useState<string | null>(null);
 
     // Wallet
@@ -56,6 +165,16 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     // UI State
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
+    const [language, setLanguage] = useState<'es' | 'en'>(() => {
+        try { return (localStorage.getItem('gp_language') as 'es' | 'en') ?? 'es'; }
+        catch { return 'es'; }
+    });
+    const t = TRANSLATIONS[language];
+
+    useEffect(() => {
+        localStorage.setItem('gp_language', language);
+    }, [language]);
+
     const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard'>('lobby');
     const [isVerifying, setIsVerifying] = useState(false);
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
@@ -247,14 +366,14 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                 return;
             }
 
-            setStatus('Loading Assets (this may take a moment)...');
+            setStatus(t.loadingAssets);
             addLog("Status: Loading Assets...");
 
             // Load scripts
             try {
                 if (!window.initGuitarPizza) {
                     addLog("[GuitarPizza] initGuitarPizza undefined, loading engine...");
-                    setStatus('Loading Game Engine...');
+                    setStatus(t.loadingEngine);
 
                     const baseUrl = import.meta.env.BASE_URL;
                     const primaryPath = `${baseUrl}game/guitar-pizza-engine.js`.replace('//', '/');
@@ -295,7 +414,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             // before the game starts. This prevents the race condition where submit_score
             // uses a different sessionId than the one stored on-chain.
             // score_goal = 1 so submit_score always returns true (human always "wins").
-            setStatus('Opening on-chain session...');
+            setStatus(t.openingSession);
             try {
                 const signer = getContractSignerRef.current();
                 const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
@@ -309,7 +428,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                 console.warn("[GuitarPizza] No wallet connected — skipping on-chain session start.");
             }
 
-            setStatus('Starting Game...');
+            setStatus(t.startingGame);
             addLog("Status: Starting Game...");
 
             if (window.initGuitarPizza) {
@@ -393,7 +512,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                             // 4. Submit all contracts in sequence via StellarContractService
                             addLog("Receipt ready. Submitting to Stellar contracts...");
-                            setStatus('Submitting to Stellar...');
+                            setStatus(t.sealed); // or just generic sending
 
                             const signer = getContractSignerRef.current();
                             const result = await StellarContractService.postGameFlow(
@@ -629,13 +748,46 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     <div className="back-btn-circle" onClick={() => setShowSettings(false)}>
                                         <ArrowLeft size={20} />
                                     </div>
-                                    <h2 className="modal-title">SETUP</h2>
+                                    <h2 className="modal-title">{t.setup}</h2>
                                     <div style={{ width: 40 }}></div>
                                 </div>
 
                                 <div style={{ flex: 1, overflowY: 'auto' }}>
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                            <Globe size={20} color="#666" />
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{t.language}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button
+                                                onClick={() => setLanguage('es')}
+                                                style={{
+                                                    padding: '0.5rem 1rem',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid #ddd',
+                                                    background: language === 'es' ? 'var(--color-accent)' : '#fff',
+                                                    color: language === 'es' ? '#fff' : '#333',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >ES</button>
+                                            <button
+                                                onClick={() => setLanguage('en')}
+                                                style={{
+                                                    padding: '0.5rem 1rem',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid #ddd',
+                                                    background: language === 'en' ? 'var(--color-accent)' : '#fff',
+                                                    color: language === 'en' ? '#fff' : '#333',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >EN</button>
+                                        </div>
+                                    </div>
+
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>Chef Name</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>{t.chefName}</label>
                                         <input
                                             type="text"
                                             value={chefName}
@@ -645,7 +797,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     </div>
 
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>X Handle</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>{t.xHandle}</label>
                                         <input
                                             type="text"
                                             value={xHandle}
@@ -655,14 +807,14 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     </div>
 
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>Connected Wallet</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>{t.wallet}</label>
                                         <div style={{ padding: '0.8rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: '0.9rem', wordBreak: 'break-all', color: '#27ae60' }}>
                                             {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : "Not Connected"}
                                         </div>
                                     </div>
 
                                     <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Master Volume</span>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{t.volume}</span>
                                         <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 50, height: 50, padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}>
                                             {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
                                         </button>
@@ -671,13 +823,13 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     {/* ── MY TXs HISTORY ───────────────────────────────── */}
                                     <div style={{ marginBottom: '1rem', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-                                            <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>⛓ My TXs</span>
+                                            <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>⛓ {t.myTxs}</span>
                                             <span style={{ fontSize: '0.75rem', color: '#999' }}>({txHistory.length})</span>
                                         </div>
 
                                         {txHistory.length === 0 ? (
                                             <div style={{ textAlign: 'center', color: '#bbb', fontSize: '0.85rem', padding: '1rem', background: '#f9f9f9', borderRadius: '8px', border: '1px dashed #ddd' }}>
-                                                No transactions yet. Play a game to start!
+                                                {t.noTxs}
                                             </div>
                                         ) : (
                                             <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e5e5e5' }}>
@@ -698,7 +850,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                             return (
                                                                 <tr key={i} style={{ borderTop: '1px solid #eee', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
                                                                     <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
-                                                                        {tx.type}
+                                                                        {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}
                                                                     </td>
                                                                     <td style={{ padding: '0.4rem 0.4rem', color: '#555', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                                                                         {tx.score.toLocaleString()}
@@ -728,7 +880,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                                 </div>
 
-                                <button className="close-btn" onClick={() => setShowSettings(false)} style={{ width: '100%' }}>BACK TO COOKING</button>
+                                <button className="close-btn" onClick={() => setShowSettings(false)} style={{ width: '100%' }}>{t.backToCooking}</button>
                             </div>
                         </div>
                     )}
@@ -783,25 +935,63 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     disabled={!engineRef.current}
                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1.2rem', padding: '1rem' }}
                                 >
-                                    {engineRef.current ? "🔥 FIRE UP OVEN" : "🔥 HEATING UP..."}
+                                    {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
                                 <div className="grid grid-cols-2 gap-3 mt-4 w-full">
-                                    <button className="secondary-btn lobby-nav-btn" onClick={() => setView('store')}>
-                                        <span className="btn-icon">🛒</span>
-                                        <span className="btn-text">MARKET</span>
+                                    <button
+                                        className="secondary-btn lobby-nav-btn"
+                                        style={{
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            filter: 'grayscale(0.5) contrast(0.8)',
+                                            cursor: 'not-allowed',
+                                            opacity: 0.8
+                                        }}
+                                        disabled
+                                    >
+                                        <div style={{
+                                            filter: 'blur(3px)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            width: '100%',
+                                            opacity: 0.6
+                                        }}>
+                                            <span className="btn-icon">🛒</span>
+                                            <span className="btn-text">{t.market}</span>
+                                        </div>
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold',
+                                            color: 'var(--ph-gold)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.1em',
+                                            textShadow: '0 0 10px rgba(0,0,0,0.5)',
+                                            zIndex: 2
+                                        }}>
+                                            {language === 'es' ? 'Próximamente' : 'Coming Soon'}
+                                        </div>
                                     </button>
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => { loadLeaderboard(); setView('leaderboard'); }}>
                                         <span className="btn-icon">🏆</span>
-                                        <span className="btn-text">LEADERBOARD</span>
+                                        <span className="btn-text">{t.ranking}</span>
                                     </button>
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => setShowSettings(true)}>
                                         <span className="btn-icon">⚙️</span>
-                                        <span className="btn-text">SETUP</span>
+                                        <span className="btn-text">{t.setup}</span>
                                     </button>
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => setView('howto')}>
                                         <span className="btn-icon">📜</span>
-                                        <span className="btn-text">RULES</span>
+                                        <span className="btn-text">{t.rules}</span>
                                     </button>
                                 </div>
                             </div>
@@ -815,10 +1005,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <div className="back-btn-circle" onClick={() => setView('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title">MARKET</h2>
+                                        <h2 className="modal-title">{t.market}</h2>
                                         <div style={{ width: 40 }}></div>
                                     </div>
-                                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem', textAlign: 'center' }}>Illicit goods for the aspiring Don.</p>
+                                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem', textAlign: 'center' }}>
+                                        {t.marketSub}
+                                    </p>
 
                                     <div className="store-grid">
                                         <div className="store-item" style={{ background: '#f9f9f9', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
@@ -853,11 +1045,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <div className="back-btn-circle" onClick={() => setView('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title">🏆 LEADERBOARD</h2>
+                                        <h2 className="modal-title">🏆 {t.ranking}</h2>
                                         <button
                                             onClick={loadLeaderboard}
                                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', width: 40, color: '#666' }}
-                                            title="Refresh"
+                                            title={t.refresh}
                                         >↺</button>
                                     </div>
 
@@ -894,8 +1086,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         ) : leaderboard.length === 0 ? (
                                             <div style={{ textAlign: 'center', padding: '2rem' }}>
                                                 <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>No scores yet!</div>
-                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>Be the first chef on-chain.</div>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
+                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
                                                 <button
                                                     className="primary-btn"
                                                     style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
@@ -945,7 +1137,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                             className="primary-btn"
                                             style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
                                             onClick={() => { setView('lobby'); handleStartGame(); }}
-                                        >🔥 CHALLENGE THE BOARD</button>
+                                        >🔥 {t.challenge}</button>
                                     )}
                                 </div>
                             </div>
@@ -958,13 +1150,17 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <div className="back-btn-circle" onClick={() => setView('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title">LEGEND</h2>
+                                        <h2 className="modal-title">{t.legend}</h2>
                                         <div style={{ width: 40 }}></div>
                                     </div>
                                     <div style={{ padding: '0 1rem', textAlign: 'center' }}>
-                                        <p style={{ lineHeight: '1.6' }}>New York, 1984. The Five Families control the cheese... You are the only one with the Rhythm to break their crust.</p>
-                                        <p style={{ marginTop: '1rem', lineHeight: '1.6' }}>Prove your worth in the kitchen. Hit the notes, bake the perfect pies, and become the...</p>
-                                        <h3 style={{ fontSize: '2rem', color: '#ccafa5', marginTop: '1rem', fontFamily: 'var(--font-title)' }}>DON OF DOUGH</h3>
+                                        <p style={{ lineHeight: '1.6', marginBottom: '1rem' }}>
+                                            {t.storyIntro}
+                                        </p>
+                                        <p style={{ lineHeight: '1.6' }}>
+                                            {t.storyBody}
+                                        </p>
+                                        <h3 style={{ fontSize: '2rem', color: '#ccafa5', marginTop: '1rem', fontFamily: 'var(--font-title)' }}>{t.don}</h3>
                                     </div>
                                 </div>
                             </div>
@@ -977,52 +1173,52 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <div className="back-btn-circle" onClick={() => setView('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title">RULES</h2>
+                                        <h2 className="modal-title">{t.rules}</h2>
                                         <div style={{ width: 40 }}></div>
                                     </div>
 
                                     <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
                                         <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>1. THE CONTROLS</h3>
-                                            <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '1rem' }}>Tap the keys as ingredients reach the plate at the bottom.</p>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
+                                            <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '0.5rem' }}>{t.controlsDesc}</p>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
                                                 <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
                                                 <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
-                                                <div className="key-box">D<br /><span style={{ fontSize: '0.7rem' }}>🟢</span></div>
-                                                <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
+                                                <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
+                                                <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
                                             </div>
                                         </section>
 
                                         <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>2. BAKING THE PIE</h3>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                                                     <div style={{ fontSize: '1.5rem' }}>🎯</div>
                                                     <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>Precision Matters</p>
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>Hitting notes on time fills your <b>Pizza Meter</b>. "Perfect" hits grant bonus progress.</p>
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.precision}</p>
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.precisionDesc}</p>
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                                                     <div style={{ fontSize: '1.5rem' }}>🔄</div>
                                                     <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>Maintain Combo</p>
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>Don't miss! High combos activate <b>Fever Mode</b>, doubling your point gain.</p>
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.combo}</p>
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.comboDesc}</p>
                                                     </div>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                                                     <div style={{ fontSize: '1.5rem' }}>📦</div>
                                                     <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>Complete Orders</p>
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>Fill the meter completely to finish a pizza. Each finished pie increases your tips (score multipliers).</p>
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.orders}</p>
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.ordersDesc}</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </section>
 
                                         <section>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>3. THE DON'S REWARD</h3>
-                                            <p style={{ fontSize: '0.9rem', color: '#666', fontStyle: 'italic' }}>Produce the finest pies to climb the ranks and unlock exclusive kitchen tools in the Market.</p>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
+                                            <p style={{ fontSize: '0.9rem', color: '#666' }}>{t.rewardsDesc}</p>
                                         </section>
                                     </div>
                                 </div>
@@ -1067,17 +1263,17 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             overflow: 'hidden'
                         }}>
                             <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.4)', padding: '0.5rem 1rem', borderRadius: '10px', backdropFilter: 'blur(2px)' }}>
-                                <h1 style={{ fontFamily: 'var(--font-title)', fontSize: '2.5rem', margin: 0, textShadow: '2px 2px 4px black' }}>SERVICE ENDED</h1>
+                                <h1 style={{ fontFamily: 'var(--font-title)', fontSize: '2.5rem', margin: 0, textShadow: '2px 2px 4px black' }}>{t.serviceEnded}</h1>
                                 <div style={{ width: '60px', height: '4px', background: 'var(--ph-gold)', margin: '0.5rem auto' }}></div>
                             </div>
 
                             <div style={{ textAlign: 'center' }}>
                                 <div className="grade" id="resGrade" style={{ fontSize: '7rem', fontWeight: 'bold', color: 'var(--ph-gold)', textShadow: '0 0 20px rgba(255,215,0,0.5)', lineHeight: 1 }}>S</div>
-                                <div className="stat-row" style={{ fontSize: '1.2rem', marginTop: '0.5rem', background: 'rgba(0,0,0,0.6)', padding: '0.2rem 1rem', borderRadius: '20px' }}>SCORE: <span id="resScore">0</span></div>
+                                <div className="stat-row" style={{ fontSize: '1.2rem', marginTop: '0.5rem', background: 'rgba(0,0,0,0.6)', padding: '0.2rem 1rem', borderRadius: '20px' }}>{t.score}: <span id="resScore">0</span></div>
                                 {/* On-chain verified score — shown once confirmed from contract */}
                                 {onChainScore !== null && (
                                     <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', background: 'rgba(39,174,96,0.2)', border: '1px solid #27ae60', borderRadius: '12px', padding: '0.2rem 0.8rem', color: '#27ae60', display: 'inline-block' }}>
-                                        ✅ On-chain: {onChainScore.toLocaleString()} pts
+                                        ✅ {t.scoreVerified}: {onChainScore.toLocaleString()} pts
                                     </div>
                                 )}
                             </div>
@@ -1094,21 +1290,21 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 }}>
                                     {proofStatus === 'generating' ? (
                                         <>
-                                            <p style={{ color: 'var(--ph-gold)', fontWeight: 'bold', marginBottom: '0.5rem' }}>GENERATING PROOF...</p>
-                                            <div style={{ fontSize: '0.8rem', color: '#ccc' }}>Securing score with Zero-Knowledge</div>
+                                            <p style={{ color: 'var(--ph-gold)', fontWeight: 'bold', marginBottom: '0.5rem' }}>{t.verifying}</p>
+                                            <div style={{ fontSize: '0.8rem', color: '#ccc' }}>{t.securing}</div>
                                         </>
                                     ) : proofStatus === 'success' ? (
                                         <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '1rem' }}>
-                                            ✓ VERIFIED & SEALED ON-CHAIN
+                                            {t.verified} ON-CHAIN
                                         </div>
                                     ) : (
-                                        <div style={{ color: '#e74c3c' }}>Verification Failed</div>
+                                        <div style={{ color: '#e74c3c' }}>{t.failed}</div>
                                     )}
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
-                                    <button id="restartBtn" onClick={handleCookAgain} className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>COOK AGAIN</button>
-                                    <button id="backToLobbyBtn" onClick={handleBackToLobby} className="secondary-btn" style={{ width: '100%', padding: '0.8rem', opacity: 0.9 }}>EXIT KITCHEN</button>
+                                    <button id="restartBtn" onClick={handleCookAgain} className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>{language === 'es' ? 'COCINAR OTRA VEZ' : 'COOK AGAIN'}</button>
+                                    <button id="backToLobbyBtn" onClick={handleBackToLobby} className="secondary-btn" style={{ width: '100%', padding: '0.8rem', opacity: 0.9 }}>{language === 'es' ? 'SALIR COCINA' : 'EXIT KITCHEN'}</button>
                                 </div>
                             )}
                         </div>
@@ -1142,10 +1338,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
-                                            ⛓ SEALED ON STELLAR
+                                            ⛓ {language === 'es' ? 'SELLADO EN STELLAR' : 'SEALED ON STELLAR'}
                                         </div>
                                         <div style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '2px' }}>
-                                            Score verified on-chain
+                                            {language === 'es' ? 'Puntaje verificado en cadena' : 'Score verified on-chain'}
                                         </div>
                                     </div>
                                     <button
@@ -1170,7 +1366,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                 gap: '0.5rem',
                                             }}>
                                                 <div>
-                                                    <div style={{ color: '#27ae60', fontSize: '0.78rem', fontWeight: 'bold' }}>✅ {tx.type}</div>
+                                                    <div style={{ color: '#27ae60', fontSize: '0.78rem', fontWeight: 'bold' }}>✅ {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}</div>
                                                     <div style={{ color: '#888', fontSize: '0.7rem', fontFamily: 'monospace' }}>{shortHash}</div>
                                                 </div>
                                                 <a
@@ -1191,12 +1387,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     className="primary-btn"
                                     style={{ width: '100%', padding: '0.8rem', fontSize: '1rem' }}
                                 >
-                                    🍕 COOK AGAIN
+                                    🍕 {language === 'es' ? 'COCINAR OTRA VEZ' : 'COOK AGAIN'}
                                 </button>
 
                                 {/* Countdown */}
                                 <div style={{ textAlign: 'center', color: '#555', fontSize: '0.72rem' }}>
-                                    Auto-closing in {popupCountdown}s
+                                    {language === 'es' ? 'Cierre automático en' : 'Auto-closing in'} {popupCountdown}s
                                 </div>
                             </div>
                         </div>
@@ -1207,4 +1403,4 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             </div>
         </div>
     );
-}
+};
