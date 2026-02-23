@@ -7,7 +7,7 @@ import type { Page } from './types/navigation';
 
 function App() {
   const [page, setPage] = useState<Page>('home');
-  const { userAddress } = useWallet();
+  const { publicKey } = useWallet();
 
   const navigate = (next: Page) => setPage(next);
 
@@ -16,7 +16,7 @@ function App() {
       {page === 'home' && <HomePage onNavigate={navigate} />}
       {page === 'game' && (
         <GuitarPizzaGame
-          userAddress={userAddress ?? ''}
+          userAddress={publicKey ?? ''}
           onGameComplete={(_score) => navigate('home')}
           onBack={() => navigate('home')}
         />

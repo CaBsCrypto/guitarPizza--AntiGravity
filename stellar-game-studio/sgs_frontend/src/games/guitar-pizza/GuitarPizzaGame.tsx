@@ -6,13 +6,14 @@ import { SimulatedZKCircuit } from './SimulatedZKCircuit';
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
 import { useWallet } from '@/hooks/useWallet';
 import { Buffer } from 'buffer';
+import { getRandomSong, songPath } from '../../data/songList';
 
 // We'll import the game logic from a separate file or inline it here if feasible
 // For now, we assume the game logic is exposed globally via window.GuitarPizza or similar after loading scripts
 
 declare global {
     interface Window {
-        initGuitarPizza: (canvas: HTMLCanvasElement | null, userAddress: string, onComplete: (score: number, inputLog?: any[]) => void) => () => void;
+        initGuitarPizza: (canvas: HTMLCanvasElement | null, userAddress: string, onComplete: (score: number, inputLog?: any[]) => void, songUrl?: string) => () => void;
         BASE64_ASSETS: Record<string, string>;
     }
 }
@@ -434,6 +435,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             if (window.initGuitarPizza) {
                 try {
                     // Check if initGuitarPizza returns an object (new version) or function (old version fallback)
+                    const randomSong = getRandomSong();
+                    const resolvedSongUrl = `${import.meta.env.BASE_URL}${songPath(randomSong)}`.replace('//', '/');
+                    addLog(`[GuitarPizza] Song: ${randomSong.title} — ${resolvedSongUrl}`);
                     const result = window.initGuitarPizza(canvasRef.current, userAddress, async (finalScore: number, inputLog: any[] = []) => {
                         // Clear any lingering status when game completes, just in case
                         setStatus('');
@@ -612,7 +616,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 setStatus(''); // Clear persistent error overlay
                             }, 4000);
                         }
-                    });
+                    }, resolvedSongUrl);
 
                     if (typeof result === 'function') {
                         engineRef.current = { cleanup: result, setVolume: () => { } };
