@@ -66,4 +66,41 @@ namespace Pisadado.Core
         PhaseLaunch,
         Result
     }
+
+    // --- Rhythm Events ---
+
+    public struct NoteHitEvent
+    {
+        public int LaneIndex;
+        public bool IsPerfect;
+        public float TimingError;
+        public int Score;
+    }
+
+    public struct NoteMissEvent
+    {
+        public int LaneIndex;
+    }
+
+    public struct NoteSustainEvent
+    {
+        public int LaneIndex;
+        public float SustainDuration;
+        public bool IsComplete;
+    }
+
+    public struct ComboMilestoneEvent
+    {
+        public int Milestone;
+    }
+
+    public struct FireModeActivatedEvent
+    {
+        public bool IsActive;
+    }
+
+    public struct PizzaCompletedEvent
+    {
+        // Add pizza data if needed
+    }
 }

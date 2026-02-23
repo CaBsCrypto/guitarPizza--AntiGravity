@@ -159,10 +159,4 @@ namespace Pisadado.PhaseA
         }
     }
 
-    public struct NoteHitEvent
-    {
-        public int LaneIndex;
-        public bool IsPerfect;
-        public int Score;
-    }
 }

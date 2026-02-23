@@ -84,6 +84,7 @@ namespace Pisadado.PhaseA
             if (currentBeat > TargetBeat + 0.5f && !IsSustaining)
             {
                 // Missed
+                EventBus.Publish(new NoteMissEvent { LaneIndex = LaneIndex });
                 _active = false;
                 gameObject.SetActive(false);
             }
