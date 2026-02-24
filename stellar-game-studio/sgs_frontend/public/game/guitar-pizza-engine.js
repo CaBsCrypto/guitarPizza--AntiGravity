@@ -3,7 +3,15 @@
 window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songUrl) {
     // --- GLOBAL VARS & CONFIG (Scoped to this function) ---
     const CONFIG = {
-        BPM: 128, LANE_COUNT: 5, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060, SONG_DURATION: 90,
+        // Read BPM from songUrl query param (e.g. ?bpm=95), fallback to 128
+        BPM: (function () {
+            try {
+                const u = new URL(typeof songUrl === 'string' && songUrl.includes('?') ? songUrl : 'http://x?' + (songUrl || ''));
+                const b = parseInt(u.searchParams.get('bpm') || '0', 10);
+                return b > 0 ? b : 128;
+            } catch (e) { return 128; }
+        })(),
+        LANE_COUNT: 5, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060, SONG_DURATION: 90,
         HITS_PER_PIZZA: 20
     };
 
@@ -484,9 +492,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             isGolden: tag === GOLDEN_TAG,
             isTrap: isTrap
         });
-        const beat = (60 / CONFIG.BPM) / difficultyMult;
-        const mult = [0.5, 0.5, 0.25, 1][Math.floor(Math.random() * 4)];
-        nextNoteTime += beat * mult;
+        // BPM-synced note scheduling: musical rhythmic patterns
+        // Pattern: mix of quarter notes (1 beat), 8th notes (0.5 beat), and 16th (0.25)
+        // Weighted to feel musical: more quarter/8th than 16th notes
+        const beatDuration = (60 / CONFIG.BPM) / difficultyMult;
+        const rhythmicPatterns = [1, 1, 0.5, 0.5, 0.5, 0.25, 0.25, 1, 0.5];
+        const mult = rhythmicPatterns[Math.floor(Math.random() * rhythmicPatterns.length)];
+        nextNoteTime += beatDuration * mult;
     }
 
     function checkHit(lane) {
@@ -554,7 +566,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         } else {
             if (fireMode) AudioEngine.onFireModeEnd();
-            combo = 0; fireMode = false; health -= 8; perfectStreak = 0;
+            combo = 0; fireMode = false; health -= 4; perfectStreak = 0;
             createFeedback("BURNT", lane, HIT_Y);
             shake = 5; camScale = 0.98;
             AudioEngine.playMiss();
@@ -646,7 +658,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 // If it was a TRAP, letting it pass is GOOD (No penalty)
                 if (!n.isTrap) {
                     if (fireMode) AudioEngine.onFireModeEnd();
-                    combo = 0; fireMode = false; health -= 12;
+                    combo = 0; fireMode = false; health -= 4;
                     createFeedback("DROPPED", n.lane, H - 50);
                     AudioEngine.playMiss();
                     AudioEngine.onMiss();
@@ -1049,14 +1061,14 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     function loadImages() {
         return new Promise((resolve) => {
             const ASSET_PATHS = {
-                "pepperoni": "game/assets/pepperoni.jpg",
-                "cheese": "game/assets/mixta.jpg",
-                "bacon": "game/assets/tomatos.jpg",
-                "onion": "game/assets/veg.jpg",
-                "secret_sauce": "game/assets/salsasecreta.jpg",
-                "hotdog": "game/assets/hotdog.jpg",
-                "burger": "game/assets/burger.jpg",
-                "super_pizza": "game/assets/decoracion/SuperPizza.png"
+                "pepperoni": "/game/assets/pepperoni.jpg",
+                "cheese": "/game/assets/mixta.jpg",
+                "bacon": "/game/assets/tomatos.jpg",
+                "onion": "/game/assets/veg.jpg",
+                "secret_sauce": "/game/assets/salsasecreta.jpg",
+                "hotdog": "/game/assets/hotdog.jpg",
+                "burger": "/game/assets/burger.jpg",
+                "super_pizza": "/game/assets/decoracion/SuperPizza.jpg"
             };
 
             const keys = Object.keys(ASSET_PATHS);
