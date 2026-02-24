@@ -1272,13 +1272,14 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             overflow: 'hidden'
                         }}>
                             <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.4)', padding: '0.5rem 1rem', borderRadius: '10px', backdropFilter: 'blur(2px)' }}>
-                                <h1 style={{ fontFamily: 'var(--font-title)', fontSize: '2.5rem', margin: 0, textShadow: '2px 2px 4px black' }}>{t.serviceEnded}</h1>
+                                <h1 id="resTitle" style={{ fontFamily: 'var(--font-title)', fontSize: '2.5rem', margin: 0, textShadow: '2px 2px 4px black' }}>{t.serviceEnded}</h1>
                                 <div style={{ width: '60px', height: '4px', background: 'var(--ph-gold)', margin: '0.5rem auto' }}></div>
                             </div>
 
                             <div style={{ textAlign: 'center' }}>
                                 <div className="grade" id="resGrade" style={{ fontSize: '7rem', fontWeight: 'bold', color: 'var(--ph-gold)', textShadow: '0 0 20px rgba(255,215,0,0.5)', lineHeight: 1 }}>S</div>
                                 <div className="stat-row" style={{ fontSize: '1.2rem', marginTop: '0.5rem', background: 'rgba(0,0,0,0.6)', padding: '0.2rem 1rem', borderRadius: '20px' }}>{t.score}: <span id="resScore">0</span></div>
+                                <div id="resPizzas" style={{ fontSize: '1rem', marginTop: '0.3rem', color: '#ffd700', display: 'none' }}>🍕 <span id="resPizzasCount">0</span> {language === 'es' ? 'pizzas horneadas' : 'pizzas baked'}</div>
                                 {/* On-chain verified score — shown once confirmed from contract */}
                                 {onChainScore !== null && (
                                     <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', background: 'rgba(39,174,96,0.2)', border: '1px solid #27ae60', borderRadius: '12px', padding: '0.2rem 0.8rem', color: '#27ae60', display: 'inline-block' }}>
@@ -1312,7 +1313,15 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
-                                    <button id="restartBtn" onClick={handleCookAgain} className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>{language === 'es' ? 'COCINAR OTRA VEZ' : 'COOK AGAIN'}</button>
+                                    <button id="restartBtn" onClick={handleCookAgain} className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>{language === 'es' ? '🍕 GUARDAR Y COCINAR OTRA VEZ' : '🍕 SAVE & COOK AGAIN'}</button>
+                                    <button
+                                        id="nextLevelBtn"
+                                        style={{ width: '100%', padding: '0.8rem', fontSize: '1rem', opacity: 0.5, cursor: 'not-allowed', background: 'linear-gradient(135deg,#1a6b2a,#145222)', border: '2px solid #2ecc71', borderRadius: '12px', color: '#fff', fontWeight: 'bold' }}
+                                        disabled
+                                        title={language === 'es' ? 'Próximamente' : 'Coming soon'}
+                                    >
+                                        🔒 {language === 'es' ? 'PRÓXIMO NIVEL (PRONTO)' : 'NEXT LEVEL (COMING SOON)'}
+                                    </button>
                                     <button id="backToLobbyBtn" onClick={handleBackToLobby} className="secondary-btn" style={{ width: '100%', padding: '0.8rem', opacity: 0.9 }}>{language === 'es' ? 'SALIR COCINA' : 'EXIT KITCHEN'}</button>
                                 </div>
                             )}

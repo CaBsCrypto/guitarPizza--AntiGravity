@@ -22,7 +22,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     };
 
     const STATE = { MENU: 0, GAME: 1, RESULTS: 2 };
-    let gameState = STATE.MENU; // Start in MENU
+    let gameState = STATE.MENU;
+    let isVictory = false; // true = song ended (win), false = health=0 (defeat)
     let gameTimer = 0;
     let score = 0;
     let combo = 0;
@@ -125,6 +126,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         notes = []; particles = []; feedbackSystem = [];
         gameTimer = 0; nextNoteTime = 0;
         inputLog = []; // Reset Log
+        isVictory = false;
+        _levelCompleteTriggered = false;
         gameState = STATE.GAME;
         lastTime = performance.now(); // RESET TIME TO PREVENT HUGE DT JUMP
         AudioEngine.init(); // Ensure audio is ready
@@ -141,6 +144,26 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         } else if (screen === 'results') {
             if (uiResults) uiResults.style.display = 'flex';
             if (uiResScore) uiResScore.innerText = Math.floor(score).toString();
+
+            // Victory vs defeat visuals
+            const titleEl = document.getElementById('resTitle');
+            const pizzasEl = document.getElementById('resPizzas');
+            const pizzasCountEl = document.getElementById('resPizzasCount');
+            const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+            if (isVictory) {
+                if (titleEl) { titleEl.innerText = '🎉 ¡NIVEL COMPLETADO!'; titleEl.style.color = '#ffd700'; }
+                if (pizzasEl) { pizzasEl.style.display = 'block'; }
+                if (pizzasCountEl) { pizzasCountEl.innerText = pizzasMade; }
+                if (nextLevelBtn) { nextLevelBtn.style.display = 'block'; }
+                if (uiResults) { uiResults.style.background = 'rgba(20,50,20,0.7)'; }
+            } else {
+                if (titleEl) { titleEl.innerText = 'SERVICIO FINALIZADO'; titleEl.style.color = '#fff'; }
+                if (pizzasEl) { pizzasEl.style.display = 'none'; }
+                if (nextLevelBtn) { nextLevelBtn.style.display = 'none'; }
+                if (uiResults) { uiResults.style.background = 'rgba(0,0,0,0.6)'; }
+            }
+
             // Calculate Grade
             let grade = "C";
             if (score > 5000) grade = "B";
@@ -312,6 +335,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const fadeStartCtx = this.ctx.currentTime + fadeStart;
             this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
             this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
+
+            // When the segment naturally ends -> trigger level complete (victory)
+            this.songSource.onended = () => {
+                if (gameState === STATE.GAME) completeLevel();
+            };
         },
         stopSong: function () {
             if (this.songSource) {
@@ -962,6 +990,15 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         ctx.font = `bold ${fontSize * 0.8}px var(--font-display, Impact)`;
         ctx.fillText(`🍕 x${pizzasMade}`, 20, hudH * 0.75 + fontSize + 5);
         ctx.shadowBlur = 0;
+    }
+
+    // Called when song ends naturally (player completed the level)
+    let _levelCompleteTriggered = false;
+    function completeLevel() {
+        if (_levelCompleteTriggered) return;
+        _levelCompleteTriggered = true;
+        isVictory = true;
+        endGame();
     }
 
     function endGame() {
