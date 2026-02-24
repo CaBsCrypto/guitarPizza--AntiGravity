@@ -128,7 +128,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <div className="hp-don-wrap">
               <img
                 className="hp-don-img"
-                src="game/assets/don_transparent.png"
+                src={`${import.meta.env.BASE_URL}game/assets/don_transparent.png`.replace('//', '/')}
                 alt="Il Don della Massa"
               />
             </div>

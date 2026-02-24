@@ -1,43 +1,7 @@
 import { useState } from 'react';
-import { TwentyOneGame } from '../games/twenty-one/TwentyOneGame';
-import { NumberGuessGame } from '../games/number-guess/NumberGuessGame';
-import { DiceDuelGame } from '../games/dice-duel/DiceDuelGame';
 import { GuitarPizzaGame } from '../games/guitar-pizza/GuitarPizzaGame';
 import { useWallet } from '@/hooks/useWallet';
-import typezeroHero from '../assets/typezero-hero.png';
-import xrayHero from '../assets/xray-hero.png';
 import './GamesCatalog.css';
-
-const games = [
-  {
-    id: 'guitar-pizza',
-    title: 'Rhythm Slice',
-    emoji: '🍕',
-    description: 'ZK-verified rhythm game — hit notes, complete pizzas, seal your score on Stellar.',
-    tags: ['Single player', 'Rhythm', 'ZK'],
-  },
-  {
-    id: 'twenty-one',
-    title: 'Twenty-One',
-    emoji: '🃏',
-    description: 'Card strategy duel where close-to-21 wins without busting.',
-    tags: ['2 players', 'Card strategy'],
-  },
-  {
-    id: 'number-guess',
-    title: 'Number Guess',
-    emoji: '🎯',
-    description: 'Pick a number, lock it in, and reveal the closest guess.',
-    tags: ['2 players', 'Fast rounds'],
-  },
-  {
-    id: 'dice-duel',
-    title: 'Dice Duel',
-    emoji: '🎲',
-    description: 'Roll two dice each and race for the highest total.',
-    tags: ['2 players', 'Quick launch'],
-  },
-];
 
 interface GamesCatalogProps {
   onBack?: () => void;
@@ -49,62 +13,15 @@ export function GamesCatalog({ onBack }: GamesCatalogProps) {
 
   const userAddress = publicKey ?? '';
 
-  const handleSelectGame = (gameId: string) => {
-    setSelectedGame(gameId);
-  };
-
   const handleBackToLibrary = () => {
     setSelectedGame(null);
   };
-
-  if (selectedGame === 'twenty-one') {
-    return (
-      <TwentyOneGame
-        userAddress={userAddress}
-        currentEpoch={1}
-        availablePoints={1000000000n}
-        onBack={handleBackToLibrary}
-        onStandingsRefresh={() => console.log('Refresh standings')}
-        onGameComplete={() => console.log('Game complete')}
-      />
-    );
-  }
-
-  if (selectedGame === 'number-guess') {
-    return (
-      <NumberGuessGame
-        userAddress={userAddress}
-        currentEpoch={1}
-        availablePoints={1000000000n}
-        onBack={handleBackToLibrary}
-        onStandingsRefresh={() => console.log('Refresh standings')}
-        onGameComplete={() => console.log('Game complete')}
-      />
-    );
-  }
-
-  if (selectedGame === 'dice-duel') {
-    return (
-      <DiceDuelGame
-        userAddress={userAddress}
-        currentEpoch={1}
-        availablePoints={1000000000n}
-        onBack={handleBackToLibrary}
-        onStandingsRefresh={() => console.log('Refresh standings')}
-        onGameComplete={() => console.log('Game complete')}
-      />
-    );
-  }
-
-
-
-
 
   if (selectedGame === 'guitar-pizza') {
     return (
       <GuitarPizzaGame
         userAddress={userAddress}
-        onGameComplete={(score) => console.log('Guitar Pizza score:', score)}
+        onGameComplete={(score) => console.log('Rhythm Slice score:', score)}
         onBack={handleBackToLibrary}
       />
     );
@@ -120,7 +37,7 @@ export function GamesCatalog({ onBack }: GamesCatalogProps) {
         ) : null}
         <div className="library-intro">
           <h2>Games Library</h2>
-          <p>Choose a template to play now or fork into your own title.</p>
+          <p>Play Rhythm Slice — ZK-verified on Stellar Testnet.</p>
         </div>
       </div>
 
@@ -133,113 +50,35 @@ export function GamesCatalog({ onBack }: GamesCatalogProps) {
             </>
           ) : (
             <>
-              <h3>{isConnecting ? 'Connecting...' : 'Connect a Dev Wallet'}</h3>
-              <p>Use the switcher above to auto-connect and swap between demo players.</p>
+              <h3>{isConnecting ? 'Connecting...' : 'Connect Freighter Wallet'}</h3>
+              <p>Connect your Freighter wallet (Testnet) to submit scores on-chain.</p>
             </>
           )}
         </div>
       )}
 
       <div className="games-grid">
-        {games.map((game, index) => (
-          <button
-            key={game.id}
-            className={`game-card ${game.id === 'guitar-pizza' ? 'featured-game' : ''}`}
-            type="button"
-            disabled={!isConnected}
-            onClick={() => handleSelectGame(game.id)}
-            style={{ animationDelay: `${index * 120}ms` }}
-          >
-            <div className="game-card-header">
-              <span className="game-emoji">{game.emoji}</span>
-              <span className="game-title">{game.title}</span>
-            </div>
-            <p className="game-description">{game.description}</p>
-            <div className="game-tags">
-              {game.tags.map((tag) => (
-                <span key={tag} className="game-tag">
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <div className="game-cta">Launch Game</div>
-          </button>
-        ))}
+        <button
+          key="guitar-pizza"
+          className="game-card featured-game"
+          type="button"
+          onClick={() => setSelectedGame('guitar-pizza')}
+        >
+          <div className="game-card-header">
+            <span className="game-emoji">🍕</span>
+            <span className="game-title">Rhythm Slice</span>
+          </div>
+          <p className="game-description">
+            ZK-verified rhythm game — hit notes, complete pizzas, seal your score on Stellar.
+          </p>
+          <div className="game-tags">
+            <span className="game-tag">Single player</span>
+            <span className="game-tag">Rhythm</span>
+            <span className="game-tag">ZK</span>
+          </div>
+          <div className="game-cta">Launch Game</div>
+        </button>
       </div>
-
-      <section className="zk-section">
-        <div className="zk-header">
-          <h3>Zero Knowledge Games</h3>
-        </div>
-        <div className="zk-grid">
-          <div className="zk-card">
-            <div className="zk-card-text">
-              <div className="zk-card-title">TypeZero</div>
-              <p className="zk-card-description">
-                A typing game built with RISC Zero and Stellar. Requires local setup.
-              </p>
-              <div className="zk-card-links">
-                <a
-                  className="zk-card-link"
-                  href="https://github.com/jamesbachini/typezero/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open on GitHub
-                </a>
-                <a
-                  className="zk-card-link"
-                  href="https://jamesbachini.com/stellar-risc-zero-games/?dpl_token=20623f91-ba93-4bfb-81b4-d7097ef5811f"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Tutorial
-                </a>
-              </div>
-            </div>
-            <div className="zk-media">
-              <img
-                src={typezeroHero}
-                alt="TypeZero gameplay screenshot"
-                loading="lazy"
-              />
-            </div>
-          </div>
-          <div className="zk-card">
-            <div className="zk-card-text">
-              <div className="zk-card-title">XRay Games</div>
-              <p className="zk-card-description">
-                A series of games including slicer built with Circom circuits.
-              </p>
-              <div className="zk-card-links">
-                <a
-                  className="zk-card-link"
-                  href="https://github.com/fredericrezeau/xray-games"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  OPEN ON GITHUB
-                </a>
-                <a
-                  className="zk-card-link"
-                  href="https://kyungj.in/posts/trustless-gaming-stellar-xray-games/"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  TUTORIAL
-                </a>
-              </div>
-            </div>
-            <div className="zk-media">
-              <img
-                src={xrayHero}
-                alt="XRay Games gameplay screenshot"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
