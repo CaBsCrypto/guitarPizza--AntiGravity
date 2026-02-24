@@ -99,9 +99,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
     // --- HELPER FUNCTIONS ---
 
+    let _difficultyStart = 0.6;  // set by startGame opts
+
     function resetGame() {
         score = 0; combo = 0; maxCombo = 0; health = 100;
-        fireMode = false; difficultyMult = 0.6; difficultyTimer = 0;
+        fireMode = false; difficultyMult = _difficultyStart; difficultyTimer = 0;
         pizzaProgress = 0; pizzasMade = 0;
         perfectStreak = 0; secretIngredients = 0;
         totalPerfectHits = 0; totalHits = 0;
@@ -265,34 +267,36 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 console.warn('[AudioEngine] Failed to load song:', e);
             }
         },
-        playSong: function () {
+        playSong: function (initialRate, startSec, durationSec) {
             if (!this.isInit || !this.songBuffer) return;
             this.stopSong();
 
-            // Low-pass filter — starts fully open
             this.filterNode = this.ctx.createBiquadFilter();
             this.filterNode.type = 'lowpass';
             this.filterNode.frequency.value = 20000;
 
-            // Separate gain for music vs SFX
             this.musicGain = this.ctx.createGain();
             this.musicGain.gain.value = 0.75;
 
-            // Source
             this.songSource = this.ctx.createBufferSource();
             this.songSource.buffer = this.songBuffer;
-            this.songSource.loop = true;
+            this.songSource.loop = false; // segment play — no full loop
+            this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
 
-            // Chain: source → musicGain → filterNode → masterGain
             this.songSource.connect(this.musicGain);
             this.musicGain.connect(this.filterNode);
             this.filterNode.connect(this.masterGain);
-            this.songSource.start(0);
+
+            // Play only the curated segment
+            const s = startSec || 0;
+            const d = durationSec || this.songBuffer.duration;
+            this.songSource.start(0, s, d);
+            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's');
         },
         stopSong: function () {
             if (this.songSource) {
-                try { this.songSource.stop(); } catch (e) {}
-                try { this.songSource.disconnect(); } catch (e) {}
+                try { this.songSource.stop(); } catch (e) { }
+                try { this.songSource.disconnect(); } catch (e) { }
                 this.songSource = null;
             }
         },
@@ -302,15 +306,40 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         _sustainTimer: 0,    // throttle for sustain ticks
 
         onHit: function (isPerfect) {
-            if (!this.filterNode || !this.isInit) return;
+            if (!this.filterNode || !this.isInit || !this.musicGain || !this.songSource) return;
             const now = this.ctx.currentTime;
-            this.filterNode.frequency.cancelScheduledValues(now);
-            this.filterNode.frequency.setTargetAtTime(20000, now, 0.15);
-            if (isPerfect && this.songSource) {
-                // Perfect: satisfying pitch swell up then back
+
+            if (isPerfect) {
+                // ── PERFECT HIT: full musical punch ──────────────────────────
+                // Volume: snap to full (1.0), decay back to normal over 0.35s
+                this.musicGain.gain.cancelScheduledValues(now);
+                this.musicGain.gain.setValueAtTime(1.0, now);
+                this.musicGain.gain.setTargetAtTime(0.75, now + 0.04, 0.18);
+
+                // Filter: flash fully open, snap back slowly
+                this.filterNode.frequency.cancelScheduledValues(now);
+                this.filterNode.frequency.setValueAtTime(22050, now);
+                this.filterNode.frequency.setTargetAtTime(16000, now + 0.06, 0.25);
+
+                // Pitch: satisfying swell +5%, decay back
                 this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setValueAtTime(1.04, now);
-                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.05, 0.2);
+                this.songSource.playbackRate.setValueAtTime(1.05, now);
+                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.06, 0.22);
+            } else {
+                // ── NORMAL HIT: lighter swell ─────────────────────────────────
+                // Volume: bump to 0.90, fall back
+                this.musicGain.gain.cancelScheduledValues(now);
+                this.musicGain.gain.setValueAtTime(0.90, now);
+                this.musicGain.gain.setTargetAtTime(0.75, now + 0.02, 0.12);
+
+                // Filter: open brighter briefly
+                this.filterNode.frequency.cancelScheduledValues(now);
+                this.filterNode.frequency.setTargetAtTime(20000, now, 0.08);
+
+                // Pitch: subtle +2% nudge
+                this.songSource.playbackRate.cancelScheduledValues(now);
+                this.songSource.playbackRate.setValueAtTime(1.02, now);
+                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.03, 0.14);
             }
         },
 
@@ -364,11 +393,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setValueAtTime(22050, now);
             }
-            // Reward ding: bright sine chime
-            this.playTone(1568, "sine", 0.01, 0.7);   // G5
-            this.playTone(2093, "sine", 0.01, 0.5);   // C6
+            // Chime tones removed — pitch peak + filter snap IS the reward
             this._sustainTimer = 0;
         },
+
 
         onFireMode: function () {
             if (!this.isInit) return;
@@ -383,10 +411,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setValueAtTime(22050, now);            // fully open
             }
-            // Fire fanfare: rising triad
-            this.playTone(523, "sawtooth", 0.02, 0.4);
-            this.playTone(659, "sawtooth", 0.02, 0.35);
-            this.playTone(784, "sawtooth", 0.02, 0.3);
+            // Fire fanfare tones removed — the music speed jump IS the signal
         },
 
         onFireModeEnd: function () {
@@ -400,15 +425,15 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         },
 
         // ── SFX ───────────────────────────────────────────────────────────────
-        playTone: function (freq, type, attack, decay) {
+        playTone: function (freq, type, attack, decay, vol) {
             if (!this.isInit) return;
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
             gain.gain.setValueAtTime(0, this.ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + attack);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + decay);
+            gain.gain.linearRampToValueAtTime(vol !== undefined ? vol : 0.3, this.ctx.currentTime + attack);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + decay);
             osc.connect(gain);
             gain.connect(this.masterGain);
             osc.start();
@@ -419,12 +444,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const root = roots[lane];
             [root, root * 1.5, root * 2].forEach(freq => this.playTone(freq, "sawtooth", 0.05, 0.3));
         },
-        playMiss: function () { this.playTone(60, "sawtooth", 0.05, 0.2); },
+        playMiss: function () { /* silent — onMiss() handles music disruption */ },
         playOvenBell: function () {
-            this.playTone(880, "sine", 0.01, 1.2);
-            this.playTone(1108.73, "sine", 0.01, 1.0);
-            this.playTone(1318.51, "sine", 0.01, 0.8);
-            this.playTone(1760, "sine", 0.01, 0.6);
+            // Subtle chime — vol 0.06 (was 0.3)
+            this.playTone(880, "sine", 0.01, 1.2, 0.06);
+            this.playTone(1108.73, "sine", 0.01, 1.0, 0.05);
+            this.playTone(1318.51, "sine", 0.01, 0.8, 0.04);
+            this.playTone(1760, "sine", 0.01, 0.6, 0.03);
         }
     };
 
@@ -519,7 +545,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
             shake = perfect ? (fireMode ? 8 : 6) : 3;
             camScale = perfect ? 1.02 : 1.01;
-            AudioEngine.playChord(lane);
+            // Music IS the feedback: no synthetic chord — onHit swells the song itself
             AudioEngine.onHit(perfect);
 
             pizzaProgress++;
@@ -966,15 +992,23 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     }
 
     // --- INITIALIZATION ---
-    function startGame() {
-        console.log("Starting Game from Engine API");
+    // opts: { songRate, diffStart, songStart, songDuration }
+    //   songRate     — playback speed (1.0 default)
+    //   diffStart    — initial difficultyMult (0.6 default)
+    //   songStart    — seconds into the file to begin (from Song.start)
+    //   songDuration — how many seconds to play  (from Song.duration)
+    function startGame(opts) {
+        const { songRate = 1.0, diffStart = 0.6, songStart = 0, songDuration = 80 } = opts || {};
+        console.log('[Engine] startGame — rate:' + songRate + ' diff:' + diffStart + ' seg:' + songStart + 's/' + songDuration + 's');
+        _difficultyStart = diffStart;
+        AudioEngine._fireRate = songRate;
         AudioEngine.init();
-        AudioEngine.stopSong(); // stop any previous
+        AudioEngine.stopSong();
         if (songUrl) {
-            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong());
+            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, songStart, songDuration));
         }
         resetGame();
-        lastTime = performance.now(); // MUST reset time before entering GAME state
+        lastTime = performance.now();
         showScreen('game');
     }
 

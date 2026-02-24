@@ -892,6 +892,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                     {/* MAIN LOBBY OVERLAY */}
                     <div id="overlay" style={{ display: 'flex', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }}>
 
+
                         <div className="bg-particles">
                             {/* Floating UP particles */}
                             <div className="particle p1">🍅</div>
@@ -929,9 +930,6 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 <h1 className="main-logo">RHYTHM<br />SLICE</h1>
                                 <p className="subtitle">PIZZA KITCHEN</p>
                             </div>
-
-                            {/* ── TOP SCORES REMOVED ── */}
-
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem', width: '80%', maxWidth: '300px' }}>
                                 <button id="startBtn"
@@ -1000,6 +998,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 </div>
                             </div>
                         </div>
+
 
                         {/* MODALS OVERLAY */}
                         {view === 'store' && (

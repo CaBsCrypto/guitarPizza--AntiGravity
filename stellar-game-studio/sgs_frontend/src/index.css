@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Special+Elite&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 * {
@@ -13,16 +13,18 @@
   --font-mono: "IBM Plex Mono", monospace;
 
   /* Dark Noir Palette */
-  --color-bg:       #080808;
-  --color-surface:  #111111;
+  --color-bg: #080808;
+  --color-surface: #111111;
   --color-surface2: #1a1a1a;
-  --color-ink:      #f0ede8;
-  --color-ink-dim:  #9a9590;
-  --color-accent:   #d4af37;   /* Vintage Gold */
-  --color-accent2:  #b91d1d;   /* Blood Red */
-  --color-border:   rgba(212, 175, 55, 0.18);
-  --color-border2:  rgba(255, 255, 255, 0.06);
-  --radius:         6px;
+  --color-ink: #f0ede8;
+  --color-ink-dim: #9a9590;
+  --color-accent: #d4af37;
+  /* Vintage Gold */
+  --color-accent2: #b91d1d;
+  /* Blood Red */
+  --color-border: rgba(212, 175, 55, 0.18);
+  --color-border2: rgba(255, 255, 255, 0.06);
+  --radius: 6px;
 }
 
 html {

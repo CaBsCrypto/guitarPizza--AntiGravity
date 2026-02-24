@@ -1,236 +1,885 @@
-/* ── HOME ── */
-.rs-home {
+/* ════════════════════════════════════════════════════════
+   HOMEPAGE — Immersive Cartoon Pizzeria Landing
+   Assets: pizzeria_bg.png, don_clean.png
+   Fonts: Bangers (Google), Space Grotesk, IBM Plex Mono
+════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Special+Elite&display=swap');
+
+/* ── GLOBAL OVERRIDES when landing is active ── */
+body:has(.hp-root) {
+  /* Pizzeria scene runs as a fixed full-page background */
+  background-image: url('/game/assets/pizzeria_bg.png');
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  background-color: #1a0c08;
+}
+
+body:has(.hp-root) .rs-shell {
+  /* Shell must be transparent so the fixed bg shows through */
+  background: transparent;
+}
+
+body:has(.hp-root) .rs-header {
+  background: rgba(14, 6, 4, 0.94);
+  border-bottom: 1px solid rgba(204, 41, 41, 0.35);
+  backdrop-filter: blur(14px);
+}
+
+body:has(.hp-root) .rs-footer {
+  background: rgba(10, 4, 2, 0.92);
+  border-top-color: rgba(204, 41, 41, 0.2);
+  color: rgba(240, 232, 216, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+body:has(.hp-root) .rs-footer-quote {
+  color: rgba(200, 80, 40, 0.45);
+}
+
+/* ── ROOT ── */
+.hp-root {
   width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 0 1.5rem 4rem;
+  color: #F0E8D8;
+  /* Transparent — the fixed pizzeria bg on body shows through */
+  background: transparent;
 }
 
-/* ── HERO ── */
-.rs-hero {
-  text-align: center;
-  padding: 5rem 1rem 3.5rem;
+/* ════════════════════════════════════════════════════════
+   HERO — full immersive pizzeria scene
+════════════════════════════════════════════════════════ */
+.hp-hero {
   position: relative;
+  width: 100%;
+  min-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.rs-hero::before {
+/* Layer 1: Pizzeria illustration background */
+.hp-scene-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('/game/assets/pizzeria_bg.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  /* Slow parallax breathing */
+  animation: sceneBreathe 20s ease-in-out infinite;
+  z-index: 0;
+}
+
+@keyframes sceneBreathe {
+
+  0%,
+  100% {
+    transform: scale(1.00) translateY(0px);
+  }
+
+  50% {
+    transform: scale(1.03) translateY(-6px);
+  }
+}
+
+/* Layer 2: Gradient vignette — darkens top+bottom so text pops */
+.hp-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(14, 5, 3, 0.80) 0%,
+      rgba(14, 5, 3, 0.20) 35%,
+      rgba(14, 5, 3, 0.10) 55%,
+      rgba(14, 5, 3, 0.75) 100%);
+  z-index: 1;
+}
+
+/* Layer 3: Floating musical notes */
+.hp-notes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.hp-note {
+  position: absolute;
+  font-size: 1.5rem;
+  opacity: 0;
+  animation: noteFloat 10s ease-in-out infinite;
+  filter: drop-shadow(0 2px 8px rgba(255, 200, 50, 0.8));
+}
+
+.hp-n1 {
+  left: 8%;
+  bottom: 20%;
+  animation-delay: 0s;
+  font-size: 1.8rem;
+}
+
+.hp-n2 {
+  left: 20%;
+  bottom: 10%;
+  animation-delay: 2.2s;
+  font-size: 1.2rem;
+}
+
+.hp-n3 {
+  left: 75%;
+  bottom: 15%;
+  animation-delay: 4s;
+  font-size: 2rem;
+}
+
+.hp-n4 {
+  left: 88%;
+  bottom: 25%;
+  animation-delay: 1.5s;
+  font-size: 1.4rem;
+}
+
+.hp-n5 {
+  left: 50%;
+  bottom: 5%;
+  animation-delay: 6s;
+  font-size: 1.6rem;
+}
+
+@keyframes noteFloat {
+  0% {
+    transform: translateY(0) rotate(-15deg);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 0.9;
+  }
+
+  85% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(-80px) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+/* Layer 4: Main content — title + Don */
+.hp-hero-inner {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 2rem 2.5rem 1rem;
+  gap: 1rem;
+}
+
+/* Title block — left side */
+.hp-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 380px;
+}
+
+.hp-eyebrow {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.72rem;
+  letter-spacing: 0.25em;
+  color: #D4A84B;
+  text-transform: uppercase;
+  opacity: 0.85;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Big cartoon title */
+.hp-title {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+}
+
+.hp-title-line1 {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(4.5rem, 14vw, 8rem);
+  color: #F0E8D8;
+  /* Thick dark cartoon outline */
+  -webkit-text-stroke: 3px #1A0A04;
+  text-shadow:
+    4px 4px 0 #1A0A04,
+    8px 8px 0 rgba(0, 0, 0, 0.3);
+  animation: titlePulse 4s ease-in-out infinite;
+}
+
+.hp-title-line2 {
+  font-family: 'Bangers', cursive;
+  font-size: clamp(4.5rem, 14vw, 8rem);
+  color: #CC2929;
+  -webkit-text-stroke: 3px #5C0000;
+  text-shadow:
+    4px 4px 0 #5C0000,
+    8px 8px 0 rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(204, 41, 41, 0.5);
+  animation: titlePulse 4s ease-in-out infinite 0.3s;
+}
+
+@keyframes titlePulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.01);
+  }
+}
+
+.hp-tagline {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.95rem;
+  color: rgba(240, 232, 216, 0.90);
+  line-height: 1.55;
+  margin: 0.3rem 0 0;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.hp-tagline em {
+  color: #D4A84B;
+  font-style: italic;
+}
+
+.hp-attribution {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.68rem;
+  color: #D4A84B;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin: 0;
+}
+
+/* Don character — right side, standing in the scene */
+.hp-don-wrap {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-end;
+  /* Nudge the Don to look like he's standing on the floor */
+  margin-bottom: -8px;
+}
+
+.hp-don-img {
+  width: clamp(180px, 28vw, 320px);
+  height: auto;
+  /* mix-blend-mode: multiply removes the white background */
+  mix-blend-mode: multiply;
+  filter:
+    contrast(1.08) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6)) drop-shadow(-4px 0 20px rgba(204, 41, 41, 0.15));
+  animation: donBob 3.5s ease-in-out infinite;
+  display: block;
+}
+
+/* Layer 5: CTA footer inside hero */
+.hp-hero-footer {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1.5rem 2rem;
+  background: linear-gradient(180deg, transparent 0%, rgba(14, 5, 3, 0.7) 100%);
+}
+
+/* ── CTA BUTTON ── */
+.hp-cta {
+  font-family: 'Bangers', cursive;
+  font-size: 1.5rem;
+  letter-spacing: 0.12em;
+  padding: 0.85rem 4rem;
+  background: #CC2929;
+  color: #FDF8F0;
+  border: 3px solid #8B0000;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow:
+    0 6px 0 #5C0000,
+    0 12px 30px rgba(204, 41, 41, 0.45);
+  transition: transform 0.12s, box-shadow 0.12s;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  animation: ctaPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes ctaPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 6px 0 #5C0000, 0 12px 30px rgba(204, 41, 41, 0.45);
+  }
+
+  50% {
+    box-shadow: 0 6px 0 #5C0000, 0 16px 50px rgba(204, 41, 41, 0.70);
+  }
+}
+
+.hp-cta:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 10px 0 #5C0000, 0 20px 50px rgba(204, 41, 41, 0.55);
+}
+
+.hp-cta:active {
+  transform: translateY(4px) scale(0.98);
+  box-shadow: 0 2px 0 #5C0000;
+}
+
+.hp-wallet-hint {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: rgba(240, 232, 216, 0.4);
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+
+/* ════════════════════════════════════════════════════════
+   LORE BANNER — Full-width cinematic quote
+════════════════════════════════════════════════════════ */
+.hp-lore-banner {
+  /* Dark red smoke overlay — inside the pizzeria, dimly lit */
+  background: rgba(10, 3, 1, 0.82);
+  border-top: 4px solid #CC2929;
+  padding: 3rem 0;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+}
+
+/* Subtle red glow from sides */
+.hp-lore-banner::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 70% 50% at 50% 30%, rgba(212,175,55,0.07) 0%, transparent 70%);
+  background:
+    radial-gradient(ellipse 40% 80% at 0% 50%, rgba(204, 41, 41, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 80% at 100% 50%, rgba(204, 41, 41, 0.08) 0%, transparent 70%);
   pointer-events: none;
 }
 
-.rs-hero-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
-  color: var(--color-accent);
-  opacity: 0.7;
-  text-transform: uppercase;
-  margin-bottom: 1.5rem;
+.hp-lore-banner-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
-.rs-hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(4.5rem, 16vw, 9rem);
-  font-weight: 700;
-  line-height: 0.86;
+.hp-lore-quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.hp-lore-quote p {
+  font-family: 'Special Elite', cursive;
+  font-size: 1.05rem;
+  color: rgba(245, 237, 224, 0.85);
+  line-height: 1.75;
+  margin: 0;
+  flex: 1;
+}
+
+.hp-lore-quote p strong {
+  color: #CC2929;
+  font-weight: normal;
+}
+
+.hp-lore-quote-mark {
+  font-family: 'Bangers', cursive;
+  font-size: 5rem;
+  color: rgba(204, 41, 41, 0.3);
+  line-height: 0.7;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.hp-lore-quote-mark.closing {
+  align-self: flex-end;
+  line-height: 0.5;
+}
+
+.hp-lore-attribution {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: rgba(245, 237, 224, 0.35);
+  text-transform: uppercase;
+  margin-top: 1.5rem;
+  text-align: right;
+}
+
+/* ════════════════════════════════════════════════════════
+   FIVE FAMILIES — Faction cards
+════════════════════════════════════════════════════════ */
+.hp-families {
+  /* Light cream overlay — like looking at a lit table in the restaurant */
+  background: rgba(245, 237, 224, 0.90);
+  padding: 3rem 0;
+  border-top: 4px solid #1A0A04;
+  border-bottom: 4px solid #1A0A04;
+  backdrop-filter: blur(1px);
+}
+
+.hp-families-inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.hp-families-title {
+  font-family: 'Bangers', cursive;
+  font-size: 2rem;
+  letter-spacing: 0.1em;
+  color: #CC2929;
+  -webkit-text-stroke: 1px #8B0000;
+  text-shadow: 3px 3px 0 rgba(139, 0, 0, 0.3);
+  margin-bottom: 0.3rem;
+}
+
+.hp-families-sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: rgba(61, 26, 26, 0.5);
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+}
+
+.hp-families-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+.hp-family-card {
+  background: #1A0A04;
+  border: 3px solid var(--family-color, #8B2020);
+  border-radius: 4px;
+  padding: 1.2rem 0.8rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
-  margin-bottom: 1.2rem;
+  gap: 0.4rem;
+  box-shadow: 4px 4px 0 var(--family-color, #8B2020);
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: default;
 }
 
-.rs-title-main {
-  color: var(--color-ink);
+.hp-family-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 4px 8px 0 var(--family-color, #8B2020);
 }
 
-.rs-title-accent {
-  color: var(--color-accent);
-  text-shadow: 0 0 80px rgba(212,175,55,0.25);
+.hp-family-icon {
+  font-size: 2rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 }
 
-.rs-hero-tagline {
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  color: var(--color-ink-dim);
-  line-height: 1.7;
-  max-width: 480px;
-  margin: 0 auto 2.5rem;
+.hp-family-name {
+  font-family: 'Bangers', cursive;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  color: #F5EDE0;
+  text-align: center;
 }
 
-.rs-hero-tagline em {
-  font-style: italic;
-  color: var(--color-accent);
-}
-
-.rs-cta-play {
+.hp-family-territory {
   font-family: var(--font-mono);
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  padding: 1rem 3.5rem;
-  background: var(--color-accent);
-  color: #000;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: rgba(245, 237, 224, 0.5);
   text-transform: uppercase;
+  text-align: center;
+  line-height: 1.3;
 }
 
-.rs-cta-play:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 40px rgba(212,175,55,0.28);
-}
-
-.rs-hero-hint {
+.hp-family-threat {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--color-ink-dim);
-  opacity: 0.55;
-  margin-top: 1.2rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+  margin-top: 0.2rem;
 }
 
-/* ── ZK FLOW ── */
-.rs-zk-flow {
+.hp-family-threat[data-level="high"] {
+  background: rgba(139, 32, 32, 0.3);
+  color: #FF8080;
+  border: 1px solid #8B2020;
+}
+
+.hp-family-threat[data-level="extreme"] {
+  background: rgba(204, 41, 41, 0.3);
+  color: #FF4444;
+  border: 1px solid #CC2929;
+  animation: threatPulse 1.5s ease-in-out infinite;
+}
+
+.hp-family-threat[data-level="unknown"] {
+  background: rgba(45, 122, 45, 0.3);
+  color: #66DD66;
+  border: 1px solid #2D7A2D;
+}
+
+@keyframes threatPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   HOW IT WORKS — Big visual cards on chalkboard
+════════════════════════════════════════════════════════ */
+.hp-flow {
+  /* Deep chalkboard green overlay — the back room, dimly lit */
+  background: rgba(8, 14, 7, 0.88);
+  padding: 3.5rem 0;
+  border-top: 4px solid rgba(45, 122, 45, 0.5);
+  position: relative;
+  backdrop-filter: blur(3px);
+}
+
+.hp-flow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(90deg,
+      rgba(245, 237, 224, 0.4) 0, rgba(245, 237, 224, 0.4) 30px,
+      transparent 30px, transparent 44px);
+}
+
+.hp-flow-inner {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.hp-flow-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.hp-flow-title-line {
+  font-family: 'Bangers', cursive;
+  font-size: 3rem;
+  letter-spacing: 0.14em;
+  color: #F5EDE0;
+  display: block;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+  -webkit-text-stroke: 1px rgba(245, 237, 224, 0.2);
+}
+
+.hp-flow-title-sub {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  color: rgba(245, 237, 224, 0.4);
+  display: block;
+  margin-top: 0.3rem;
+}
+
+.hp-flow-cards {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+}
+
+.hp-flow-card {
+  flex: 1;
+  max-width: 220px;
+  background: rgba(245, 237, 224, 0.05);
+  border: 2px solid rgba(245, 237, 224, 0.1);
+  border-radius: 8px;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.hp-flow-card:hover {
+  background: rgba(245, 237, 224, 0.08);
+  border-color: rgba(204, 41, 41, 0.4);
+}
+
+.hp-flow-card--mid {
+  background: rgba(204, 41, 41, 0.08);
+  border-color: rgba(204, 41, 41, 0.25);
+  transform: scaleY(1.04);
+}
+
+.hp-flow-card-num {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: rgba(204, 41, 41, 0.6);
+}
+
+.hp-flow-card-icon {
+  font-size: 3rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+}
+
+.hp-flow-card-title {
+  font-family: 'Bangers', cursive;
+  font-size: 1.8rem;
+  letter-spacing: 0.12em;
+  color: #F5EDE0;
+  margin: 0;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.hp-flow-card-desc {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: rgba(245, 237, 224, 0.6);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.hp-flow-connector {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
-  padding: 2.5rem 0;
-  border-top: 1px solid var(--color-border2);
-  border-bottom: 1px solid var(--color-border2);
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  row-gap: 1.5rem;
+  padding: 0 1rem;
+  font-size: 2rem;
+  color: rgba(204, 41, 41, 0.4);
+  flex-shrink: 0;
+  padding-bottom: 2rem;
 }
 
-.rs-zk-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0 2rem;
-  min-width: 140px;
+/* ════════════════════════════════════════════════════════
+   CONTRACTS — Classified dossier
+════════════════════════════════════════════════════════ */
+.hp-contracts {
+  /* Very dark vignette at the end — like the kitchen after hours */
+  background: rgba(6, 2, 1, 0.88);
+  padding: 3.5rem 0 5rem;
+  border-top: 4px solid #CC2929;
+  backdrop-filter: blur(3px);
 }
 
-.rs-zk-num {
+.hp-contracts-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 2rem;
+  background: #F5EDE0;
+  border: 3px solid #1A0A04;
+  border-radius: 2px;
+  box-shadow:
+    6px 6px 0 #6B4226,
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+  /* Aged paper texture via repeating gradient */
+  background-image:
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 28px,
+      rgba(168, 48, 48, 0.06) 28px,
+      rgba(168, 48, 48, 0.06) 29px);
+}
+
+.hp-dossier-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px dashed rgba(168, 48, 48, 0.3);
+  position: relative;
+}
+
+.hp-dossier-stamp {
+  position: absolute;
+  top: -0.5rem;
+  right: 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  padding: 0.2rem 0.6rem;
+  background: rgba(45, 122, 45, 0.15);
+  color: #2D7A2D;
+  border: 2px solid #2D7A2D;
+  border-radius: 2px;
+  transform: rotate(2deg);
+  text-transform: uppercase;
+  animation: stampBlink 3s ease-in-out infinite;
+}
+
+@keyframes stampBlink {
+
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+
+  95% {
+    opacity: 0.4;
+  }
+}
+
+.hp-contracts-title {
+  font-family: 'Bangers', cursive;
+  font-size: 1.6rem;
+  letter-spacing: 0.1em;
+  color: #1A0A04;
+  margin: 0 0 0.3rem;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.hp-dossier-sub {
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.15em;
-  color: var(--color-accent);
-  opacity: 0.5;
-}
-
-.rs-zk-icon {
-  font-size: 2rem;
-  line-height: 1;
-  margin: 0.2rem 0;
-}
-
-.rs-zk-label {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--color-ink);
+  color: rgba(61, 26, 26, 0.5);
   text-transform: uppercase;
+  margin: 0;
 }
 
-.rs-zk-desc {
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  color: var(--color-ink-dim);
-  text-align: center;
-  line-height: 1.4;
-  max-width: 130px;
-}
-
-.rs-zk-arrow {
-  font-size: 1.5rem;
-  color: var(--color-accent);
-  opacity: 0.3;
-  padding: 0 0.5rem;
-  align-self: center;
-  padding-bottom: 1rem; /* align with icon row */
-}
-
-/* ── CONTRACTS ── */
-.rs-contracts-section {
-  padding: 1.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border2);
-  border-radius: var(--radius);
-}
-
-.rs-contracts-title {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--color-ink-dim);
-  text-transform: uppercase;
-  margin-bottom: 1rem;
-}
-
-.rs-contracts {
+.hp-contracts-list {
   display: flex;
   flex-direction: column;
 }
 
-.rs-contract-row {
+.hp-contract-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.45rem 0;
-  border-bottom: 1px solid var(--color-border2);
+  gap: 0.8rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px dashed rgba(168, 48, 48, 0.2);
   flex-wrap: wrap;
 }
 
-.rs-contract-row:last-child {
+.hp-contract-row:last-child {
   border-bottom: none;
 }
 
-.rs-contract-name {
+.hp-contract-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.hp-contract-name {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: var(--color-ink-dim);
+  color: #3D1A1A;
   min-width: 140px;
   flex-shrink: 0;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.rs-contract-addr {
+.hp-contract-addr {
   font-family: var(--font-mono);
-  font-size: 0.63rem;
-  color: var(--color-ink-dim);
-  opacity: 0.6;
+  font-size: 0.6rem;
+  color: rgba(61, 26, 26, 0.45);
   word-break: break-all;
   background: none;
   padding: 0;
 }
 
-.rs-contract-hub .rs-contract-name {
-  color: var(--color-accent);
-  opacity: 0.7;
+.hp-contract-hub .hp-contract-name {
+  color: #CC2929;
+  font-weight: 800;
 }
 
-.rs-contract-hub .rs-contract-addr {
-  color: rgba(212,175,55,0.5);
+.hp-contract-hub .hp-contract-addr {
+  color: rgba(204, 41, 41, 0.4);
 }
 
-/* ── RESPONSIVE ── */
-@media (max-width: 600px) {
-  .rs-hero { padding: 4rem 0.5rem 3rem; }
-  .rs-zk-flow { gap: 0; row-gap: 1rem; }
-  .rs-zk-step { padding: 0 1rem; min-width: 110px; }
-  .rs-zk-arrow { display: none; }
-  .rs-contracts-section { padding: 1rem 0.8rem; }
-  .rs-contract-name { min-width: 110px; }
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .hp-hero-inner {
+    flex-direction: column-reverse;
+    align-items: center;
+    padding: 1rem 1.2rem 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .hp-title-block {
+    text-align: center;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .hp-don-img {
+    width: clamp(150px, 55vw, 220px);
+  }
+
+  .hp-families-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .hp-flow-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hp-flow-card {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .hp-flow-card--mid {
+    transform: none;
+  }
+
+  .hp-flow-connector {
+    display: none;
+  }
+
+  .hp-cta {
+    font-size: 1.2rem;
+    padding: 0.8rem 2.5rem;
+  }
+
+  .hp-lore-quote p {
+    font-size: 0.9rem;
+  }
+
+  .hp-contracts-inner {
+    padding: 1.5rem 1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .hp-families-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

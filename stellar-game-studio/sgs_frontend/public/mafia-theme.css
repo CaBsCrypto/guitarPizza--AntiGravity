@@ -403,6 +403,20 @@ button {
     }
 }
 
+@keyframes donBob {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(-1deg) scale(1);
+        filter: drop-shadow(0 8px 20px rgba(212, 175, 55, 0.5));
+    }
+
+    50% {
+        transform: translateY(-10px) rotate(1deg) scale(1.03);
+        filter: drop-shadow(0 15px 30px rgba(212, 175, 55, 0.8));
+    }
+}
+
 /* ===== PIZZA RAIN (Falling Animation) ===== */
 .pizza-rain {
     position: absolute;
