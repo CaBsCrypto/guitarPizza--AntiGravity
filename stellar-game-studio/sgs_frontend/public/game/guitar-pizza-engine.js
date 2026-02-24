@@ -2,16 +2,22 @@
 
 window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songUrl) {
     // --- GLOBAL VARS & CONFIG (Scoped to this function) ---
+    // Parse all song params from the URL query string
+    const _songParams = (function () {
+        try {
+            const u = new URL(typeof songUrl === 'string' && songUrl.includes('?') ? songUrl : 'http://x?' + (songUrl || ''));
+            const bpm = parseInt(u.searchParams.get('bpm') || '0', 10);
+            const start = parseFloat(u.searchParams.get('start') || '0');
+            const duration = parseFloat(u.searchParams.get('duration') || '0');
+            return { bpm: bpm > 0 ? bpm : 128, start: start || 0, duration: duration > 0 ? duration : 80 };
+        } catch (e) { return { bpm: 128, start: 0, duration: 80 }; }
+    })();
+
     const CONFIG = {
-        // Read BPM from songUrl query param (e.g. ?bpm=95), fallback to 128
-        BPM: (function () {
-            try {
-                const u = new URL(typeof songUrl === 'string' && songUrl.includes('?') ? songUrl : 'http://x?' + (songUrl || ''));
-                const b = parseInt(u.searchParams.get('bpm') || '0', 10);
-                return b > 0 ? b : 128;
-            } catch (e) { return 128; }
-        })(),
-        LANE_COUNT: 5, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060, SONG_DURATION: 90,
+        BPM: _songParams.bpm,
+        SONG_START: _songParams.start,
+        SONG_DURATION: _songParams.duration,
+        LANE_COUNT: 5, HIT_WINDOW: 0.160, PERFECT_WINDOW: 0.060,
         HITS_PER_PIZZA: 20
     };
 
@@ -299,7 +305,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const s = startSec || 0;
             const d = durationSec || this.songBuffer.duration;
             this.songSource.start(0, s, d);
-            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's');
+            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
+
+            // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
+            const fadeStart = Math.max(0, d - 3);
+            const fadeStartCtx = this.ctx.currentTime + fadeStart;
+            this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
+            this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
         },
         stopSong: function () {
             if (this.songSource) {
@@ -1016,8 +1028,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         AudioEngine._fireRate = songRate;
         AudioEngine.init();
         AudioEngine.stopSong();
+        // Use segment params from CONFIG (read from query params), with opts overrides if desired
+        const resolvedStart = songStart !== undefined ? songStart : CONFIG.SONG_START;
+        const resolvedDuration = songDuration !== undefined ? songDuration : CONFIG.SONG_DURATION;
         if (songUrl) {
-            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, songStart, songDuration));
+            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
         }
         resetGame();
         lastTime = performance.now();

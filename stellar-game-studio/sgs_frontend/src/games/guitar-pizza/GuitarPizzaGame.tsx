@@ -437,9 +437,13 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                     // Check if initGuitarPizza returns an object (new version) or function (old version fallback)
                     const randomSong = getRandomSong();
                     const baseUrl = `${import.meta.env.BASE_URL}${songPath(randomSong)}`.replace('//', '/');
-                    // Append BPM as a query param so the engine can sync note timing to the real song tempo
-                    const resolvedSongUrl = randomSong.bpm ? `${baseUrl}?bpm=${randomSong.bpm}` : baseUrl;
-                    addLog(`[GuitarPizza] Song: ${randomSong.title} @ ${randomSong.bpm ?? '?'}BPM — ${resolvedSongUrl}`);
+                    // Append song params as query params so the engine uses the correct segment
+                    const params = new URLSearchParams();
+                    if (randomSong.bpm) params.set('bpm', String(randomSong.bpm));
+                    params.set('start', String(randomSong.start ?? 0));
+                    params.set('duration', String(randomSong.duration ?? 80));
+                    const resolvedSongUrl = `${baseUrl}?${params.toString()}`;
+                    addLog(`[GuitarPizza] Song: ${randomSong.title} @ ${randomSong.bpm ?? '?'}BPM | ${randomSong.start}s–${(randomSong.start ?? 0) + (randomSong.duration ?? 80)}s — ${resolvedSongUrl}`);
                     const result = window.initGuitarPizza(canvasRef.current, userAddress, async (finalScore: number, inputLog: any[] = []) => {
                         // Clear any lingering status when game completes, just in case
                         setStatus('');
