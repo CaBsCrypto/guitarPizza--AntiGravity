@@ -1068,7 +1068,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 "secret_sauce": "/game/assets/salsasecreta.jpg",
                 "hotdog": "/game/assets/hotdog.jpg",
                 "burger": "/game/assets/burger.jpg",
-                "super_pizza": "/game/assets/decoracion/SuperPizza.jpg"
+                "super_pizza": "/game/assets/decoracion/SuperPizza.png"
             };
 
             const keys = Object.keys(ASSET_PATHS);
