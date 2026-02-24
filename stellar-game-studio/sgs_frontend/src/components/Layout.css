@@ -48,10 +48,23 @@
   gap: 1px;
   /* Subtle hover lift */
   transition: transform 0.15s;
+  animation: brandBreathe 5s ease-in-out infinite;
 }
 
 .rs-brand:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.02);
+}
+
+@keyframes brandBreathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
 }
 
 .rs-brand-title {

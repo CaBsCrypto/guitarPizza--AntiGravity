@@ -45,23 +45,55 @@ body:has(.hp-root) .rs-footer-quote {
   background: transparent;
 }
 
-/* ════════════════════════════════════════════════════════
-   HERO — full immersive pizzeria scene
-════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   HERO — Full pizzeria scene
+   ══════════════════════════════════════════════════════════════════════════ */
 .hp-hero {
   position: relative;
-  width: 100%;
-  min-height: 90vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
+  padding: 4rem 1rem;
+}
+
+/* Layer 2: Blackout for Spotlight */
+.hp-spotlight-over {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  /* The "Spotlight" — a cone of light from the top center */
+  mask-image: radial-gradient(circle at 50% 10%, white 0%, transparent 60%);
+  mask-size: 100% 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Layer 3: Rain of pizzas container */
+.hp-pizza-rain-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.hp-falling-pizza {
+  position: absolute;
+  font-size: 2.5rem;
+  animation: hp-pizza-rain 4s linear infinite;
+  filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.2));
 }
 
 /* Layer 1: Pizzeria illustration background */
 .hp-scene-bg {
   position: absolute;
   inset: 0;
-  background-image: url('/game/assets/pizzeria_bg.png');
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url('/game/assets/pizzeria_bg.png');
   background-size: cover;
   background-position: center bottom;
   background-repeat: no-repeat;
@@ -86,13 +118,10 @@ body:has(.hp-root) .rs-footer-quote {
 .hp-vignette {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg,
-      rgba(14, 5, 3, 0.80) 0%,
-      rgba(14, 5, 3, 0.20) 35%,
-      rgba(14, 5, 3, 0.10) 55%,
-      rgba(14, 5, 3, 0.75) 100%);
-  z-index: 1;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
+  z-index: 4;
+  pointer-events: none;
+  /* Don't block button clicks */
 }
 
 /* Layer 3: Floating musical notes */
@@ -199,46 +228,76 @@ body:has(.hp-root) .rs-footer-quote {
 
 /* Big cartoon title */
 .hp-title {
-  margin: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
+  margin: 0 0 1.5rem;
   line-height: 0.9;
-  letter-spacing: 0.04em;
+  filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: titlePulse 4s ease-in-out infinite;
+  /* Restore movement */
+}
+
+.hp-title:hover {
+  transform: scale(1.05) rotate(-2deg);
 }
 
 .hp-title-line1 {
   font-family: 'Bangers', cursive;
-  font-size: clamp(4.5rem, 14vw, 8rem);
-  color: #F0E8D8;
+  font-size: clamp(3.5rem, 8vw, 6.5rem);
+  color: #fff;
   /* Thick dark cartoon outline */
-  -webkit-text-stroke: 3px #1A0A04;
+  -webkit-text-stroke: 2px #1a1a1a;
   text-shadow:
-    4px 4px 0 #1A0A04,
-    8px 8px 0 rgba(0, 0, 0, 0.3);
-  animation: titlePulse 4s ease-in-out infinite;
+    6px 6px 0 rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.05em;
 }
 
 .hp-title-line2 {
   font-family: 'Bangers', cursive;
-  font-size: clamp(4.5rem, 14vw, 8rem);
+  font-size: clamp(4.5rem, 10vw, 8.5rem);
   color: #CC2929;
-  -webkit-text-stroke: 3px #5C0000;
+  -webkit-text-stroke: 2px #1a1a1a;
+  margin-top: -0.5rem;
   text-shadow:
-    4px 4px 0 #5C0000,
-    8px 8px 0 rgba(0, 0, 0, 0.4),
-    0 0 40px rgba(204, 41, 41, 0.5);
-  animation: titlePulse 4s ease-in-out infinite 0.3s;
+    8px 8px 0 rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.02em;
 }
 
 @keyframes titlePulse {
 
   0%,
   100% {
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
   }
 
   50% {
-    transform: scale(1.01);
+    transform: scale(1.03) rotate(0.5deg);
+  }
+}
+
+@keyframes donBob {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-10px) scale(1.02);
+  }
+}
+
+@keyframes hp-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-15px);
   }
 }
 
@@ -268,22 +327,29 @@ body:has(.hp-root) .rs-footer-quote {
 
 /* Don character — right side, standing in the scene */
 .hp-don-wrap {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
-  flex-shrink: 0;
-  align-self: flex-end;
-  /* Nudge the Don to look like he's standing on the floor */
-  margin-bottom: -8px;
+  animation: hp-float 4s ease-in-out infinite;
 }
 
 .hp-don-img {
-  width: clamp(180px, 28vw, 320px);
+  width: 100%;
+  max-width: 450px;
   height: auto;
   /* mix-blend-mode: multiply removes the white background */
   mix-blend-mode: multiply;
   filter:
-    contrast(1.08) drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6)) drop-shadow(-4px 0 20px rgba(204, 41, 41, 0.15));
+    contrast(1.08) drop-shadow(15px 15px 0px rgba(0, 0, 0, 0.2)) drop-shadow(-4px 0 20px rgba(204, 41, 41, 0.15));
   animation: donBob 3.5s ease-in-out infinite;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.hp-don-img:hover {
+  transform: scale(1.05) rotate(2deg);
 }
 
 /* Layer 5: CTA footer inside hero */
@@ -346,6 +412,146 @@ body:has(.hp-root) .rs-footer-quote {
   text-align: center;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   IMMERSIVE TEXTURES & UTILITIES
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --cartoon-border: 4px solid #1a1a1a;
+  --cartoon-shadow: 10px 10px 0px rgba(0, 0, 0, 0.4);
+  --color-pop-red: #FF4D4D;
+  --color-pop-yellow: #FFD93D;
+}
+
+@keyframes hp-bouncy {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  30% {
+    transform: scale(1.05, 0.95);
+  }
+
+  50% {
+    transform: scale(0.98, 1.05);
+  }
+
+  70% {
+    transform: scale(1.02, 0.98);
+  }
+}
+
+@keyframes hp-pizza-rain {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes hp-pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.hp-ornament {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(4px 4px 0px rgba(0, 0, 0, 0.3));
+}
+
+.hp-garlic-string {
+  content: '🧄';
+  top: -30px;
+  left: 10%;
+  font-size: 3rem;
+  transform: rotate(-10deg);
+}
+
+.hp-flour-bag {
+  content: '🍚';
+  bottom: -20px;
+  right: 15%;
+  font-size: 4rem;
+  transform: rotate(5deg);
+}
+
+.hp-organic-seam-top {
+  clip-path: polygon(0 0, 100% 5%, 100% 100%, 0 100%);
+}
+
+.hp-organic-seam-bottom {
+  clip-path: polygon(0 0, 100% 0, 100% 95%, 0 100%);
+}
+
+@keyframes hp-smoke-drift {
+  0% {
+    transform: translateX(-5%) translateY(0) scale(1);
+    opacity: 0.1;
+  }
+
+  50% {
+    transform: translateX(5%) translateY(-5px) scale(1.05);
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: translateX(-5%) translateY(0) scale(1);
+    opacity: 0.1;
+  }
+}
+
+.hp-smoke-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05), transparent 70%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hp-halftone {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.1) 2px, transparent 2px);
+  background-size: 20px 20px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   GLOBAL OVERRIDES FOR LANDING
+   ────────────────────────────────────────────────────────────────────────── */
+.hp-active {
+  background-color: #CC2929;
+  /* Brick Red Fallback */
+  background-image: url('game/assets/pizzeria_bg.png');
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  margin: 0;
+  overflow-x: hidden;
+}
 
 /* ════════════════════════════════════════════════════════
    LORE BANNER — Full-width cinematic quote
@@ -428,29 +634,35 @@ body:has(.hp-root) .rs-footer-quote {
    FIVE FAMILIES — Faction cards
 ════════════════════════════════════════════════════════ */
 .hp-families {
-  /* Light cream overlay — like looking at a lit table in the restaurant */
-  background: rgba(245, 237, 224, 0.90);
-  padding: 3rem 0;
-  border-top: 4px solid #1A0A04;
-  border-bottom: 4px solid #1A0A04;
-  backdrop-filter: blur(1px);
+  background: var(--wood-light);
+  padding: 8rem 0;
+  margin-top: -3rem;
+  /* Overlap to hide seam */
+  clip-path: polygon(0 5%, 100% 0, 100% 100%, 0 95%);
+  position: relative;
+  z-index: 2;
 }
 
 .hp-families-inner {
-  max-width: 820px;
+  max-width: 950px;
   margin: 0 auto;
-  padding: 0 1.5rem;
-  text-align: center;
+  padding: 3rem;
+  background-color: var(--cork-bg);
+  background-image:
+    radial-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+  background-size: 10px 10px;
+  border: 10px solid var(--wood-mahogany);
+  box-shadow: var(--cartoon-shadow);
+  transform: rotate(0.5deg);
 }
 
 .hp-families-title {
   font-family: 'Bangers', cursive;
-  font-size: 2rem;
-  letter-spacing: 0.1em;
-  color: #CC2929;
-  -webkit-text-stroke: 1px #8B0000;
-  text-shadow: 3px 3px 0 rgba(139, 0, 0, 0.3);
-  margin-bottom: 0.3rem;
+  font-size: 3rem;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
 }
 
 .hp-families-sub {
@@ -462,43 +674,139 @@ body:has(.hp-root) .rs-footer-quote {
   margin-bottom: 2rem;
 }
 
-.hp-families-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1rem;
+.hp-carousel-stage {
+  position: relative;
+  max-width: 100% !important;
+  overflow: hidden;
+  padding: 4rem 0 !important;
+}
+
+.hp-carousel-track-wrap {
+  width: 100%;
+  overflow: visible;
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.hp-carousel-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  gap: 2rem;
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.hp-carousel-nav {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2rem;
+  z-index: 10;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.hp-nav-btn {
+  width: 50px;
+  height: 50px;
+  background: var(--wood-mahogany);
+  border: 3px solid #1a1a1a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  color: #fff;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.hp-nav-btn:hover {
+  transform: scale(1.1);
+  background: var(--color-pop-red);
+}
+
+.hp-nav-btn:active {
+  transform: translateY(2px) scale(0.95);
 }
 
 .hp-family-card {
-  background: #1A0A04;
-  border: 3px solid var(--family-color, #8B2020);
-  border-radius: 4px;
-  padding: 1.2rem 0.8rem;
+  flex: 0 0 25%;
+  /* 4 cards visible at once conceptually, but centered */
+  background: #fff;
+  padding: 16px;
+  padding-bottom: 45px;
+  border: 1px solid #ddd;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
-  box-shadow: 4px 4px 0 var(--family-color, #8B2020);
-  transition: transform 0.15s, box-shadow 0.15s;
-  cursor: default;
 }
 
-.hp-family-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 4px 8px 0 var(--family-color, #8B2020);
+.hp-card-active {
+  transform: scale(1.1) rotate(0deg) !important;
+  z-index: 5;
+  box-shadow: 15px 15px 30px rgba(0, 0, 0, 0.25);
+  border: 2px solid var(--syndicate-color);
 }
 
-.hp-family-icon {
-  font-size: 2rem;
-  line-height: 1;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+.hp-card-dim {
+  filter: grayscale(0.4) brightness(0.9);
+  opacity: 0.6;
+  transform: scale(0.9) rotate(var(--random-tilt, -2deg));
 }
 
-.hp-family-name {
+.hp-card-pin {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #cc2929;
+  z-index: 10;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+.hp-family-genre {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--syndicate-color);
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.hp-family-perk {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.85rem;
+  color: #666;
+  border-top: 1px dashed #ccc;
+  width: 100%;
+  padding-top: 0.5rem;
+}
+
+.hp-perk-label {
+  color: #1a1a1a;
+  font-weight: bold;
+}
+
+.hp-family-card::after {
+  content: 'WANTED';
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
   font-family: 'Bangers', cursive;
-  font-size: 1rem;
-  letter-spacing: 0.06em;
-  color: #F5EDE0;
-  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(204, 41, 41, 0.3);
+  border: 2px solid rgba(204, 41, 41, 0.3);
+  padding: 2px 4px;
+  transform: rotate(-15deg);
 }
 
 .hp-family-territory {
@@ -547,169 +855,209 @@ body:has(.hp-root) .rs-footer-quote {
     opacity: 1;
   }
 
-  50% {
-    opacity: 0.6;
-  }
 }
 
 /* ════════════════════════════════════════════════════════
-   HOW IT WORKS — Big visual cards on chalkboard
+   THE SECRET RECIPE FILES — Bureau Dossier Redesign
 ════════════════════════════════════════════════════════ */
-.hp-flow {
-  /* Deep chalkboard green overlay — the back room, dimly lit */
-  background: rgba(8, 14, 7, 0.88);
-  padding: 3.5rem 0;
-  border-top: 4px solid rgba(45, 122, 45, 0.5);
+.hp-intel {
+  /* High-fidelity wood background image (darkened) */
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+    url('/game/assets/pizzeria_bg.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-attachment: fixed;
+  background-color: #2c150e;
+  /* Fallback mahogany */
+  padding: 8rem 0;
+  margin-top: -3rem;
+  clip-path: polygon(0 0, 100% 5%, 100% 95%, 0 100%);
   position: relative;
-  backdrop-filter: blur(3px);
+  z-index: 1;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
 }
 
-.hp-flow::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: repeating-linear-gradient(90deg,
-      rgba(245, 237, 224, 0.4) 0, rgba(245, 237, 224, 0.4) 30px,
-      transparent 30px, transparent 44px);
-}
-
-.hp-flow-inner {
-  max-width: 820px;
+.hp-manila-folder {
+  max-width: 950px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 4rem 3rem;
+  background-color: #D4A84B;
+  /* Manila Base */
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 5%, transparent 95%, rgba(0, 0, 0, 0.05) 100%);
+  border-left: 20px solid #B68E3A;
+  /* Folder spine */
+  border-radius: 4px 40px 40px 4px;
+  box-shadow:
+    20px 20px 60px rgba(0, 0, 0, 0.6),
+    inset -10px 0 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transform: rotate(-0.5deg);
 }
 
-.hp-flow-header {
-  text-align: center;
-  margin-bottom: 2.5rem;
+.hp-intel-header {
+  position: relative;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 2rem;
+  margin-bottom: 3rem;
 }
 
-.hp-flow-title-line {
-  font-family: 'Bangers', cursive;
-  font-size: 3rem;
-  letter-spacing: 0.14em;
-  color: #F5EDE0;
-  display: block;
-  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
-  -webkit-text-stroke: 1px rgba(245, 237, 224, 0.2);
-}
-
-.hp-flow-title-sub {
-  font-family: 'Special Elite', cursive;
-  font-size: 0.8rem;
-  letter-spacing: 0.2em;
-  color: rgba(245, 237, 224, 0.4);
-  display: block;
-  margin-top: 0.3rem;
-}
-
-.hp-flow-cards {
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0;
-}
-
-.hp-flow-card {
-  flex: 1;
-  max-width: 220px;
-  background: rgba(245, 237, 224, 0.05);
-  border: 2px solid rgba(245, 237, 224, 0.1);
-  border-radius: 8px;
-  padding: 2rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  text-align: center;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.hp-flow-card:hover {
-  background: rgba(245, 237, 224, 0.08);
-  border-color: rgba(204, 41, 41, 0.4);
-}
-
-.hp-flow-card--mid {
-  background: rgba(204, 41, 41, 0.08);
-  border-color: rgba(204, 41, 41, 0.25);
-  transform: scaleY(1.04);
-}
-
-.hp-flow-card-num {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.2em;
-  color: rgba(204, 41, 41, 0.6);
-}
-
-.hp-flow-card-icon {
-  font-size: 3rem;
-  line-height: 1;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
-}
-
-.hp-flow-card-title {
+.hp-intel-stamp {
+  position: absolute;
+  top: -1rem;
+  right: 1rem;
   font-family: 'Bangers', cursive;
   font-size: 1.8rem;
-  letter-spacing: 0.12em;
-  color: #F5EDE0;
-  margin: 0;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+  color: #8B0000;
+  border: 4px solid #8B0000;
+  padding: 0.2rem 1rem;
+  transform: rotate(15deg);
+  opacity: 0.7;
+  user-select: none;
+  letter-spacing: 0.1em;
 }
 
-.hp-flow-card-desc {
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  color: rgba(245, 237, 224, 0.6);
-  line-height: 1.5;
+.hp-intel-title {
+  font-family: 'Bangers', cursive;
+  font-size: 4.5rem;
+  color: #1a1a1a;
+  line-height: 1;
   margin: 0;
 }
 
-.hp-flow-connector {
+.hp-intel-subtitle {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.hp-intel-cards {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1rem;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.hp-paper-clip {
+  background: #F0E8D8;
+  /* Aged Paper */
+  color: #222;
+  padding: 2.5rem 1.5rem;
+  flex: 1;
+  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: transform 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.hp-paper-clip::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 15px;
+  background: #aaa;
+  /* Paper Clip placeholder */
+  border-radius: 10px;
+  border: 2px solid #888;
+  z-index: 2;
+  background: linear-gradient(to bottom, #d1d1d1, #a1a1a1);
+}
+
+.hp-card-tilted {
+  transform: rotate(2deg) translateY(-5px);
+  z-index: 2;
+}
+
+.hp-intel-card-num {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #8B0000;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  display: inline-block;
+}
+
+.hp-intel-card-icon {
   font-size: 2rem;
-  color: rgba(204, 41, 41, 0.4);
-  flex-shrink: 0;
-  padding-bottom: 2rem;
+  margin-bottom: 1rem;
+}
+
+.hp-intel-card-title {
+  font-family: 'Bangers', cursive;
+  font-size: 1.8rem;
+  margin-bottom: 0.8rem;
+  color: #222;
+}
+
+.hp-intel-card-desc {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #444;
+}
+
+.hp-intel-footer-stamp {
+  margin-top: 4rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  padding-top: 1.5rem;
 }
 
 /* ════════════════════════════════════════════════════════
    CONTRACTS — Classified dossier
 ════════════════════════════════════════════════════════ */
 .hp-contracts {
-  /* Very dark vignette at the end — like the kitchen after hours */
-  background: rgba(6, 2, 1, 0.88);
-  padding: 3.5rem 0 5rem;
-  border-top: 4px solid #CC2929;
-  backdrop-filter: blur(3px);
+  background: var(--wood-mahogany);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+    url('game/assets/pizzeria_bg.png');
+  background-attachment: fixed;
+  background-size: cover;
+  padding: 6rem 0;
+  border-top: var(--cartoon-border);
+  position: relative;
 }
 
 .hp-contracts-inner {
-  max-width: 720px;
+  max-width: 850px;
   margin: 0 auto;
-  padding: 2rem 2rem;
-  background: #F5EDE0;
-  border: 3px solid #1A0A04;
-  border-radius: 2px;
-  box-shadow:
-    6px 6px 0 #6B4226,
-    0 20px 60px rgba(0, 0, 0, 0.5);
-  position: relative;
-  /* Aged paper texture via repeating gradient */
+  padding: 4rem 3rem;
+  background: #fff;
   background-image:
-    repeating-linear-gradient(0deg,
-      transparent,
-      transparent 28px,
-      rgba(168, 48, 48, 0.06) 28px,
-      rgba(168, 48, 48, 0.06) 29px);
+    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(0, 0, 0, 0.03) 27px, rgba(0, 0, 0, 0.03) 28px);
+  border: var(--cartoon-border);
+  box-shadow: 20px 20px 0px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  position: relative;
+  transform: rotate(1deg);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
+
+.hp-contracts-inner::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  pointer-events: none;
+}
+
 
 .hp-dossier-header {
   text-align: center;
@@ -728,9 +1076,9 @@ body:has(.hp-root) .rs-footer-quote {
   font-weight: 800;
   letter-spacing: 0.2em;
   padding: 0.2rem 0.6rem;
-  background: rgba(45, 122, 45, 0.15);
-  color: #2D7A2D;
-  border: 2px solid #2D7A2D;
+  background: rgba(204, 41, 41, 0.15);
+  color: #CC2929;
+  border: 2px solid #CC2929;
   border-radius: 2px;
   transform: rotate(2deg);
   text-transform: uppercase;
@@ -846,14 +1194,19 @@ body:has(.hp-root) .rs-footer-quote {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .hp-flow-cards {
+  .hp-intel-cards {
     flex-direction: column;
     align-items: center;
+    gap: 1.5rem;
   }
 
-  .hp-flow-card {
+  .hp-paper-clip {
     max-width: 100%;
     width: 100%;
+  }
+
+  .hp-intel-inner {
+    padding: 2rem 1.5rem;
   }
 
   .hp-flow-card--mid {

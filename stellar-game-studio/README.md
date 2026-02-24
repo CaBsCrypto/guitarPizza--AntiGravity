@@ -208,6 +208,56 @@ bb prove_ultra_honk -b target/guitar_pizza_proof.json -w target/witness.gz -o ta
 
 ---
 
+## The Sovereign Syndicates (Lore & Web3)
+
+The world of Guitar Pizza is controlled by the **Sovereign Syndicates of the Seven Slices**. These are not just mafia families; they are genre-bending "Music Cartels" that guard the ancient secrets of rhythm and dough.
+
+### 1. The Ignis Nitro Cartel (**Industrial Metal**)
+*   **Focus**: Heat, Speed, and Incineration.
+*   **Aesthetic**: Brutalist brick ovens, glowing red neon, scorched aprons.
+*   **Syndicate Buff**: +10% Health recovery on "Perfect" hits.
+
+### 2. The Velvet Vinili (**Acid Jazz / Smooth Groove**)
+*   **Focus**: Flow, Secret Sauces, and Groove.
+*   **Aesthetic**: Deep purple noir lighting, vinyl record plates, velvet curtains.
+*   **Syndicate Buff**: -15% Multiplier/Combo decay on "Miss".
+
+### 3. The Neon-Nduja Society (**Synth-wave / Glitch**)
+*   **Focus**: Precision, Mathematics, and Toppings.
+*   **Aesthetic**: Cyan/Magenta holographic lighting, grid-patterned crusts.
+*   **Syndicate Buff**: +5% Base Score per note (Syndicate-specific Boards).
+
+### 4. The Deep-Dish Abyss (**Dark Dub / Doom**)
+*   **Focus**: Foundation, Volume, and Concrete.
+*   **Aesthetic**: Low-ceiling concrete bunkers, heavy iron plates, thick smoke.
+*   **Syndicate Buff**: -20% Health damage taken on "Miss".
+
+### 5. The Aria Artisan (**Grand Opera / Classical**)
+*   **Focus**: Orchestration, Value, and Perfection.
+*   **Aesthetic**: Gold-leafed ovens, marble counters, tuxedo-wearing chefs.
+*   **Syndicate Buff**: 2x spawn rate for "Secret Sauce" (Golden Notes).
+
+### 6. The Techno-Truffle Pulse (**Hard Techno / Underground**)
+*   **Focus**: Pulse, Velocity, and Minimalist Perfection.
+*   **Aesthetic**: Chrome-plated kitchens, strobe-light ovens, deep charcoal dough.
+*   **Syndicate Buff**: +25% Score bonus during "Fever Mode".
+
+### 7. The Lo-Fi Limoncello (**Chillhop / Lo-fi Beats**)
+*   **Focus**: Relaxation, Soul, and Bitter-Sweet Rhythms.
+*   **Aesthetic**: Pastel yellow gradients, paper-texture backgrounds, lazy rotating garnishes.
+*   **Syndicate Buff**: "Chill Guard" - Prevent combo break on the first "Miss" of a streak.
+
+### Syndicate Attribute System (SAS)
+Players can integrate these syndicates via Web3 (NFTs) to unlock:
+1.  **Skins & Visuals**: Custom lane skins and background themes.
+2.  **Audio Signatures**: Unique "Order Up" SFX and miss-feedback sounds.
+3.  **Gameplay Buffs**: Non-breaking utility perks (listed above).
+4.  **Aura System**: Syndicated players display a faction glow on the Global Leaderboards.
+
+*Note: Global competitive integrity is maintained via Dual Leaderboards (Pure Skill vs Syndicate Wars).*
+
+---
+
 ## Studio Reference
 
 Run the studio frontend locally (from `sgs_frontend/`):
