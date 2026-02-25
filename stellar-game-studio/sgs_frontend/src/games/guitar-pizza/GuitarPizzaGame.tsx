@@ -976,16 +976,16 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem', width: '80%', maxWidth: '300px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', width: '80%', maxWidth: '300px' }}>
                                 <button id="startBtn"
                                     onClick={handleStartGame}
                                     disabled={!engineRef.current}
-                                    style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1.2rem', padding: '1rem' }}
+                                    style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1rem', padding: '0.75rem' }}
                                 >
                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
-                                <div className="grid grid-cols-2 gap-3 mt-4 w-full">
+                                <div className="grid grid-cols-2 gap-2 mt-2 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
                                         style={{
