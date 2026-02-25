@@ -23,7 +23,7 @@ export const SONGS: Song[] = [
     totalDuration: 190,
     bpm: 95,
     start: 28,      // skip the intro, land on the hook
-    duration: 80,   // 1 min 20 sec of gameplay
+    duration: 155,  // ~2min 35sec — covers the full song (190s total - 28s start - 7s end silence)
   },
   // ── TODO: fill in start/duration after listening to each song ───────────
   // { id: 'rare-pizzas',   index: 2,  title: 'Rare Pizzas',   artist: 'PizzaDAO', file: '02_rare_pizzas.mp3',   start: 30, duration: 80 },
