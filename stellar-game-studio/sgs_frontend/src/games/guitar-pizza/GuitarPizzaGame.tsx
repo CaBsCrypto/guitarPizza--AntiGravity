@@ -6,7 +6,7 @@ import { SimulatedZKCircuit } from './SimulatedZKCircuit';
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
 import { useWallet } from '@/hooks/useWallet';
 import { Buffer } from 'buffer';
-import { getRandomSong, songPath } from '../../data/songList';
+import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 
 // We'll import the game logic from a separate file or inline it here if feasible
 // For now, we assume the game logic is exposed globally via window.GuitarPizza or similar after loading scripts
@@ -176,7 +176,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
         localStorage.setItem('gp_language', language);
     }, [language]);
 
-    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard'>('lobby');
+    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker'>('lobby');
+    const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
     const [txHash, setTxHash] = useState<string | null>(null);
@@ -435,15 +436,15 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             if (window.initGuitarPizza) {
                 try {
                     // Check if initGuitarPizza returns an object (new version) or function (old version fallback)
-                    const randomSong = getRandomSong();
-                    const baseUrl = `${import.meta.env.BASE_URL}${songPath(randomSong)}`.replace('//', '/');
+                    const chosenSong = selectedSong.available ? selectedSong : (SONGS.find(s => s.available) ?? selectedSong);
+                    const baseUrl = `${import.meta.env.BASE_URL}${songPath(chosenSong)}`.replace('//', '/');
                     // Append song params as query params so the engine uses the correct segment
                     const params = new URLSearchParams();
-                    if (randomSong.bpm) params.set('bpm', String(randomSong.bpm));
-                    params.set('start', String(randomSong.start ?? 0));
-                    params.set('duration', String(randomSong.duration ?? 80));
+                    if (chosenSong.bpm) params.set('bpm', String(chosenSong.bpm));
+                    params.set('start', String(chosenSong.start ?? 0));
+                    params.set('duration', String(chosenSong.duration ?? 80));
                     const resolvedSongUrl = `${baseUrl}?${params.toString()}`;
-                    addLog(`[GuitarPizza] Song: ${randomSong.title} @ ${randomSong.bpm ?? '?'}BPM | ${randomSong.start}s–${(randomSong.start ?? 0) + (randomSong.duration ?? 80)}s — ${resolvedSongUrl}`);
+                    addLog(`[GuitarPizza] Song: ${chosenSong.title} @ ${chosenSong.bpm ?? '?'}BPM | ${chosenSong.start}s–${(chosenSong.start ?? 0) + (chosenSong.duration ?? 80)}s`);
                     const result = window.initGuitarPizza(canvasRef.current, userAddress, async (finalScore: number, inputLog: any[] = []) => {
                         // Clear any lingering status when game completes, just in case
                         setStatus('');
@@ -946,6 +947,19 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
+                                {/* Selected Song display + picker button */}
+                                <button
+                                    className="secondary-btn"
+                                    onClick={() => setView('songpicker')}
+                                    style={{ fontSize: '0.9rem', padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}
+                                >
+                                    <span>🎵</span>
+                                    <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {selectedSong.title}
+                                    </span>
+                                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>▼</span>
+                                </button>
+
                                 <div className="grid grid-cols-2 gap-3 mt-4 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
@@ -1007,6 +1021,95 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
 
                         {/* MODALS OVERLAY */}
+
+                        {/* ── SONG PICKER ─────────────────────────────── */}
+                        {view === 'songpicker' && (
+                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                    <div className="modal-header">
+                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+                                            <ArrowLeft size={20} />
+                                        </div>
+                                        <h2 className="modal-title">🎵 {language === 'es' ? 'ÁLBUM' : 'TRACKLIST'}</h2>
+                                        <div style={{ width: 40, fontSize: '0.75rem', color: '#888', textAlign: 'right' }}>
+                                            {SONGS.filter(s => s.available).length}/{SONGS.length}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.25rem' }}>
+                                        {SONGS.map((song) => {
+                                            const isSelected = selectedSong.id === song.id;
+                                            const mins = Math.floor(song.duration / 60);
+                                            const secs = song.duration % 60;
+                                            return (
+                                                <button
+                                                    key={song.id}
+                                                    disabled={!song.available}
+                                                    onClick={() => { setSelectedSong(song); setView('lobby'); }}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.75rem',
+                                                        padding: '0.7rem 0.9rem',
+                                                        borderRadius: '12px',
+                                                        border: isSelected ? '2px solid var(--ph-gold)' : '2px solid transparent',
+                                                        background: isSelected
+                                                            ? 'rgba(212,175,55,0.15)'
+                                                            : song.available
+                                                                ? 'rgba(255,255,255,0.06)'
+                                                                : 'rgba(0,0,0,0.2)',
+                                                        cursor: song.available ? 'pointer' : 'not-allowed',
+                                                        opacity: song.available ? 1 : 0.4,
+                                                        textAlign: 'left',
+                                                        color: '#fff',
+                                                        width: '100%',
+                                                        transition: 'all 0.15s ease',
+                                                    }}
+                                                >
+                                                    {/* Track number */}
+                                                    <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#888', minWidth: '22px' }}>
+                                                        {song.available ? String(song.index).padStart(2, '0') : '🔒'}
+                                                    </span>
+
+                                                    {/* Info */}
+                                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {song.title}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '1px' }}>
+                                                            {song.artist}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Meta */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', fontSize: '0.72rem', color: '#888', flexShrink: 0 }}>
+                                                        {song.available && (
+                                                            <>
+                                                                <span>{song.bpm} BPM</span>
+                                                                <span>{mins}:{String(secs).padStart(2, '0')}</span>
+                                                            </>
+                                                        )}
+                                                        {!song.available && (
+                                                            <span style={{ color: '#666' }}>Pronto</span>
+                                                        )}
+                                                        {isSelected && <span style={{ color: 'var(--ph-gold)', fontSize: '0.9rem' }}>♪</span>}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <button
+                                        className="primary-btn"
+                                        style={{ width: '100%', marginTop: '0.5rem' }}
+                                        onClick={() => setView('lobby')}
+                                    >
+                                        🔥 {language === 'es' ? 'LISTO — ENCENDER HORNO' : 'READY — FIRE UP OVEN'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {view === 'store' && (
                             <div className="modal-backdrop" onClick={() => setView('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
