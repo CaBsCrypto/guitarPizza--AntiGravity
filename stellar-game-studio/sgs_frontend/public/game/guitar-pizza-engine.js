@@ -989,6 +989,15 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         ctx.fillStyle = "#ff7675"; // Mafia Red
         ctx.font = `bold ${fontSize * 0.8}px var(--font-display, Impact)`;
         ctx.fillText(`🍕 x${pizzasMade}`, 20, hudH * 0.75 + fontSize + 5);
+
+        // Time remaining counter (top-right)
+        const timeLeft = Math.max(0, Math.ceil(CONFIG.SONG_DURATION - gameTimer));
+        ctx.fillStyle = timeLeft <= 10 ? "#ff7675" : "#aaaaaa";
+        ctx.font = `bold ${Math.min(22, W * 0.055)}px monospace`;
+        ctx.textAlign = "right";
+        ctx.fillText(`⏱ ${timeLeft}s`, W - 15, hudH * 0.75);
+        ctx.textAlign = "left";
+
         ctx.shadowBlur = 0;
     }
 
@@ -1059,15 +1068,15 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     //   songStart    — seconds into the file to begin (from Song.start)
     //   songDuration — how many seconds to play  (from Song.duration)
     function startGame(opts) {
-        const { songRate = 1.0, diffStart = 0.6, songStart = 0, songDuration = 80 } = opts || {};
-        console.log('[Engine] startGame — rate:' + songRate + ' diff:' + diffStart + ' seg:' + songStart + 's/' + songDuration + 's');
+        const { songRate = 1.0, diffStart = 0.6 } = opts || {};
+        // Always use start/duration from CONFIG (read from query params at load time)
+        const resolvedStart = CONFIG.SONG_START;
+        const resolvedDuration = CONFIG.SONG_DURATION;
+        console.log('[Engine] startGame — rate:' + songRate + ' diff:' + diffStart + ' seg:' + resolvedStart + 's–' + (resolvedStart + resolvedDuration) + 's (' + resolvedDuration + 's)');
         _difficultyStart = diffStart;
         AudioEngine._fireRate = songRate;
         AudioEngine.init();
         AudioEngine.stopSong();
-        // Use segment params from CONFIG (read from query params), with opts overrides if desired
-        const resolvedStart = songStart !== undefined ? songStart : CONFIG.SONG_START;
-        const resolvedDuration = songDuration !== undefined ? songDuration : CONFIG.SONG_DURATION;
         if (songUrl) {
             AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
         }
