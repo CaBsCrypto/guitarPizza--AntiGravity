@@ -933,9 +933,47 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             position: 'relative',
                             zIndex: 1
                         }}>
+
                             <div className="logo-container">
                                 <h1 className="main-logo">RHYTHM<br />SLICE</h1>
-                                <p className="subtitle">PIZZA KITCHEN</p>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                                    <p className="subtitle">PIZZA KITCHEN</p>
+                                    {/* Mafia noir vinyl SVG — asymmetric gold highlight makes spin obvious */}
+                                    <button
+                                        onClick={() => setView('songpicker')}
+                                        title={selectedSong.title}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            padding: 0,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            animation: 'vinyl-spin 3s linear infinite',
+                                            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.8))',
+                                        }}
+                                    >
+                                        <svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                            {/* Outer disc — near black */}
+                                            <circle cx="50" cy="50" r="49" fill="#0d0d0d" stroke="#d4af37" strokeWidth="1.5" strokeOpacity="0.5" />
+                                            {/* Groove rings — concentric thin circles */}
+                                            {[38, 33, 28, 23].map(r => (
+                                                <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#1e1e1e" strokeWidth="1.2" />
+                                            ))}
+                                            {/* Dark red label ring — Italian vintage style */}
+                                            <circle cx="50" cy="50" r="21" fill="#5a0f0f" />
+                                            <circle cx="50" cy="50" r="20" fill="#7a1515" />
+                                            {/* Label ring decorative border */}
+                                            <circle cx="50" cy="50" r="20" fill="none" stroke="#a02020" strokeWidth="1" />
+                                            {/* Center spindle hole */}
+                                            <circle cx="50" cy="50" r="4.5" fill="#d4af37" />
+                                            {/* Asymmetric specular highlight — top-right arc, makes spin VERY visible */}
+                                            <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(255,230,100,0.55)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                                            {/* Softer secondary highlight */}
+                                            <path d="M 65 22 A 33 33 0 0 1 78 42" stroke="rgba(255,255,255,0.18)" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1rem', width: '80%', maxWidth: '300px' }}>
@@ -945,19 +983,6 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1.2rem', padding: '1rem' }}
                                 >
                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
-                                </button>
-
-                                {/* Selected Song display + picker button */}
-                                <button
-                                    className="secondary-btn"
-                                    onClick={() => setView('songpicker')}
-                                    style={{ fontSize: '0.9rem', padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}
-                                >
-                                    <span>🎵</span>
-                                    <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {selectedSong.title}
-                                    </span>
-                                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>▼</span>
                                 </button>
 
                                 <div className="grid grid-cols-2 gap-3 mt-4 w-full">

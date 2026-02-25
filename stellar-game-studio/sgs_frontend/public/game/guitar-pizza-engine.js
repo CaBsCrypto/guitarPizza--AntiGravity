@@ -52,6 +52,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     let particles = [];
     let feedbackSystem = [];
     let shake = 0;
+    let laneBoxPhase = [0, 0, 0, 0]; // 0 = closed, 1 = open
+    let centerBanner = null; // { text, life, maxLife }
+    let laneBoxAnim = [0, 0, 0, 0]; // 0..1 bounce timer per lane
     let camScale = 1.0;
 
     let beatTimer = 0;
@@ -83,6 +86,21 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     // --- ASSETS ---
     // --- ASSETS ---
     const ASSETS = {};
+    // --- PIZZA BOX PLATE ASSETS (4 per lane) ---
+    const PLATE_ASSETS = { closed: [null, null, null, null], open: [null, null, null, null] };
+    (function loadBoxAssets() {
+        const base = '/game/assets/';
+        const closedNames = ['cajacerrada1.png', 'cajacerrada2.png', 'caja cerrada 3.png', 'cajacerrada4.png'];
+        const openNames = ['pizzaAbierta1.png', 'pizzaAbierta2.png', 'pizzaAbierta3.png', 'pizzaAbierta4.png'];
+        for (let i = 0; i < 4; i++) {
+            const c = new window.Image();
+            c.src = base + closedNames[i];
+            c.onload = () => { PLATE_ASSETS.closed[i] = c; };
+            const o = new window.Image();
+            o.src = base + openNames[i];
+            o.onload = () => { PLATE_ASSETS.open[i] = o; };
+        }
+    })();
     const TAGS = ["pepperoni", "cheese", "bacon", "onion"]; // Mapped to Lanes 0-3
     const TRAP_TAGS = ["hotdog", "burger"]; // Ghost/Trap Notes (Sushi removed for performance)
     const GOLDEN_TAG = "secret_sauce";
@@ -128,6 +146,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         inputLog = []; // Reset Log
         isVictory = false;
         _levelCompleteTriggered = false;
+        laneBoxPhase = [0, 0, 0, 0]; // all boxes start closed
+        laneBoxAnim = [0, 0, 0, 0];
+        centerBanner = null;
         gameState = STATE.GAME;
         lastTime = performance.now(); // RESET TIME TO PREVENT HUGE DT JUMP
         AudioEngine.init(); // Ensure audio is ready
@@ -572,6 +593,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const perfect = bestDist < (hitZone * 0.3);
 
             totalHits++;
+            // Trigger box bounce animation on the hit lane
+            laneBoxAnim[lane] = 1.0;
             if (perfect) {
                 totalPerfectHits++;
                 perfectStreak++;
@@ -655,6 +678,24 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         if (fireMode) feverTime += dt;  // accumulate seconds in fever/fire mode
         gameTimer += dt;
+
+        // ── Box opening: all open at 15% of song ──
+        if (CONFIG.SONG_DURATION > 0 && gameTimer / CONFIG.SONG_DURATION >= 0.15) {
+            if (laneBoxPhase[0] !== 1) {
+                laneBoxPhase = [1, 1, 1, 1];
+                centerBanner = { text: "LET'S COOK! 🍕", life: 1.4, maxLife: 1.4 };
+            }
+        }
+        // Update banner
+        if (centerBanner) {
+            centerBanner.life -= dt;
+            if (centerBanner.life <= 0) centerBanner = null;
+        }
+        // Decay box bounce animations
+        for (let i = 0; i < 4; i++) {
+            if (laneBoxAnim[i] > 0) laneBoxAnim[i] = Math.max(0, laneBoxAnim[i] - dt * 8);
+        }
+
         if (gameTimer > nextNoteTime) spawnNote();
 
         if (pizzaPopup.active) {
@@ -843,23 +884,72 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             ctx.fillStyle = gradient; ctx.fillRect(x, 0, LANE_W, H);
             ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = THE_OVEN_THEME.dimensions.laneBorderWidth; ctx.strokeRect(x, 0, LANE_W, H);
 
-            // Plate
+            // ── Pizza Box Plate ──
             const plateX = x + LANE_W / 2; const plateY = HIT_Y; const plateRadius = LANE_W * 0.35;
-            ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(plateX + 4, plateY + 4, plateRadius + 2, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = ingredient.plate; ctx.beginPath(); ctx.arc(plateX, plateY, plateRadius, 0, Math.PI * 2); ctx.fill();
+            const boxSize = plateRadius * 2.8;
+            const boxImg = laneBoxPhase[i] === 1 ? PLATE_ASSETS.open[i] : PLATE_ASSETS.closed[i];
 
-            // Active Glow
+            // Lift: box moves UP on hit, returns smoothly
+            const anim = laneBoxAnim[i];
+            const liftY = Math.sin(anim * Math.PI) * 12; // max -12px up
+            const drawY = plateY - liftY;
+
+            // ── Neon hold glow (pulsing with beat) ──
             if (Input.held[i]) {
-                ctx.shadowBlur = 40; ctx.shadowColor = ingredient.primary;
-                ctx.strokeStyle = ingredient.primary; ctx.lineWidth = 6;
-                ctx.beginPath(); ctx.arc(plateX, plateY, plateRadius + 10, 0, Math.PI * 2); ctx.stroke();
+                const pulse = 1.0 + beatFlash * 0.8;
+                const glowR = boxSize * 0.7 * pulse;
+                const neonColors = [
+                    'rgba(192,57,43',   // red   (pepperoni)
+                    'rgba(241,196,15',  // yellow(cheese)
+                    'rgba(217,136,128', // pink  (bacon)
+                    'rgba(155,89,182',  // purple(onion)
+                ];
+                const base = neonColors[i];
+                const neonGrad = ctx.createRadialGradient(plateX, drawY, 0, plateX, drawY, glowR);
+                neonGrad.addColorStop(0, base + ', 0.6)');
+                neonGrad.addColorStop(0.5, base + ', 0.2)');
+                neonGrad.addColorStop(1, base + ', 0)');
+                ctx.fillStyle = neonGrad;
+                ctx.shadowColor = ingredient.primary;
+                ctx.shadowBlur = 35 * pulse;
+                ctx.beginPath(); ctx.arc(plateX, drawY, glowR, 0, Math.PI * 2); ctx.fill();
                 ctx.shadowBlur = 0;
+            }
+
+            if (boxImg) {
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#000';
+                ctx.fillRect(plateX - boxSize / 2 + 4, drawY - boxSize / 2 + 4, boxSize, boxSize);
+                ctx.globalAlpha = 1.0;
+                ctx.drawImage(boxImg, plateX - boxSize / 2, drawY - boxSize / 2, boxSize, boxSize);
+            } else {
+                ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(plateX + 4, drawY + 4, plateRadius + 2, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = ingredient.plate; ctx.beginPath(); ctx.arc(plateX, drawY, plateRadius, 0, Math.PI * 2); ctx.fill();
             }
         }
 
-        // Hit Line
-        ctx.shadowBlur = 25; ctx.shadowColor = THE_OVEN_THEME.colors.hitLine; ctx.strokeStyle = THE_OVEN_THEME.colors.hitLine; ctx.lineWidth = THE_OVEN_THEME.dimensions.hitLineThickness;
-        ctx.beginPath(); ctx.moveTo(offsetX, HIT_Y); ctx.lineTo(offsetX + totalGameWidth, HIT_Y); ctx.stroke(); ctx.shadowBlur = 0;
+        // Hit Zone — side ticks per lane (no full line over the pizza boxes)
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = THE_OVEN_THEME.colors.hitLine;
+        ctx.fillStyle = THE_OVEN_THEME.colors.hitLine;
+        const tickW = 10, tickH = 18;
+        for (let i = 0; i < 4; i++) {
+            const lx = offsetX + i * LANE_W;
+            const rx = lx + LANE_W;
+            // Left tick (pointing right ▶)
+            ctx.beginPath();
+            ctx.moveTo(lx, HIT_Y - tickH / 2);
+            ctx.lineTo(lx + tickW, HIT_Y);
+            ctx.lineTo(lx, HIT_Y + tickH / 2);
+            ctx.closePath(); ctx.fill();
+            // Right tick (pointing left ◀)
+            ctx.beginPath();
+            ctx.moveTo(rx, HIT_Y - tickH / 2);
+            ctx.lineTo(rx - tickW, HIT_Y);
+            ctx.lineTo(rx, HIT_Y + tickH / 2);
+            ctx.closePath(); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
 
         // Notes
         notes.forEach(n => {
@@ -962,7 +1052,36 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         });
         ctx.globalAlpha = 1.0;
 
-        // Render Pizza Completion Character Popup
+        // ── Center Banner (¡A COCINAR! etc.) ────────────────────────────────
+        if (centerBanner) {
+            const t = centerBanner.life / centerBanner.maxLife; // 1→0
+            // Scale: pop in fast, then hold, then fade out
+            const popScale = t > 0.7
+                ? 0.5 + (1 - t) / 0.3 * 0.7   // 0→1 during first 30% of life
+                : 1.2 - (t < 0.25 ? (0.25 - t) / 0.25 * 0.3 : 0); // slight shrink on exit
+            const alpha = t < 0.25 ? t / 0.25 * 1.0 : (t > 0.85 ? (t - 0.85) / 0.15 : 1.0);
+            const fontSize = Math.min(W * 0.09, 52);
+            ctx.save();
+            ctx.translate(W / 2, H * 0.35);
+            ctx.scale(popScale, popScale);
+            ctx.globalAlpha = alpha;
+            ctx.font = `900 ${fontSize}px 'Bangers', 'Impact', sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Shadow layer
+            ctx.shadowColor = 'rgba(0,0,0,0.9)';
+            ctx.shadowBlur = 20;
+            // Thick outline
+            ctx.lineWidth = fontSize * 0.12;
+            ctx.strokeStyle = '#000';
+            ctx.strokeText(centerBanner.text, 0, 0);
+            // Gold fill
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText(centerBanner.text, 0, 0);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
         if (pizzaPopup.active) {
             const img = ASSETS["super_pizza"];
             if (img) {

@@ -45,6 +45,16 @@ em {
   color: var(--color-accent);
 }
 
+@keyframes vinyl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 code {
   font-family: var(--font-mono);
   font-size: 0.82em;
