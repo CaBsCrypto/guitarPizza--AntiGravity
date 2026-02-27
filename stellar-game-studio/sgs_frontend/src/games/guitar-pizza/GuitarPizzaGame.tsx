@@ -13,7 +13,7 @@ import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 
 declare global {
     interface Window {
-        initGuitarPizza: (canvas: HTMLCanvasElement | null, userAddress: string, onComplete: (score: number, inputLog?: any[]) => void, songUrl?: string) => () => void;
+        initGuitarPizza: (canvas: HTMLCanvasElement | null, userAddress: string, onComplete: (score: number, inputLog?: any[]) => void, songUrl?: string, t?: any) => () => void;
         BASE64_ASSETS: Record<string, string>;
     }
 }
@@ -85,7 +85,11 @@ const TRANSLATIONS = {
         ordersDesc: 'Completa pizzas para ganar más.',
         rewards: 'RECOMPENSA',
         rewardsDesc: '¡Sube en el ranking y desbloquea herramientas!',
-        language: 'Idioma'
+        language: 'Idioma',
+        engineLoading: 'Cargando Ingredientes...',
+        engineLetsCook: '¡A COCINAR! 🍕',
+        engineLevelComplete: '🎉 ¡NIVEL COMPLETADO!',
+        engineServiceEnded: 'SERVICIO FINALIZADO'
     },
     en: {
         initializing: 'Initializing...',
@@ -127,7 +131,7 @@ const TRANSLATIONS = {
         storyIntro: 'New York, 1984. The Five Families control the cheese... You are the only one with the Rhythm to break their crust.',
         storyBody: 'Prove your worth in the kitchen. Hit the notes, bake the perfect pies, and become the...',
         don: 'DON OF DOUGH',
-        controls: 'CONTROLES',
+        controls: 'CONTROLS',
         controlsDesc: 'Tap the keys as ingredients reach the plate at the bottom.',
         baking: 'BAKING',
         precision: 'Precision',
@@ -138,7 +142,11 @@ const TRANSLATIONS = {
         ordersDesc: 'Finish pies to increase tips.',
         rewards: 'REWARD',
         rewardsDesc: 'Climb the ranks and unlock market tools!',
-        language: 'Language'
+        language: 'Language',
+        engineLoading: 'Loading Ingredients...',
+        engineLetsCook: "LET'S COOK! 🍕",
+        engineLevelComplete: '🎉 LEVEL COMPLETE!',
+        engineServiceEnded: 'SERVICE ENDED'
     }
 };
 
@@ -671,7 +679,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 setStatus(''); // Clear persistent error overlay
                             }, 4000);
                         }
-                    }, resolvedSongUrl);
+                    }, resolvedSongUrl, t);
 
                     if (typeof result === 'function') {
                         engineRef.current = { cleanup: result, setVolume: () => { } };
@@ -1434,8 +1442,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                         width: '100%',
                         height: '100%',
                         zIndex: 20,
-                        background: 'rgba(0,0,0,0.6)',
-                        backdropFilter: 'blur(4px)',
+                        // Elegant Glassmorphism: allows the game background to be seen blurred
+                        background: 'rgba(20, 5, 5, 0.4)',
+                        backdropFilter: 'blur(12px)',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1445,8 +1454,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             width: '85%',
                             maxWidth: '420px',
                             minHeight: '480px',
-                            background: `linear-gradient(135deg, rgba(15, 15, 20, 0.9), rgba(5, 5, 8, 0.95))`,
-                            backdropFilter: 'blur(16px)',
+                            // Removed the hard black gradient and replaced with elegant bright glass
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            backdropFilter: 'blur(20px)',
                             borderRadius: '16px',
                             boxShadow: '0 30px 60px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.1)',
                             border: '1px solid rgba(212,175,55, 0.3)', // Subtle gold border
@@ -1462,14 +1472,24 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             {/* Decorative Top Accent */}
                             <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '4px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)' }}></div>
 
-                            <div style={{ textAlign: 'center', width: '100%', marginBottom: '1rem' }}>
-                                <h1 id="resTitle" style={{ fontFamily: 'var(--font-title)', fontSize: '2.4rem', letterSpacing: '2px', color: '#fdf8f0', margin: 0, textShadow: '0 4px 10px rgba(0,0,0,0.8)' }}>
+                            {/* Aligned Header Section */}
+                            <div style={{ textAlign: 'center', width: '100%', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <h1 id="resTitle" style={{
+                                    fontFamily: 'var(--font-title)',
+                                    fontSize: '1.8rem',
+                                    letterSpacing: '2px',
+                                    color: '#fdf8f0',
+                                    margin: '0',
+                                    lineHeight: '1.1',
+                                    textShadow: '0 4px 10px rgba(0,0,0,0.8)'
+                                }}>
                                     {t.serviceEnded}
                                 </h1>
-                                <div style={{ width: '80px', height: '2px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)', margin: '0.8rem auto' }}></div>
+                                <div style={{ width: '120px', height: '2px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)', marginTop: '0.8rem' }}></div>
                             </div>
 
-                            <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            {/* Score Content centrally aligned */}
+                            <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
                                 {/* Huge Glowing Grade */}
                                 <div className="grade" id="resGrade" style={{
                                     fontSize: '7.5rem',
@@ -1539,20 +1559,28 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         style={{
                                             width: '100%',
                                             padding: '1.2rem',
-                                            fontSize: '1.1rem',
+                                            fontSize: '1.2rem',
                                             fontFamily: 'var(--font-title)',
                                             letterSpacing: '2px',
-                                            background: 'linear-gradient(135deg, #8b0000, #4a0000)',
+                                            background: 'linear-gradient(135deg, #a71d1d, #600202)',
                                             border: '1px solid #ff4d4d',
-                                            boxShadow: '0 4px 15px rgba(139,0,0,0.4), inset 0 2px 0 rgba(255,100,100,0.3)',
+                                            boxShadow: '0 4px 15px rgba(139,0,0,0.6), inset 0 2px 0 rgba(255,100,100,0.4)',
                                             borderRadius: '12px',
                                             color: '#fff',
                                             cursor: 'pointer',
                                             textTransform: 'uppercase',
-                                            transition: 'all 0.2s ease'
+                                            transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                                         }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.2)' }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.filter = 'none' }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.filter = 'brightness(1.2)';
+                                            e.currentTarget.style.transform = 'scale(1.03)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.filter = 'none';
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                        }}
+                                        onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
+                                        onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.03)' }}
                                     >
                                         🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
                                     </button>
@@ -1564,20 +1592,28 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                             style={{
                                                 width: '100%',
                                                 padding: '1.2rem',
-                                                fontSize: '1.1rem',
+                                                fontSize: '1.2rem',
                                                 fontFamily: 'var(--font-title)',
                                                 letterSpacing: '2px',
-                                                background: 'linear-gradient(135deg, #d35400, #e67e22)',
-                                                border: '1px solid #f39c12',
-                                                boxShadow: '0 4px 15px rgba(211,84,0,0.4), inset 0 2px 0 rgba(241,196,15,0.3)',
+                                                background: 'linear-gradient(135deg, #d4af37, #997a00)',
+                                                border: '1px solid #f9e596',
+                                                boxShadow: '0 4px 15px rgba(212,175,55,0.4), inset 0 2px 0 rgba(255,255,255,0.4)',
                                                 borderRadius: '12px',
-                                                color: '#fff',
+                                                color: '#111',
                                                 cursor: 'pointer',
                                                 textTransform: 'uppercase',
-                                                transition: 'all 0.2s ease'
+                                                transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                                             }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.2)' }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.filter = 'none' }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.filter = 'brightness(1.15)';
+                                                e.currentTarget.style.transform = 'scale(1.03)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.filter = 'none';
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                            }}
+                                            onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
+                                            onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.03)' }}
                                         >
                                             🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
                                         </button>

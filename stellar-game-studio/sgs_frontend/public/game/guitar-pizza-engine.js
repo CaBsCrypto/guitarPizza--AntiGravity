@@ -1,6 +1,9 @@
 
 
-window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songUrl) {
+window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songUrl, t) {
+    // Default translations if missing
+    t = t || { engineLoading: 'Cargando Ingredientes...', engineLetsCook: "¡A COCINAR! 🍕", engineLevelComplete: '🎉 ¡NIVEL COMPLETADO!', engineServiceEnded: 'SERVICIO FINALIZADO' };
+
     // --- GLOBAL VARS & CONFIG (Scoped to this function) ---
     // Parse all song params from the URL query string
     const _songParams = (function () {
@@ -173,13 +176,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const nextLevelBtn = document.getElementById('nextLevelBtn');
 
             if (isVictory) {
-                if (titleEl) { titleEl.innerText = '🎉 ¡NIVEL COMPLETADO!'; titleEl.style.color = '#ffd700'; }
+                if (titleEl) { titleEl.innerText = t.engineLevelComplete; titleEl.style.color = '#ffd700'; }
                 if (pizzasEl) { pizzasEl.style.display = 'block'; }
                 if (pizzasCountEl) { pizzasCountEl.innerText = pizzasMade; }
                 if (nextLevelBtn) { nextLevelBtn.style.display = 'block'; }
                 if (uiResults) { uiResults.style.background = 'rgba(20,50,20,0.7)'; }
             } else {
-                if (titleEl) { titleEl.innerText = 'SERVICIO FINALIZADO'; titleEl.style.color = '#fff'; }
+                if (titleEl) { titleEl.innerText = t.engineServiceEnded; titleEl.style.color = '#fff'; }
                 if (pizzasEl) { pizzasEl.style.display = 'none'; }
                 if (nextLevelBtn) { nextLevelBtn.style.display = 'none'; }
                 if (uiResults) { uiResults.style.background = 'rgba(0,0,0,0.6)'; }
@@ -701,7 +704,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         if (CONFIG.SONG_DURATION > 0 && gameTimer / CONFIG.SONG_DURATION >= 0.15) {
             if (laneBoxPhase[0] !== 1) {
                 laneBoxPhase = [1, 1, 1, 1];
-                centerBanner = { text: "LET'S COOK! 🍕", life: 1.4, maxLife: 1.4 };
+                centerBanner = { text: t.engineLetsCook, life: 1.4, maxLife: 1.4 };
             }
         }
         // Update banner
@@ -882,6 +885,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         // If Menu, STOP here. (Loop clears it to transparent).
         if (gameState === STATE.MENU) return;
+        // Do NOT stop for RESULTS, we want to see the frozen last frame of the game!
 
         const totalGameWidth = 4 * LANE_W;
         const offsetX = (W - totalGameWidth) / 2;
@@ -1294,7 +1298,12 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
 
         if (dt < 0.5) { // Prevent huge dt jumps
-            if (gameState === STATE.GAME) update(dt);
+            if (gameState === STATE.GAME) {
+                update(dt);
+            }
+            // Always render the visual state, even if GAME OVER (RESULTS)
+            // This allows the React CSS glassmorphism overlay to blur the active gameplay view
+            // instead of a black canvas.
             render(dt);
         }
         requestId = requestAnimationFrame(loop);
@@ -1388,7 +1397,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 ctx.font = "30px Arial";
                 ctx.textAlign = "center";
                 const percent = Math.floor((current / total) * 100);
-                ctx.fillText(`Cargando Ingredientes... ${percent}%`, W / 2, H / 2 - 20);
+                ctx.fillText(`${t.engineLoading} ${percent}%`, W / 2, H / 2 - 20);
 
                 // Draw Bar Background
                 const barW = Math.min(W * 0.6, 400);
