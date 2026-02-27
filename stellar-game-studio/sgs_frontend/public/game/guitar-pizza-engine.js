@@ -109,16 +109,16 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         colors: {
             // Lane Colors: [Red (Pepperoni), Yellow (Cheese), Pink (Bacon), Purple (Onion)]
             lanes: [
-                { primary: "rgba(192, 57, 43, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#4a0000", note: "#C0392B" },    // Lane 0: Pepperoni
-                { primary: "rgba(241, 196, 15, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#664a00", note: "#F4D03F" },    // Lane 1: Cheese
-                { primary: "rgba(217, 136, 128, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#5c2b14", note: "#E6B0AA" },    // Lane 2: Bacon (Pinkish)
-                { primary: "rgba(155, 89, 182, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#27004f", note: "#9B59B6" }     // Lane 3: Onion
+                { primary: "rgba(192, 57, 43, 0.4)", dark: "rgba(192, 57, 43, 0.05)", plate: "#4a0000", note: "#C0392B" },    // Lane 0: Pepperoni
+                { primary: "rgba(241, 196, 15, 0.4)", dark: "rgba(241, 196, 15, 0.05)", plate: "#664a00", note: "#F4D03F" },    // Lane 1: Cheese
+                { primary: "rgba(217, 136, 128, 0.4)", dark: "rgba(217, 136, 128, 0.05)", plate: "#5c2b14", note: "#E6B0AA" },    // Lane 2: Bacon (Pinkish)
+                { primary: "rgba(155, 89, 182, 0.4)", dark: "rgba(155, 89, 182, 0.05)", plate: "#27004f", note: "#9B59B6" }     // Lane 3: Onion
             ],
             hitLine: "#D4A84B", // Mafia Gold for Hitline
             background: {
-                base: "#fdfaf6",       // Paper texture background color
-                checker: "#8C1B1B",    // Deep Mafia Red
-                oven: "#111111",       // Gritty asphalt black
+                base: "#ffffff",       // Pure white paper texture for maximum contrast
+                checker: "#9A1F1F",    // Slightly lighter mafia red
+                oven: "#4A4A4A",       // 20%+ brighter grey for the background track
                 ovenBorder: "#8B0000", // Blood Red Inner Border
                 outerBorder: "#080402" // Deepest black-brown for the frame
             }
@@ -895,21 +895,49 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         ctx.translate(W / 2, H / 2); ctx.scale(camScale, camScale); ctx.translate(-W / 2, -H / 2);
         if (shake > 0.1) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
 
-        if (beatFlash > 0) {
-            ctx.fillStyle = fireMode ? "#ff7675" : "#fff";
-            ctx.globalAlpha = beatFlash * 0.5; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1.0;
-        }
+        // Removed the beatFlash overlay directly so it stops putting white/red flashes over everything
+        // if (beatFlash > 0) { ... }
 
-        // Lanes
+        // 1. Draw Lane Backgrounds
         for (let i = 0; i < 4; i++) {
             const x = offsetX + i * LANE_W;
             const ingredient = THE_OVEN_THEME.colors.lanes[i];
 
-            // Gradient BG
+            // Gradient BG - Making the lanes much brighter and less transparent
+            // to completely hide the dark background.
+            const topColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.9)");
+            const botColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.7)");
             const gradient = ctx.createLinearGradient(x, 0, x, H);
-            gradient.addColorStop(0, ingredient.dark); gradient.addColorStop(1, ingredient.primary);
+            gradient.addColorStop(0, topColor);
+            gradient.addColorStop(1, botColor);
+
             ctx.fillStyle = gradient; ctx.fillRect(x, 0, LANE_W, H);
             ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = THE_OVEN_THEME.dimensions.laneBorderWidth; ctx.strokeRect(x, 0, LANE_W, H);
+        }
+
+        // 2. Draw Elegant Division / Delivery Counter for the Pizzas
+        // Move it higher so open boxes don't cover the golden trim
+        const counterTop = HIT_Y - (LANE_W * 0.65);
+        const counterHeight = H - counterTop;
+
+        // Counter Background (Dark translucent glass)
+        ctx.fillStyle = "rgba(20, 5, 5, 0.8)";
+        ctx.fillRect(offsetX, counterTop, totalGameWidth, counterHeight);
+
+        // Golden Line separating the lanes from the counter (Elegant Hit Frame)
+        ctx.fillStyle = THE_OVEN_THEME.colors.hitLine;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = THE_OVEN_THEME.colors.hitLine;
+        ctx.fillRect(offsetX, counterTop, totalGameWidth, 4);
+        ctx.shadowBlur = 0;
+
+        // A second subtle gold trim line at the very bottom
+        ctx.fillRect(offsetX, H - 6, totalGameWidth, 6);
+
+        // 3. Draw Pizza Boxes and Hit Feedback
+        for (let i = 0; i < 4; i++) {
+            const x = offsetX + i * LANE_W;
+            const ingredient = THE_OVEN_THEME.colors.lanes[i];
 
             // ── Pizza Box Plate ──
             const plateX = x + LANE_W / 2; const plateY = HIT_Y; const plateRadius = LANE_W * 0.35;
@@ -944,10 +972,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
 
             if (boxImg) {
-                ctx.globalAlpha = 0.3;
-                ctx.fillStyle = '#000';
-                ctx.fillRect(plateX - boxSize / 2 + 4, drawY - boxSize / 2 + 4, boxSize, boxSize);
-                ctx.globalAlpha = 1.0;
+                // Removed the dark 0.3 opacity black box that was darkening the plates
                 ctx.drawImage(boxImg, plateX - boxSize / 2, drawY - boxSize / 2, boxSize, boxSize);
             } else {
                 ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.beginPath(); ctx.arc(plateX + 4, drawY + 4, plateRadius + 2, 0, Math.PI * 2); ctx.fill();
