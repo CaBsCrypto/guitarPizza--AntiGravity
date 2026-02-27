@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd stellar-game-studio/sgs_frontend && npm install && npm run build",
+  "outputDirectory": "stellar-game-studio/sgs_frontend/dist",
+  "framework": "vite"
+}
