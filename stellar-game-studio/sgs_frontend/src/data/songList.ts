@@ -28,13 +28,13 @@ export const SONGS: Song[] = [
   {
     id: 'rare-pizzas',
     index: 2,
-    title: 'Rare Pizzas',
+    title: 'Rare Pizzas (Hard Mode)',
     artist: 'PizzaDAO',
-    file: '02_rare_pizzas.mp3',
-    bpm: 100,
-    available: false,
-    start: 0,
-    duration: 120,
+    file: '01_sauce.mp3', // Reusing the same file for now but at higher speed
+    bpm: 115, // Faster!
+    available: false, // Set to true dynamically or by saving state
+    start: 28,
+    duration: 155,
   },
   {
     id: 'pizza-mind',

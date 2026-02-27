@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import type { Page } from '../types/navigation';
 import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
@@ -9,13 +9,13 @@ interface HomePageProps {
 }
 
 const SYNDICATES = [
-  { icon: '🔥', name: 'Ignis Nitro', genre: 'Industrial Metal', perk: '+10% Health Regen', color: '#ff4d4d' },
-  { icon: '🌊', name: 'Velvet Vinili', genre: 'Acid Jazz', perk: '-15% Decay Rate', color: '#9b59b6' },
-  { icon: '👾', name: 'Neon-Nduja', genre: 'Synth-wave', perk: '+5% Base Score', color: '#00f2ff' },
-  { icon: '🌑', name: 'Deep-Dish Abyss', genre: 'Dark Dub', perk: '-20% Damage Taken', color: '#1a1a1a' },
-  { icon: '🎭', name: 'Aria Artisan', genre: 'Grand Opera', perk: '2x Secret Sauce', color: '#ffd700' },
-  { icon: '⚡', name: 'Techno-Truffle', genre: 'Hard Techno', perk: '+25% Fever Score', color: '#00ffaa' },
-  { icon: '🍋', name: 'Lo-Fi Limoncello', genre: 'Chillhop', perk: 'Combo Shield', color: '#e6ff00' },
+  { icon: '🥩', name: 'The Pepperoni Cartel', genre: 'Heavy Metal', perk: '+10% Health Regen', color: '#ff4d4d' },
+  { icon: '🧀', name: 'La Famiglia Mozzarella', genre: 'Smooth Jazz', perk: '-15% Decay Rate', color: '#f1c40f' },
+  { icon: '🌿', name: 'The Basil Syndicate', genre: 'Fast Swing', perk: '+5% Base Score', color: '#2ecc71' },
+  { icon: '🌙', name: 'The Midnight Dough', genre: 'Dark Blues', perk: '-20% Damage Taken', color: '#8e44ad' },
+  { icon: '👑', name: 'The Golden Crust Society', genre: 'Grand Opera', perk: '2x Secret Sauce', color: '#e67e22' },
+  { icon: '🌶️', name: 'The Spicy Sausage Crew', genre: 'Frenetic Bebop', perk: '+25% Fever Score', color: '#e74c3c' },
+  { icon: '🐟', name: 'The Anchovy Outcasts', genre: 'Lo-Fi/Street', perk: 'Combo Shield', color: '#3498db' },
 ];
 
 export function HomePage({ onNavigate }: HomePageProps) {
@@ -25,9 +25,32 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [startX, setStartX] = useState(0);
   const [dragMoved, setDragMoved] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const handleEnterKitchen = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      onNavigate('game');
+    }, 1200);
+  };
 
   const nextSlide = () => setCarouselIdx((prev) => (prev + 1) % SYNDICATES.length);
   const prevSlide = () => setCarouselIdx((prev) => (prev - 1 + SYNDICATES.length) % SYNDICATES.length);
+
+  // Parallax state
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // Calculate normalized mouse position from -1 to 1
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      setMousePos({ x, y });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   // Drag Handlers
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -71,10 +94,19 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div className="hp-active">
+      {/* Cinematic Transition Overlay */}
+      <div className={`hp-cinematic-overlay ${isTransitioning ? 'hp-fade-to-black' : ''}`} />
+
       {/* Global atmospheric effects */}
       <div className="hp-smoke-overlay" />
 
-      <div className="hp-root">
+      <div
+        className="hp-root"
+        style={{
+          '--mouse-x': mousePos.x,
+          '--mouse-y': mousePos.y
+        } as React.CSSProperties}
+      >
 
         {/* ══════════════════════════════════════
             HERO — Full pizzeria scene
@@ -87,25 +119,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
           {/* Layer 2: Noir Spotlight Overlay */}
           <div className="hp-spotlight-over" />
 
-          {/* Layer 3: Pizza Rain (Cartoon Animation) */}
-          <div className="hp-pizza-rain-wrap">
-            {[...Array(12)].map((_, i) => (
-              <div
-                key={i}
-                className="hp-falling-pizza"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 5}s`,
-                  animationDuration: `${3 + Math.random() * 4}s`
-                }}
-              >
-                {['🍕', '🍅', '🧀', '🌶️', '🍄', '🥓'][i % 6]}
-              </div>
-            ))}
-          </div>
-
           {/* Layer 3: Dark vignette overlay so text pops */}
-          <div className="hp-vignette hp-halftone" />
+          <div className="hp-vignette" />
 
           {/* Layer 4: Content */}
           <div className="hp-hero-inner">
@@ -118,18 +133,19 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 <span className="hp-title-line2">SLICE</span>
               </h1>
               <p className="hp-tagline">
-                "The Five Families control the cheese.<br />
-                Only <em>rhythm</em> can break their crust."
+                "The Dons think they own the oven.<br />
+                Show 'em who really rules the kitchen.<br />
+                Just keep the rhythm, <em>capisce</em>?"
               </p>
-              <p className="hp-attribution">— Il Don della Massa</p>
+              <p className="hp-attribution">— Benny</p>
             </div>
 
-            {/* Don character */}
+            {/* Benny character */}
             <div className="hp-don-wrap">
               <img
                 className="hp-don-img"
-                src={`${import.meta.env.BASE_URL}game/assets/don_transparent.png`.replace('//', '/')}
-                alt="Il Don della Massa"
+                src={`${import.meta.env.BASE_URL}game/assets/benny_transparent.png`.replace('//', '/')}
+                alt="Benny"
               />
             </div>
           </div>
@@ -139,7 +155,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <button
               type="button"
               className="hp-cta"
-              onClick={() => onNavigate('game')}
+              onClick={handleEnterKitchen}
             >
               🔥 ENTER THE KITCHEN
             </button>
@@ -152,147 +168,164 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
         </section>
 
-        {/* ══════════════════════════════════════
-            LORE BANNER — Full width strip
-        ══════════════════════════════════════ */}
-        <section className="hp-lore-banner">
-          <div className="hp-lore-banner-inner">
-            <div className="hp-lore-quote">
-              <span className="hp-lore-quote-mark">"</span>
-              <p>
-                New York, 1984. Five criminal families carved this city like a pizza —
-                each one claiming a slice. The <strong>Russos</strong> own the flour.
-                The <strong>Calabreses</strong> run the sauce. The <strong>Marinos</strong> control the ovens.
-                Nobody cooks without their blessing. Nobody wins without a receipt.
-              </p>
-              <span className="hp-lore-quote-mark closing">"</span>
-            </div>
-            <div className="hp-lore-attribution">
-              — From the case files of Detective Sal Fontana, NYPD
-            </div>
-          </div>
-        </section>
+
 
         {/* ══════════════════════════════════════
-            THE DOSSIER — Secret Recipe Files
+            LOWER PANELS — Glassmorphism Grid
         ══════════════════════════════════════ */}
-        <section className="hp-intel hp-dossier-desk">
-          <div className="hp-intel-inner hp-manila-folder">
-            <div className="hp-intel-header">
-              <span className="hp-intel-stamp">TOP SECRET</span>
-              <h2 className="hp-intel-title">THE SECRET RECIPE FILES</h2>
-              <p className="hp-intel-subtitle">FOR YOUR EYES ONLY: SYNDICATE CLEARANCE REQUIRED</p>
-            </div>
+        <div className="hp-lower-container">
+          <div className="hp-panels-grid">
 
-            <div className="hp-intel-cards">
-              <div className="hp-intel-card hp-paper-clip">
-                <div className="hp-intel-card-num">RECIPE STEP 01</div>
-                <div className="hp-intel-card-icon">🍕</div>
-                <h3 className="hp-intel-card-title">THE PREPARATION</h3>
-                <p className="hp-intel-card-desc">Master the rhythm. Every slice is an ingredient, every beat a ritual. Precision is the dough of champions.</p>
-              </div>
+            {/* PANEL 1: RECIPE FILES */}
+            <section className="hp-glass-panel hp-panel-intel">
+              <div className="hp-panel-inner">
+                <div className="hp-intel-header">
+                  <span className="hp-intel-stamp">TOP SECRET</span>
+                  <h2 className="hp-intel-title">THE RECIPE FILES</h2>
+                  <p className="hp-intel-subtitle">SYNDICATE CLEARANCE REQUIRED</p>
+                </div>
 
-              <div className="hp-intel-card hp-paper-clip hp-card-tilted">
-                <div className="hp-intel-card-num">RECIPE STEP 02</div>
-                <div className="hp-intel-card-icon">📎</div>
-                <h3 className="hp-intel-card-title">THE INGREDIENTS</h3>
-                <p className="hp-intel-card-desc">RISC Zero acts as the "Silent Witness"—verifying that your recipe is authentic without revealing the secret sauce.</p>
-              </div>
-
-              <div className="hp-intel-card hp-paper-clip">
-                <div className="hp-intel-card-num">RECIPE STEP 03</div>
-                <div className="hp-intel-card-icon">📜</div>
-                <h3 className="hp-intel-card-title">THE FINAL BAKE</h3>
-                <p className="hp-intel-card-desc">Your masterpiece is etched onto the Stellar Ledger. Immutable, witnessed, and served hot to the world.</p>
-              </div>
-            </div>
-
-            <div className="hp-intel-footer-stamp">STELLAR BUREAU · THE SEVEN SLICES</div>
-          </div>
-          {/* Organic decorators */}
-          <div className="hp-ornament hp-garlic-string" />
-        </section>
-
-        {/* ══════════════════════════════════════
-            THE SOVEREIGN SYNDICATES — Carousel
-        ══════════════════════════════════════ */}
-        <section className="hp-families hp-checkered-floor">
-          <div className="hp-families-inner hp-carousel-stage">
-            <h2 className="hp-families-title">THE SOVEREIGN SYNDICATES</h2>
-            <p className="hp-families-sub">Guardians of the Seven Slices. Rulers of the Rhythm.</p>
-
-            <div className="hp-carousel-nav">
-              <button onClick={prevSlide} className="hp-nav-btn hp-nav-prev"><ChevronLeft /></button>
-              <button onClick={nextSlide} className="hp-nav-btn hp-nav-next"><ChevronRight /></button>
-            </div>
-
-            <div
-              className="hp-carousel-track-wrap"
-              onMouseDown={handleDragStart}
-              onMouseMove={handleDragMove}
-              onMouseUp={handleDragEnd}
-              onMouseLeave={handleDragEnd}
-              onTouchStart={handleDragStart}
-              onTouchMove={handleDragMove}
-              onTouchEnd={handleDragEnd}
-              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-            >
-              <div
-                className="hp-carousel-track"
-                style={{
-                  transform: `translateX(calc(-${carouselIdx * 25}% + 37.5% + ${dragOffset}px))`,
-                  transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                }}
-              >
-                {SYNDICATES.map((s, i) => (
-                  <div
-                    key={s.name}
-                    className={`hp-family-card ${i === carouselIdx ? 'hp-card-active' : 'hp-card-dim'}`}
-                    style={{ '--syndicate-color': s.color } as React.CSSProperties}
-                    onClick={() => !dragMoved && setCarouselIdx(i)}
-                  >
-                    <Pin className="hp-card-pin" />
-                    <div className="hp-family-icon">{s.icon}</div>
-                    <div className="hp-family-name">{s.name}</div>
-                    <div className="hp-family-genre">{s.genre}</div>
-                    <div className="hp-family-perk">
-                      <span className="hp-perk-label">BOOST:</span> {s.perk}
+                <div className="hp-intel-cards">
+                  <div className="hp-intel-card">
+                    <div className="hp-intel-card-num">PHASE 01</div>
+                    <div className="hp-intel-card-content">
+                      <div className="hp-intel-card-icon">🔪</div>
+                      <div>
+                        <h3 className="hp-intel-card-title">THE HIT</h3>
+                        <p className="hp-intel-card-desc">Slice to the beat. Every perfect note is a fresh ingredient for the Family. Miss, and the Don will be displeased. Your rhythm is your weapon.</p>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="hp-ornament hp-flour-bag" />
-        </section>
 
-        {/* ══════════════════════════════════════
-            CONTRACTS — Secret dossier
-        ══════════════════════════════════════ */}
-        <section className="hp-contracts">
-          <div className="hp-contracts-inner">
-            <div className="hp-dossier-header">
-              <span className="hp-dossier-stamp">LIVE</span>
-              <h2 className="hp-contracts-title">CLASSIFIED / ON-CHAIN ASSETS</h2>
-              <p className="hp-dossier-sub">Stellar Testnet · Verified by the Bureau</p>
-            </div>
-            <div className="hp-contracts-list">
-              {[
-                { name: 'guitar-pizza', addr: 'CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH', icon: '🍕' },
-                { name: 'zk-leaderboard', addr: 'CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV', icon: '🏆' },
-                { name: 'achievement-vault', addr: 'CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC', icon: '🎖️' },
-                { name: 'daily-recipe', addr: 'CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN', icon: '📋' },
-                { name: 'game-hub', addr: 'CB4VZAT2U3UC6XFK3N23SKRF2NDCMP3QHJYMCHHFMZO7MRQO6DQ2EMYG', icon: '🌐', isHub: true },
-              ].map((c) => (
-                <div key={c.name} className={`hp-contract-row${c.isHub ? ' hp-contract-hub' : ''}`}>
-                  <span className="hp-contract-icon">{c.icon}</span>
-                  <span className="hp-contract-name">{c.name}</span>
-                  <code className="hp-contract-addr">{c.addr}</code>
+                  <div className="hp-intel-card">
+                    <div className="hp-intel-card-num">PHASE 02</div>
+                    <div className="hp-intel-card-content">
+                      <div className="hp-intel-card-icon">🤫</div>
+                      <div>
+                        <h3 className="hp-intel-card-title">THE ALIBI</h3>
+                        <p className="hp-intel-card-desc">No one needs to know the family recipe. RISC Zero acts as our "Silent Witness", proving your high score is legit without exposing the secret sauce.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hp-intel-card">
+                    <div className="hp-intel-card-num">PHASE 03</div>
+                    <div className="hp-intel-card-content">
+                      <div className="hp-intel-card-icon">💎</div>
+                      <div>
+                        <h3 className="hp-intel-card-title">THE PAYOFF</h3>
+                        <p className="hp-intel-card-desc">Your reputation is eternal. The contract is sealed and your verified score is etched onto the Stellar Ledger. Immutable, bulletproof, and served piping hot.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </section>
+
+            {/* PANEL 2: FAMILIES CAROUSEL (3D COVERFLOW) */}
+            <section
+              className="hp-glass-panel hp-panel-families"
+              style={{ '--active-glow': SYNDICATES[carouselIdx].color } as React.CSSProperties}
+            >
+              <div className="hp-panel-inner hp-carousel-stage">
+                <div className="hp-families-header">
+                  <h2 className="hp-families-title">THE SOVEREIGN SYNDICATES</h2>
+                  <p className="hp-families-sub">Guardians of the Seven Slices.</p>
+                </div>
+
+                <div className="hp-carousel-nav">
+                  <button onClick={prevSlide} className="hp-nav-btn hp-nav-prev"><ChevronLeft /></button>
+                  <button onClick={nextSlide} className="hp-nav-btn hp-nav-next"><ChevronRight /></button>
+                </div>
+
+                <div
+                  className="hp-carousel-track-wrap"
+                  onMouseDown={handleDragStart}
+                  onMouseMove={handleDragMove}
+                  onMouseUp={handleDragEnd}
+                  onMouseLeave={handleDragEnd}
+                  onTouchStart={handleDragStart}
+                  onTouchMove={handleDragMove}
+                  onTouchEnd={handleDragEnd}
+                  style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                >
+                  <div className="hp-carousel-track-3d">
+                    {SYNDICATES.map((s, i) => {
+                      // Calculate shortest distance on a circle
+                      const total = SYNDICATES.length;
+                      let diff = i - carouselIdx;
+                      if (diff > total / 2) diff -= total;
+                      if (diff < -total / 2) diff += total;
+
+                      const absDiff = Math.abs(diff);
+                      const zIndex = 100 - absDiff;
+                      const isActive = diff === 0;
+
+                      // 3D positioning
+                      const translateX = diff * 110 + dragOffset * 0.5; // Spread cards horizontally
+                      const translateZ = isActive ? 0 : -absDiff * 80;
+                      const rotateY = isActive ? 0 : -Math.sign(diff) * 20;
+                      const scale = isActive ? 1.15 : 0.85;
+
+                      return (
+                        <div
+                          key={s.name}
+                          className={`hp-family-card-3d ${isActive ? 'hp-card-active' : 'hp-card-dim'}`}
+                          style={{
+                            '--syndicate-color': s.color,
+                            zIndex,
+                            transform: `translateX(calc(-50% + ${translateX}px)) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+                            transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), filter 0.5s',
+                          } as React.CSSProperties}
+                          onClick={() => !dragMoved && setCarouselIdx(i)}
+                        >
+                          <Pin className="hp-card-pin" />
+                          <div className="hp-family-icon">{s.icon}</div>
+                          <div className="hp-family-name">{s.name}</div>
+                          {isActive && (
+                            <div className="hp-family-details">
+                              <div className="hp-family-genre">{s.genre}</div>
+                              <div className="hp-family-perk">
+                                <span className="hp-perk-label">BOOST:</span> {s.perk}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* PANEL 3: CONTRACTS FULL WIDTH */}
+            <section className="hp-glass-panel hp-panel-contracts">
+              <div className="hp-panel-inner">
+                <div className="hp-dossier-header">
+                  <span className="hp-dossier-stamp">LIVE</span>
+                  <h2 className="hp-contracts-title">CLASSIFIED / ON-CHAIN ASSETS</h2>
+                  <p className="hp-dossier-sub">Stellar Testnet · Verified by the Bureau</p>
+                </div>
+                <div className="hp-contracts-list">
+                  {[
+                    { name: 'guitar-pizza', addr: 'CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH', icon: '🍕' },
+                    { name: 'zk-leaderboard', addr: 'CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV', icon: '🏆' },
+                    { name: 'achievement-vault', addr: 'CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC', icon: '🎖️' },
+                    { name: 'daily-recipe', addr: 'CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN', icon: '📋' },
+                    { name: 'game-hub', addr: 'CB4VZAT2U3UC6XFK3N23SKRF2NDCMP3QHJYMCHHFMZO7MRQO6DQ2EMYG', icon: '🌐', isHub: true },
+                  ].map((c) => (
+                    <div key={c.name} className={`hp-contract-row${c.isHub ? ' hp-contract-hub' : ''}`}>
+                      <span className="hp-contract-icon">{c.icon}</span>
+                      <span className="hp-contract-name">{c.name}</span>
+                      <code className="hp-contract-addr">{c.addr}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
           </div>
-        </section>
+        </div>
 
       </div>
     </div>

@@ -8,7 +8,7 @@
 /* ── GLOBAL OVERRIDES when landing is active ── */
 body:has(.hp-root) {
   /* Pizzeria scene runs as a fixed full-page background */
-  background-image: url('/game/assets/pizzeria_bg.png');
+  background-image: url('/game/assets/FONDOJUEGO.png');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;
@@ -35,6 +35,22 @@ body:has(.hp-root) .rs-footer {
 
 body:has(.hp-root) .rs-footer-quote {
   color: rgba(200, 80, 40, 0.45);
+}
+
+/* ── CINEMATIC OVERLAY ── */
+.hp-cinematic-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: #030303;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hp-fade-to-black {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ── ROOT ── */
@@ -73,13 +89,14 @@ body:has(.hp-root) .rs-footer-quote {
 
 /* Layer 3: Rain of pizzas container */
 .hp-pizza-rain-wrap {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   pointer-events: none;
-  z-index: 3;
+  z-index: 100;
+  overflow: hidden;
 }
 
 .hp-falling-pizza {
@@ -89,17 +106,19 @@ body:has(.hp-root) .rs-footer-quote {
   filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.2));
 }
 
-/* Layer 1: Pizzeria illustration background */
 .hp-scene-bg {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%), url('/game/assets/pizzeria_bg.png');
+  /* Make the background slightly larger than the container so it doesn't reveal edges when moved */
+  inset: -5%;
+  background: url('/game/assets/FONDOJUEGO.png');
   background-size: cover;
   background-position: center bottom;
   background-repeat: no-repeat;
-  /* Slow parallax breathing */
+  /* Slow parallax breathing + mouse parallax */
   animation: sceneBreathe 20s ease-in-out infinite;
   z-index: 0;
+  translate: calc(var(--mouse-x, 0) * -15px) calc(var(--mouse-y, 0) * -15px);
+  transition: translate 0.1s ease-out;
 }
 
 @keyframes sceneBreathe {
@@ -118,16 +137,15 @@ body:has(.hp-root) .rs-footer-quote {
 .hp-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
+  background: transparent;
   z-index: 4;
   pointer-events: none;
   /* Don't block button clicks */
 }
 
-/* Layer 3: Floating musical notes */
 .hp-notes {
   position: absolute;
-  inset: 0;
+  inset: -5%;
   pointer-events: none;
   z-index: 2;
   overflow: hidden;
@@ -208,12 +226,13 @@ body:has(.hp-root) .rs-footer-quote {
   gap: 1rem;
 }
 
-/* Title block — left side */
 .hp-title-block {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   max-width: 380px;
+  translate: calc(var(--mouse-x, 0) * 15px) calc(var(--mouse-y, 0) * 15px);
+  transition: translate 0.1s ease-out;
 }
 
 .hp-eyebrow {
@@ -325,7 +344,6 @@ body:has(.hp-root) .rs-footer-quote {
   margin: 0;
 }
 
-/* Don character — right side, standing in the scene */
 .hp-don-wrap {
   flex: 1;
   display: flex;
@@ -333,16 +351,16 @@ body:has(.hp-root) .rs-footer-quote {
   align-items: center;
   position: relative;
   animation: hp-float 4s ease-in-out infinite;
+  margin-bottom: -1rem;
+  translate: calc(var(--mouse-x, 0) * 20px) calc(var(--mouse-y, 0) * 20px);
+  transition: translate 0.1s ease-out;
 }
 
 .hp-don-img {
   width: 100%;
-  max-width: 450px;
+  max-width: 500px;
   height: auto;
-  /* mix-blend-mode: multiply removes the white background */
-  mix-blend-mode: multiply;
-  filter:
-    contrast(1.08) drop-shadow(15px 15px 0px rgba(0, 0, 0, 0.2)) drop-shadow(-4px 0 20px rgba(204, 41, 41, 0.15));
+  filter: drop-shadow(0px 20px 30px rgba(0, 0, 0, 0.6)) drop-shadow(-4px 0 20px rgba(204, 41, 41, 0.4));
   animation: donBob 3.5s ease-in-out infinite;
   display: block;
   transition: transform 0.3s ease;
@@ -360,7 +378,6 @@ body:has(.hp-root) .rs-footer-quote {
   flex-direction: column;
   align-items: center;
   padding: 1.5rem 1.5rem 2rem;
-  background: linear-gradient(180deg, transparent 0%, rgba(14, 5, 3, 0.7) 100%);
 }
 
 /* ── CTA BUTTON ── */
@@ -543,13 +560,14 @@ body:has(.hp-root) .rs-footer-quote {
    GLOBAL OVERRIDES FOR LANDING
    ────────────────────────────────────────────────────────────────────────── */
 .hp-active {
-  background-color: #CC2929;
-  /* Brick Red Fallback */
-  background-image: url('game/assets/pizzeria_bg.png');
+  background-color: #1a0c08;
+  /* Dark Fallback */
+  background-image: url('/game/assets/FONDOJUEGO.png');
   background-attachment: fixed;
   background-size: cover;
   background-position: center;
   margin: 0;
+  min-height: 100vh;
   overflow-x: hidden;
 }
 
@@ -631,47 +649,253 @@ body:has(.hp-root) .rs-footer-quote {
 }
 
 /* ════════════════════════════════════════════════════════
-   FIVE FAMILIES — Faction cards
+   LOWER PANELS — Glassmorphism Grid
 ════════════════════════════════════════════════════════ */
-.hp-families {
-  background: var(--wood-light);
-  padding: 8rem 0;
-  margin-top: -3rem;
-  /* Overlap to hide seam */
-  clip-path: polygon(0 5%, 100% 0, 100% 100%, 0 95%);
+.hp-lower-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
   position: relative;
+  z-index: 10;
+}
+
+.hp-panels-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+/* Base Glassmatic Panel */
+.hp-glass-panel {
+  background: rgba(14, 5, 4, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 60, 60, 0.15);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 20px rgba(255, 60, 60, 0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.8s ease, box-shadow 0.8s ease;
+}
+
+/* Dynamic glow for the Families Panel */
+.hp-panel-families {
+  border-color: color-mix(in srgb, var(--active-glow, rgba(255, 60, 60)) 40%, transparent);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 30px color-mix(in srgb, var(--active-glow, rgba(255, 60, 60)) 15%, transparent);
+}
+
+.hp-panel-inner {
+  padding: 2.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Panel 3: Contracts spans both columns */
+.hp-panel-contracts {
+  grid-column: 1 / -1;
+}
+
+/* Responsive grid */
+@media (max-width: 1024px) {
+  .hp-panels-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   THE SECRET RECIPE FILES (Panel 1)
+════════════════════════════════════════════════════════ */
+
+.hp-intel-header {
+  position: relative;
+  border-bottom: 2px solid rgba(255, 60, 60, 0.2);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.hp-intel-stamp {
+  position: absolute;
+  top: -1rem;
+  right: 0;
+  font-family: 'Bangers', cursive;
+  font-size: 1.5rem;
+  color: #CC2929;
+  border: 3px solid #CC2929;
+  padding: 0.1rem 0.5rem;
+  transform: rotate(10deg);
+  opacity: 0.8;
+  letter-spacing: 0.1em;
+}
+
+.hp-intel-title {
+  font-family: 'Bangers', cursive;
+  font-size: 2.5rem;
+  color: #fff;
+  line-height: 1;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hp-intel-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.hp-intel-cards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.hp-intel-card {
+  position: relative;
+  background: #fdfaf6;
+  /* Paper texture */
+  border: 1px solid #c2b5a3;
+  border-radius: 2px;
+  padding: 1.5rem;
+  width: 90%;
+  box-shadow: 2px 5px 15px rgba(0, 0, 0, 0.4);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, z-index 0s;
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.02) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.02) 75%, rgba(0, 0, 0, 0.02)), repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.02) 25%, #fdfaf6 25%, #fdfaf6 75%, rgba(0, 0, 0, 0.02) 75%, rgba(0, 0, 0, 0.02));
+  background-position: 0 0, 2px 2px;
+  background-size: 4px 4px;
+  z-index: 1;
+}
+
+/* Overlap the cards */
+.hp-intel-card:not(:first-child) {
+  margin-top: -30px;
+}
+
+/* Stagger rotations */
+.hp-intel-card:nth-child(1) {
+  transform: rotate(-2deg);
+  z-index: 1;
+}
+
+.hp-intel-card:nth-child(2) {
+  transform: rotate(1.5deg);
   z-index: 2;
 }
 
-.hp-families-inner {
-  max-width: 950px;
-  margin: 0 auto;
-  padding: 3rem;
-  background-color: var(--cork-bg);
-  background-image:
-    radial-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px);
-  background-size: 10px 10px;
-  border: 10px solid var(--wood-mahogany);
-  box-shadow: var(--cartoon-shadow);
-  transform: rotate(0.5deg);
+.hp-intel-card:nth-child(3) {
+  transform: rotate(-1deg);
+  z-index: 3;
+}
+
+/* Masking Tape Effect */
+.hp-intel-card::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 80px;
+  height: 25px;
+  background: rgba(238, 232, 205, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border-left: 2px dashed rgba(0, 0, 0, 0.1);
+  border-right: 2px dashed rgba(0, 0, 0, 0.1);
+  z-index: 5;
+}
+
+.hp-intel-card:hover {
+  transform: translateY(-15px) scale(1.05) rotate(0deg) !important;
+  z-index: 10 !important;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+}
+
+.hp-intel-card-num {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.9rem;
+  color: #CC2929;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.1em;
+  /* Stamp effect */
+  display: inline-block;
+  align-self: flex-start;
+  border: 2px solid #CC2929;
+  padding: 0.2rem 0.5rem;
+  transform: rotate(-3deg);
+  opacity: 0.9;
+  border-radius: 4px;
+}
+
+.hp-intel-card-content {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.hp-intel-card-icon {
+  font-size: 2rem;
+  background: rgba(204, 41, 41, 0.1);
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid rgba(204, 41, 41, 0.3);
+}
+
+.hp-intel-card-title {
+  font-family: 'Bangers', cursive;
+  font-size: 1.6rem;
+  margin: 0 0 0.3rem 0;
+  color: #1a1a1a;
+  /* Dark text for paper */
+  letter-spacing: 0.05em;
+}
+
+.hp-intel-card-desc {
+  font-family: 'Special Elite', cursive;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #333;
+  /* Dark text for paper */
+  margin: 0;
+  font-weight: bold;
+}
+
+/* ════════════════════════════════════════════════════════
+   THE SOVEREIGN SYNDICATES (Panel 2)
+════════════════════════════════════════════════════════ */
+.hp-families-header {
+  border-bottom: 2px solid rgba(255, 60, 60, 0.2);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .hp-families-title {
   font-family: 'Bangers', cursive;
   font-size: 3rem;
-  color: #1a1a1a;
+  color: #fff;
   margin-bottom: 0.5rem;
-  text-shadow: none;
-  -webkit-text-stroke: 0;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+  -webkit-text-stroke: 1px #1a1a1a;
 }
 
 .hp-families-sub {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   letter-spacing: 0.18em;
-  color: rgba(61, 26, 26, 0.5);
+  color: rgba(255, 255, 255, 0.8);
   text-transform: uppercase;
   margin-bottom: 2rem;
+  margin-bottom: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .hp-carousel-stage {
@@ -685,14 +909,20 @@ body:has(.hp-root) .rs-footer-quote {
   width: 100%;
   overflow: visible;
   mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  perspective: 1200px;
+  /* Essential for 3D Coverflow */
+  padding: 2rem 0;
 }
 
-.hp-carousel-track {
-  display: flex;
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-  gap: 2rem;
-  padding: 2rem 0;
+.hp-carousel-track-3d {
+  position: relative;
   width: 100%;
+  height: 380px;
+  /* Fixed height for absolute cards */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-style: preserve-3d;
 }
 
 .hp-carousel-nav {
@@ -703,7 +933,8 @@ body:has(.hp-root) .rs-footer-quote {
   display: flex;
   justify-content: space-between;
   padding: 0 2rem;
-  z-index: 10;
+  z-index: 50;
+  /* Ensure on top of 3D */
   pointer-events: none;
   transform: translateY(-50%);
 }
@@ -733,33 +964,33 @@ body:has(.hp-root) .rs-footer-quote {
   transform: translateY(2px) scale(0.95);
 }
 
-.hp-family-card {
-  flex: 0 0 25%;
-  /* 4 cards visible at once conceptually, but centered */
-  background: #fff;
-  padding: 16px;
-  padding-bottom: 45px;
-  border: 1px solid #ddd;
-  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.15);
-  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.hp-family-card-3d {
+  position: absolute;
+  width: 260px;
+  /* Fixed width for 3D */
+  background: #fdfaf6;
+  padding: 24px 16px 20px 16px;
+  border: 1px solid #c2b5a3;
+  border-radius: 4px;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.4);
   cursor: pointer;
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* Add subtle paper texture noise via gradient */
+  background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.02) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.02) 75%, rgba(0, 0, 0, 0.02)), repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.02) 25%, #fdfaf6 25%, #fdfaf6 75%, rgba(0, 0, 0, 0.02) 75%, rgba(0, 0, 0, 0.02));
+  background-position: 0 0, 2px 2px;
+  background-size: 4px 4px;
 }
 
 .hp-card-active {
-  transform: scale(1.1) rotate(0deg) !important;
-  z-index: 5;
-  box-shadow: 15px 15px 30px rgba(0, 0, 0, 0.25);
-  border: 2px solid var(--syndicate-color);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px var(--syndicate-color);
+  border: 3px solid var(--syndicate-color);
 }
 
 .hp-card-dim {
-  filter: grayscale(0.4) brightness(0.9);
+  filter: grayscale(1) blur(2px) brightness(0.5);
   opacity: 0.6;
-  transform: scale(0.9) rotate(var(--random-tilt, -2deg));
 }
 
 .hp-card-pin {
@@ -770,6 +1001,23 @@ body:has(.hp-root) .rs-footer-quote {
   color: #cc2929;
   z-index: 10;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+
+.hp-family-details {
+  width: 100%;
+  animation: slideUpFade 0.4s ease forwards;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hp-family-genre {
@@ -796,17 +1044,30 @@ body:has(.hp-root) .rs-footer-quote {
   font-weight: bold;
 }
 
-.hp-family-card::after {
+.hp-family-card-3d::after {
   content: 'WANTED';
   position: absolute;
-  bottom: 10px;
-  right: 10px;
+  top: 10px;
+  /* Move to top left for mugshot vibe */
+  left: -15px;
   font-family: 'Bangers', cursive;
-  font-size: 0.8rem;
-  color: rgba(204, 41, 41, 0.3);
-  border: 2px solid rgba(204, 41, 41, 0.3);
-  padding: 2px 4px;
+  font-size: 1.8rem;
+  color: #CC2929;
+  letter-spacing: 0.15em;
+  border: 3px solid #CC2929;
+  padding: 0 0.5rem;
+  border-radius: 4px;
   transform: rotate(-15deg);
+  opacity: 0;
+  transition: opacity 0.3s 0.2s;
+  /* Slight delay on show */
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 2px 0px rgba(204, 41, 41, 0.2);
+  background: rgba(253, 250, 246, 0.8);
+}
+
+.hp-card-active::after {
+  opacity: 1;
 }
 
 .hp-family-territory {
@@ -858,212 +1119,13 @@ body:has(.hp-root) .rs-footer-quote {
 }
 
 /* ════════════════════════════════════════════════════════
-   THE SECRET RECIPE FILES — Bureau Dossier Redesign
+   CONTRACTS — Classified dossier (Panel 3)
 ════════════════════════════════════════════════════════ */
-.hp-intel {
-  /* High-fidelity wood background image (darkened) */
-  background:
-    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
-    url('/game/assets/pizzeria_bg.png');
-  background-size: cover;
-  background-position: center bottom;
-  background-attachment: fixed;
-  background-color: #2c150e;
-  /* Fallback mahogany */
-  padding: 8rem 0;
-  margin-top: -3rem;
-  clip-path: polygon(0 0, 100% 5%, 100% 95%, 0 100%);
-  position: relative;
-  z-index: 1;
-  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
-}
-
-.hp-manila-folder {
-  max-width: 950px;
-  margin: 0 auto;
-  padding: 4rem 3rem;
-  background-color: #D4A84B;
-  /* Manila Base */
-  background-image:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0%, transparent 5%, transparent 95%, rgba(0, 0, 0, 0.05) 100%);
-  border-left: 20px solid #B68E3A;
-  /* Folder spine */
-  border-radius: 4px 40px 40px 4px;
-  box-shadow:
-    20px 20px 60px rgba(0, 0, 0, 0.6),
-    inset -10px 0 20px rgba(0, 0, 0, 0.1);
-  position: relative;
-  transform: rotate(-0.5deg);
-}
-
-.hp-intel-header {
-  position: relative;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
-  padding-bottom: 2rem;
-  margin-bottom: 3rem;
-}
-
-.hp-intel-stamp {
-  position: absolute;
-  top: -1rem;
-  right: 1rem;
-  font-family: 'Bangers', cursive;
-  font-size: 1.8rem;
-  color: #8B0000;
-  border: 4px solid #8B0000;
-  padding: 0.2rem 1rem;
-  transform: rotate(15deg);
-  opacity: 0.7;
-  user-select: none;
-  letter-spacing: 0.1em;
-}
-
-.hp-intel-title {
-  font-family: 'Bangers', cursive;
-  font-size: 4.5rem;
-  color: #1a1a1a;
-  line-height: 1;
-  margin: 0;
-}
-
-.hp-intel-subtitle {
-  font-family: 'Special Elite', cursive;
-  font-size: 0.9rem;
-  color: rgba(0, 0, 0, 0.5);
-  margin-top: 0.5rem;
-  letter-spacing: 0.05em;
-}
-
-.hp-intel-cards {
-  display: flex;
-  gap: 2rem;
-  align-items: stretch;
-}
-
-.hp-paper-clip {
-  background: #F0E8D8;
-  /* Aged Paper */
-  color: #222;
-  padding: 2.5rem 1.5rem;
-  flex: 1;
-  box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
-  position: relative;
-  transition: transform 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.hp-paper-clip::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 15px;
-  background: #aaa;
-  /* Paper Clip placeholder */
-  border-radius: 10px;
-  border: 2px solid #888;
-  z-index: 2;
-  background: linear-gradient(to bottom, #d1d1d1, #a1a1a1);
-}
-
-.hp-card-tilted {
-  transform: rotate(2deg) translateY(-5px);
-  z-index: 2;
-}
-
-.hp-intel-card-num {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: #8B0000;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
-  display: inline-block;
-}
-
-.hp-intel-card-icon {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
-
-.hp-intel-card-title {
-  font-family: 'Bangers', cursive;
-  font-size: 1.8rem;
-  margin-bottom: 0.8rem;
-  color: #222;
-}
-
-.hp-intel-card-desc {
-  font-family: 'Special Elite', cursive;
-  font-size: 0.85rem;
-  line-height: 1.6;
-  color: #444;
-}
-
-.hp-intel-footer-stamp {
-  margin-top: 4rem;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: rgba(0, 0, 0, 0.3);
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  border-top: 1px dashed rgba(0, 0, 0, 0.1);
-  padding-top: 1.5rem;
-}
-
-/* ════════════════════════════════════════════════════════
-   CONTRACTS — Classified dossier
-════════════════════════════════════════════════════════ */
-.hp-contracts {
-  background: var(--wood-mahogany);
-  background-image:
-    linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-    url('game/assets/pizzeria_bg.png');
-  background-attachment: fixed;
-  background-size: cover;
-  padding: 6rem 0;
-  border-top: var(--cartoon-border);
-  position: relative;
-}
-
-.hp-contracts-inner {
-  max-width: 850px;
-  margin: 0 auto;
-  padding: 4rem 3rem;
-  background: #fff;
-  background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(0, 0, 0, 0.03) 27px, rgba(0, 0, 0, 0.03) 28px);
-  border: var(--cartoon-border);
-  box-shadow: 20px 20px 0px rgba(0, 0, 0, 0.5);
-  border-radius: 4px;
-  position: relative;
-  transform: rotate(1deg);
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.hp-contracts-inner::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  pointer-events: none;
-}
-
-
 .hp-dossier-header {
   text-align: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px dashed rgba(168, 48, 48, 0.3);
+  border-bottom: 1px dashed rgba(255, 60, 60, 0.3);
   position: relative;
 }
 
@@ -1102,16 +1164,16 @@ body:has(.hp-root) .rs-footer-quote {
   font-family: 'Bangers', cursive;
   font-size: 1.6rem;
   letter-spacing: 0.1em;
-  color: #1A0A04;
+  color: #fff;
   margin: 0 0 0.3rem;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
 .hp-dossier-sub {
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.15em;
-  color: rgba(61, 26, 26, 0.5);
+  color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
   margin: 0;
 }
@@ -1125,28 +1187,38 @@ body:has(.hp-root) .rs-footer-quote {
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px dashed rgba(168, 48, 48, 0.2);
-  flex-wrap: wrap;
+  padding: 0.8rem 1.2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  transition: background 0.2s;
 }
 
-.hp-contract-row:last-child {
-  border-bottom: none;
+.hp-contract-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 60, 60, 0.2);
 }
 
 .hp-contract-icon {
-  font-size: 1rem;
+  font-size: 1.2rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: #D4A84B;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.9;
 }
 
 .hp-contract-name {
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 600;
-  color: #3D1A1A;
-  min-width: 140px;
-  flex-shrink: 0;
+  font-weight: bold;
+  color: #fff;
+  flex: 1;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1154,24 +1226,47 @@ body:has(.hp-root) .rs-footer-quote {
 .hp-contract-addr {
   font-family: var(--font-mono);
   font-size: 0.6rem;
-  color: rgba(61, 26, 26, 0.45);
+  color: rgba(255, 255, 255, 0.45);
   word-break: break-all;
   background: none;
   padding: 0;
+  text-align: right;
+}
+
+.hp-contract-hub {
+  background: rgba(204, 41, 41, 0.1);
+  border: 1px solid rgba(204, 41, 41, 0.3);
+}
+
+.hp-contract-hub:hover {
+  background: rgba(204, 41, 41, 0.15);
+  border-color: rgba(204, 41, 41, 0.5);
 }
 
 .hp-contract-hub .hp-contract-name {
-  color: #CC2929;
+  color: #FF4D4D;
   font-weight: 800;
 }
 
 .hp-contract-hub .hp-contract-addr {
-  color: rgba(204, 41, 41, 0.4);
+  color: rgba(255, 77, 77, 0.6);
 }
 
 /* ════════════════════════════════════════════════════════
    RESPONSIVE
 ════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .hp-panels-grid {
+    grid-template-columns: 1fr;
+    /* Stack panels vertically on tablet/mobile */
+  }
+
+  .hp-contracts-panel {
+    grid-column: 1;
+    /* Reset the span to 1 column */
+  }
+}
+
 @media (max-width: 640px) {
   .hp-hero-inner {
     flex-direction: column-reverse;
@@ -1187,7 +1282,9 @@ body:has(.hp-root) .rs-footer-quote {
   }
 
   .hp-don-img {
-    width: clamp(150px, 55vw, 220px);
+    width: clamp(180px, 65vw, 250px);
+    /* Slightly larger clamp for Benny to preserve details */
+    margin-bottom: 0;
   }
 
   .hp-families-grid {

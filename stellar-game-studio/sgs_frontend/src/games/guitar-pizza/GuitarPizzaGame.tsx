@@ -36,12 +36,12 @@ const EXPLORER_BASE = 'https://stellar.expert/explorer/testnet/tx';
 const TRANSLATIONS = {
     es: {
         initializing: 'Inicializando...',
-        loadingAssets: 'Cargando Objetos (puede tardar un momento)...',
-        loadingEngine: 'Cargando Motor del Juego...',
-        openingSession: 'Abriendo sesión en cadena...',
+        loadingAssets: 'Cargando Objetos...',
+        loadingEngine: 'Cargando Motor...',
+        openingSession: 'Abriendo sesión...',
         startingGame: 'Iniciando Juego...',
         market: 'MERCADO',
-        marketSub: 'Artículos ilícitos para el aspirante a Don.',
+        marketSub: 'Para el aspirante a Don.',
         ranking: 'RANKING',
         legend: 'LEYENDA',
         rules: 'REGLAS',
@@ -71,7 +71,7 @@ const TRANSLATIONS = {
         beFirst: 'Sé el primero en la cadena.',
         refresh: 'Refrescar',
         back: 'Atrás',
-        storyIntro: 'Nueva York, 1984. Las Cinco Familias controlan el queso... Tú eres el único con el Ritmo para romper su corteza.',
+        storyIntro: 'NY 1984. Las Familias controlan el queso... Usa el Ritmo para romper su corteza.',
         storyBody: 'Demuestra tu valía en la cocina. Toca las notas, hornea las pizzas perfectas y conviértete en el...',
         don: 'DON DE LA MASA',
         controls: 'CONTROLES',
@@ -176,7 +176,36 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
         localStorage.setItem('gp_language', language);
     }, [language]);
 
+    // Market State
+    const [pizzaBalance, setPizzaBalance] = useState<number>(() => {
+        try { return parseInt(localStorage.getItem('gp_pizzas_balance') ?? '0', 10) || 0; }
+        catch { return 0; }
+    });
+
+    const [inventory, setInventory] = useState<string[]>(() => {
+        try { return JSON.parse(localStorage.getItem('gp_inventory') ?? '[]'); }
+        catch { return []; }
+    });
+
+    useEffect(() => {
+        localStorage.setItem('gp_pizzas_balance', pizzaBalance.toString());
+    }, [pizzaBalance]);
+
+    useEffect(() => {
+        localStorage.setItem('gp_inventory', JSON.stringify(inventory));
+    }, [inventory]);
+
     const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker'>('lobby');
+    const [closingView, setClosingView] = useState<string | null>(null);
+
+    const closeModalWithAnimation = useCallback((targetView: 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' = 'lobby') => {
+        setClosingView(view);
+        setTimeout(() => {
+            setClosingView(null);
+            setView(targetView);
+        }, 200); // Matches the 0.2s in CSS
+    }, [view]);
+
     const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
@@ -239,13 +268,19 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
             });
         }, 1000);
 
-        // Auto-close after 8s
+        // Auto-close after 8 seconds
         popupTimerRef.current = setTimeout(() => {
-            if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
-            setShowTxPopup(false);
-            onGameComplete(finalScore);
+            closeTxPopup();
         }, 8000);
-    }, [onGameComplete]);
+    }, [closeTxPopup]);
+
+    // Clear timers on unmount
+    useEffect(() => {
+        return () => {
+            if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+            if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+        };
+    }, []);
 
     // ── Leaderboard loader ────────────────────────────────────────────────────
     const loadLeaderboard = useCallback(async () => {
@@ -327,6 +362,16 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
         } catch {
             console.warn("[GuitarPizza] No wallet for replay on-chain session — skipping.");
         }
+    };
+
+    const handleNextLevel = () => {
+        // Unlock Level 2
+        const song2 = SONGS.find(s => s.id === 'rare-pizzas');
+        if (song2) {
+            song2.available = true;
+            setSelectedSong(song2);
+        }
+        handleCookAgain(); // uses the new selectedSong in the next init
     };
 
     // Load leaderboard on mount
@@ -489,6 +534,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             const verifiedScore = finalScore;
                             addLog(`[GuitarPizza] Engine score: ${finalScore} | ZK-verified score: ${verifiedScore}`);
                             addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
+
+                            // Update local balance
+                            setPizzaBalance(prev => prev + verifiedScore);
 
                             const sessionStats: GameSessionStats = {
                                 levelId: 1,
@@ -988,44 +1036,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 <div className="grid grid-cols-2 gap-2 mt-2 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{
-                                            position: 'relative',
-                                            overflow: 'hidden',
-                                            filter: 'grayscale(0.5) contrast(0.8)',
-                                            cursor: 'not-allowed',
-                                            opacity: 0.8
-                                        }}
-                                        disabled
+                                        style={{ position: 'relative', overflow: 'hidden' }}
+                                        onClick={() => setView('store')}
                                     >
-                                        <div style={{
-                                            filter: 'blur(3px)',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            width: '100%',
-                                            opacity: 0.6
-                                        }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                                             <span className="btn-icon">🛒</span>
                                             <span className="btn-text">{t.market}</span>
-                                        </div>
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 'bold',
-                                            color: 'var(--ph-gold)',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.1em',
-                                            textShadow: '0 0 10px rgba(0,0,0,0.5)',
-                                            zIndex: 2
-                                        }}>
-                                            {language === 'es' ? 'Próximamente' : 'Coming Soon'}
                                         </div>
                                     </button>
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => { loadLeaderboard(); setView('leaderboard'); }}>
@@ -1048,11 +1064,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                         {/* MODALS OVERLAY */}
 
                         {/* ── SONG PICKER ─────────────────────────────── */}
-                        {view === 'songpicker' && (
-                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+                        {(view === 'songpicker' || closingView === 'songpicker') && (
+                            <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                                     <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
                                         <h2 className="modal-title">🎵 {language === 'es' ? 'ÁLBUM' : 'TRACKLIST'}</h2>
@@ -1070,7 +1086,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                 <button
                                                     key={song.id}
                                                     disabled={!song.available}
-                                                    onClick={() => { setSelectedSong(song); setView('lobby'); }}
+                                                    onClick={() => { setSelectedSong(song); closeModalWithAnimation('lobby'); }}
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -1127,59 +1143,105 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     <button
                                         className="primary-btn"
                                         style={{ width: '100%', marginTop: '0.5rem' }}
-                                        onClick={() => setView('lobby')}
+                                        onClick={() => closeModalWithAnimation('lobby')}
                                     >
-                                        🔥 {language === 'es' ? 'LISTO — ENCENDER HORNO' : 'READY — FIRE UP OVEN'}
+                                        🔥 {language === 'es' ? 'ENCENDER HORNO' : 'READY — FIRE UP OVEN'}
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {view === 'store' && (
-                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+                        {(view === 'store' || closingView === 'store') && (
+                            <div className={`modal-backdrop ${closingView === 'store' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                                     <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
                                         <h2 className="modal-title">{t.market}</h2>
                                         <div style={{ width: 40 }}></div>
                                     </div>
-                                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem', textAlign: 'center' }}>
-                                        {t.marketSub}
-                                    </p>
 
-                                    <div className="store-grid">
-                                        <div className="store-item" style={{ background: '#f9f9f9', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🌶️</div>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Spicy Pepperoni</div>
-                                            <div style={{ color: '#dba11c', fontSize: '0.8rem', fontWeight: 'bold' }}>500 🍕</div>
+                                    <div style={{ padding: '0 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
+                                            {t.marketSub}
+                                        </p>
+                                        <div style={{ background: 'rgba(212,175,55,0.15)', padding: '0.4rem 0.8rem', borderRadius: '12px', border: '1px solid var(--ph-gold)', fontWeight: 'bold', color: 'var(--ph-gold)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1.1rem' }}>
+                                            <span>🍕</span> {pizzaBalance.toLocaleString()}
                                         </div>
-                                        <div className="store-item" style={{ background: '#f9f9f9', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛡️</div>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Oven Mitts</div>
-                                            <div style={{ color: '#dba11c', fontSize: '0.8rem', fontWeight: 'bold' }}>1200 🍕</div>
-                                        </div>
-                                        <div className="store-item" style={{ background: '#f9f9f9', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🧂</div>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>Secret Sauce</div>
-                                            <div style={{ color: '#dba11c', fontSize: '0.8rem', fontWeight: 'bold' }}>5000 🍕</div>
-                                        </div>
-                                        <div className="store-item" style={{ background: '#eee', padding: '0.8rem', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', opacity: 0.7 }}>
-                                            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔒</div>
-                                            <div style={{ fontSize: '0.9rem', color: '#666' }}>Mystery Box</div>
-                                            <div style={{ color: '#999', fontSize: '0.8rem' }}>???</div>
+                                    </div>
+
+                                    <div className="store-grid" style={{ padding: '0 0.5rem', maxHeight: '50vh', overflowY: 'auto' }}>
+                                        {[
+                                            { id: 'spicy_pepperoni', icon: '🌶️', name: 'Spicy Pepperoni', price: 500 },
+                                            { id: 'oven_mitts', icon: '🛡️', name: 'Oven Mitts', price: 1200 },
+                                            { id: 'secret_sauce', icon: '🧂', name: 'Secret Sauce', price: 5000 },
+                                            { id: 'golden_cutter', icon: '🔪', name: 'Golden Cutter', price: 10000 },
+                                        ].map(item => {
+                                            const isOwned = inventory.includes(item.id);
+                                            const canAfford = pizzaBalance >= item.price;
+
+                                            // Handle Purchase logic
+                                            const handleBuy = () => {
+                                                if (isOwned || !canAfford) return;
+                                                setPizzaBalance(prev => prev - item.price);
+                                                setInventory(prev => [...prev, item.id]);
+                                            };
+
+                                            return (
+                                                <div key={item.id} className="store-item" style={{
+                                                    background: isOwned ? 'rgba(39, 174, 96, 0.1)' : '#f9f9f9',
+                                                    padding: '0.8rem',
+                                                    borderRadius: '12px',
+                                                    border: isOwned ? '1px solid #27ae60' : '1px solid #ddd',
+                                                    textAlign: 'center',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    justifyContent: 'space-between',
+                                                    gap: '0.5rem',
+                                                    opacity: (!isOwned && !canAfford) ? 0.7 : 1
+                                                }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{item.icon}</div>
+                                                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isOwned ? '#27ae60' : '#333' }}>{item.name}</div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={handleBuy}
+                                                        disabled={isOwned || !canAfford}
+                                                        style={{
+                                                            width: '100%',
+                                                            padding: '0.5rem',
+                                                            borderRadius: '8px',
+                                                            border: 'none',
+                                                            fontWeight: 'bold',
+                                                            cursor: (isOwned || !canAfford) ? 'not-allowed' : 'pointer',
+                                                            background: isOwned ? '#27ae60' : (canAfford ? 'var(--ph-gold)' : '#ccc'),
+                                                            color: isOwned ? 'white' : (canAfford ? 'black' : '#666'),
+                                                            fontSize: '0.85rem'
+                                                        }}
+                                                    >
+                                                        {isOwned ? (language === 'es' ? 'COMPRADO' : 'OWNED') : `${item.price} 🍕`}
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+
+                                        <div className="store-item" style={{ background: '#eee', padding: '0.8rem', borderRadius: '12px', border: '1px dashed #bbb', textAlign: 'center', opacity: 0.6, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: 'bold' }}>Mystery Pack</div>
+                                            <div style={{ color: '#999', fontSize: '0.8rem', marginTop: '0.5rem' }}>???</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {view === 'leaderboard' && (
-                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+                        {(view === 'leaderboard' || closingView === 'leaderboard') && (
+                            <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                                     <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
                                             <ArrowLeft size={20} />
                                         </div>
                                         <h2 className="modal-title">🏆 {t.ranking}</h2>
@@ -1378,40 +1440,68 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                         alignItems: 'center',
                         justifyContent: 'center',
                     }}>
-                        {/* Popup Card */}
+                        {/* Popup Card (Elegant Glassmorphism) */}
                         <div style={{
                             width: '85%',
-                            maxWidth: '400px',
-                            minHeight: '500px',
-                            // Improved visibility: Lighter gradient at top to show image better
-                            backgroundImage: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.85) 70%), url(${resultParams.bgImage})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            borderRadius: '20px',
-                            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-                            border: '4px solid var(--color-accent)',
+                            maxWidth: '420px',
+                            minHeight: '480px',
+                            background: `linear-gradient(135deg, rgba(15, 15, 20, 0.9), rgba(5, 5, 8, 0.95))`,
+                            backdropFilter: 'blur(16px)',
+                            borderRadius: '16px',
+                            boxShadow: '0 30px 60px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(212,175,55, 0.3)', // Subtle gold border
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '2rem',
+                            padding: '2.5rem 2rem',
                             color: 'white',
                             position: 'relative',
                             overflow: 'hidden'
                         }}>
-                            <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.4)', padding: '0.5rem 1rem', borderRadius: '10px', backdropFilter: 'blur(2px)' }}>
-                                <h1 id="resTitle" style={{ fontFamily: 'var(--font-title)', fontSize: '2.5rem', margin: 0, textShadow: '2px 2px 4px black' }}>{t.serviceEnded}</h1>
-                                <div style={{ width: '60px', height: '4px', background: 'var(--ph-gold)', margin: '0.5rem auto' }}></div>
+                            {/* Decorative Top Accent */}
+                            <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '4px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)' }}></div>
+
+                            <div style={{ textAlign: 'center', width: '100%', marginBottom: '1rem' }}>
+                                <h1 id="resTitle" style={{ fontFamily: 'var(--font-title)', fontSize: '2.4rem', letterSpacing: '2px', color: '#fdf8f0', margin: 0, textShadow: '0 4px 10px rgba(0,0,0,0.8)' }}>
+                                    {t.serviceEnded}
+                                </h1>
+                                <div style={{ width: '80px', height: '2px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)', margin: '0.8rem auto' }}></div>
                             </div>
 
-                            <div style={{ textAlign: 'center' }}>
-                                <div className="grade" id="resGrade" style={{ fontSize: '7rem', fontWeight: 'bold', color: 'var(--ph-gold)', textShadow: '0 0 20px rgba(255,215,0,0.5)', lineHeight: 1 }}>S</div>
-                                <div className="stat-row" style={{ fontSize: '1.2rem', marginTop: '0.5rem', background: 'rgba(0,0,0,0.6)', padding: '0.2rem 1rem', borderRadius: '20px' }}>{t.score}: <span id="resScore">0</span></div>
-                                <div id="resPizzas" style={{ fontSize: '1rem', marginTop: '0.3rem', color: '#ffd700', display: 'none' }}>🍕 <span id="resPizzasCount">0</span> {language === 'es' ? 'pizzas horneadas' : 'pizzas baked'}</div>
-                                {/* On-chain verified score — shown once confirmed from contract */}
+                            <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                {/* Huge Glowing Grade */}
+                                <div className="grade" id="resGrade" style={{
+                                    fontSize: '7.5rem',
+                                    fontFamily: 'var(--font-title)',
+                                    fontWeight: 'bold',
+                                    color: 'var(--ph-gold)',
+                                    textShadow: '0 0 30px rgba(212,175,55,0.4), 0 0 10px rgba(255,255,255,0.2)',
+                                    lineHeight: 1,
+                                    marginBottom: '1rem'
+                                }}>S</div>
+
+                                {/* Receipt-style Score Badge */}
+                                <div className="stat-row" style={{
+                                    fontSize: '1.4rem',
+                                    fontFamily: "'Special Elite', monospace",
+                                    color: '#fdf8f0',
+                                    background: 'rgba(0,0,0,0.5)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    padding: '0.6rem 1.5rem',
+                                    borderRadius: '30px',
+                                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)'
+                                }}>
+                                    {t.score}: <span id="resScore" style={{ color: 'var(--ph-gold)', fontWeight: 'bold' }}>0</span>
+                                </div>
+                                <div id="resPizzas" style={{ fontSize: '1.1rem', marginTop: '0.8rem', fontFamily: "'Bangers', cursive", letterSpacing: '1px', color: '#cca243', display: 'none' }}>
+                                    🍕 <span id="resPizzasCount">0</span> {language === 'es' ? ' PIZZAS' : ' PIZZAS BAKED'}
+                                </div>
+
+                                {/* On-chain verified score */}
                                 {onChainScore !== null && (
-                                    <div style={{ marginTop: '0.4rem', fontSize: '0.82rem', background: 'rgba(39,174,96,0.2)', border: '1px solid #27ae60', borderRadius: '12px', padding: '0.2rem 0.8rem', color: '#27ae60', display: 'inline-block' }}>
-                                        ✅ {t.scoreVerified}: {onChainScore.toLocaleString()} pts
+                                    <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', background: 'rgba(39,174,96,0.15)', border: '1px solid rgba(39,174,96,0.5)', borderRadius: '12px', padding: '0.3rem 1rem', color: '#2ecc71', display: 'inline-block', fontFamily: 'monospace' }}>
+                                        ✅ {t.scoreVerified}: <strong style={{ color: '#fff' }}>{onChainScore.toLocaleString()} pts</strong>
                                     </div>
                                 )}
                             </div>
@@ -1419,38 +1509,109 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             {/* Verification Status or Actions */}
                             {isVerifying ? (
                                 <div style={{
-                                    background: 'rgba(0,0,0,0.8)',
-                                    padding: '1rem',
-                                    borderRadius: '10px',
+                                    background: 'rgba(0,0,0,0.4)',
+                                    padding: '1.2rem',
+                                    borderRadius: '12px',
                                     width: '100%',
+                                    marginTop: '1.5rem',
                                     textAlign: 'center',
-                                    border: '1px solid var(--ph-gold)'
+                                    border: '1px solid rgba(212,175,55,0.2)',
+                                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
                                 }}>
                                     {proofStatus === 'generating' ? (
                                         <>
-                                            <p style={{ color: 'var(--ph-gold)', fontWeight: 'bold', marginBottom: '0.5rem' }}>{t.verifying}</p>
-                                            <div style={{ fontSize: '0.8rem', color: '#ccc' }}>{t.securing}</div>
+                                            <p style={{ color: 'var(--ph-gold)', fontFamily: 'var(--font-title)', fontSize: '1.2rem', letterSpacing: '1px', marginBottom: '0.3rem' }}>{t.verifying}</p>
+                                            <div style={{ fontSize: '0.85rem', color: '#aaa', fontFamily: "'Special Elite', monospace" }}>{t.securing}</div>
                                         </>
                                     ) : proofStatus === 'success' ? (
-                                        <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '1rem' }}>
-                                            {t.verified} ON-CHAIN
+                                        <div style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px' }}>
+                                            ✅ {t.verified} ON-CHAIN
                                         </div>
                                     ) : (
-                                        <div style={{ color: '#e74c3c' }}>{t.failed}</div>
+                                        <div style={{ color: '#e74c3c', fontWeight: 'bold' }}>❌ {t.failed}</div>
                                     )}
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%' }}>
-                                    <button id="restartBtn" onClick={handleCookAgain} className="primary-btn" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>{language === 'es' ? '🍕 GUARDAR Y COCINAR OTRA VEZ' : '🍕 SAVE & COOK AGAIN'}</button>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%', marginTop: '1.5rem' }}>
                                     <button
-                                        id="nextLevelBtn"
-                                        style={{ width: '100%', padding: '0.8rem', fontSize: '1rem', opacity: 0.5, cursor: 'not-allowed', background: 'linear-gradient(135deg,#1a6b2a,#145222)', border: '2px solid #2ecc71', borderRadius: '12px', color: '#fff', fontWeight: 'bold' }}
-                                        disabled
-                                        title={language === 'es' ? 'Próximamente' : 'Coming soon'}
+                                        id="restartBtn"
+                                        onClick={handleCookAgain}
+                                        style={{
+                                            width: '100%',
+                                            padding: '1.2rem',
+                                            fontSize: '1.1rem',
+                                            fontFamily: 'var(--font-title)',
+                                            letterSpacing: '2px',
+                                            background: 'linear-gradient(135deg, #8b0000, #4a0000)',
+                                            border: '1px solid #ff4d4d',
+                                            boxShadow: '0 4px 15px rgba(139,0,0,0.4), inset 0 2px 0 rgba(255,100,100,0.3)',
+                                            borderRadius: '12px',
+                                            color: '#fff',
+                                            cursor: 'pointer',
+                                            textTransform: 'uppercase',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.2)' }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.filter = 'none' }}
                                     >
-                                        🔒 {language === 'es' ? 'PRÓXIMO NIVEL (PRONTO)' : 'NEXT LEVEL (COMING SOON)'}
+                                        🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
                                     </button>
-                                    <button id="backToLobbyBtn" onClick={handleBackToLobby} className="secondary-btn" style={{ width: '100%', padding: '0.8rem', opacity: 0.9 }}>{language === 'es' ? 'SALIR COCINA' : 'EXIT KITCHEN'}</button>
+
+                                    {onChainScore !== null && onChainScore >= 4000 ? (
+                                        <button
+                                            id="nextLevelBtn"
+                                            onClick={handleNextLevel}
+                                            style={{
+                                                width: '100%',
+                                                padding: '1.2rem',
+                                                fontSize: '1.1rem',
+                                                fontFamily: 'var(--font-title)',
+                                                letterSpacing: '2px',
+                                                background: 'linear-gradient(135deg, #d35400, #e67e22)',
+                                                border: '1px solid #f39c12',
+                                                boxShadow: '0 4px 15px rgba(211,84,0,0.4), inset 0 2px 0 rgba(241,196,15,0.3)',
+                                                borderRadius: '12px',
+                                                color: '#fff',
+                                                cursor: 'pointer',
+                                                textTransform: 'uppercase',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.2)' }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.filter = 'none' }}
+                                        >
+                                            🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            id="nextLevelBtn"
+                                            style={{ width: '100%', padding: '0.9rem', fontSize: '1rem', fontFamily: 'var(--font-title)', opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
+                                            disabled
+                                            title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
+                                        >
+                                            🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
+                                        </button>
+                                    )}
+
+                                    <button
+                                        id="backToLobbyBtn"
+                                        onClick={handleBackToLobby}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.9rem',
+                                            fontSize: '0.95rem',
+                                            fontFamily: "'Special Elite', monospace",
+                                            background: 'transparent',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            borderRadius: '12px',
+                                            color: '#aaa',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa'; }}
+                                    >
+                                        {language === 'es' ? 'SALIR' : 'EXIT KITCHEN'}
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -1533,7 +1694,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     className="primary-btn"
                                     style={{ width: '100%', padding: '0.8rem', fontSize: '1rem' }}
                                 >
-                                    🍕 {language === 'es' ? 'COCINAR OTRA VEZ' : 'COOK AGAIN'}
+                                    🍕 {language === 'es' ? 'REPETIR' : 'COOK AGAIN'}
                                 </button>
 
                                 {/* Countdown */}

@@ -640,6 +640,16 @@ button {
     }
 }
 
+@keyframes slideDown {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(100%);
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -648,6 +658,24 @@ button {
     to {
         opacity: 1;
     }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.modal-backdrop.closing {
+    animation: fadeOut 0.2s ease-in forwards;
+}
+
+.modal-backdrop.closing .modal-content {
+    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Reuse Store Grid styles */
@@ -671,6 +699,11 @@ button {
         border-radius: 20px;
         border-bottom: 4px solid var(--ph-dark);
         animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-backdrop.closing .modal-content {
+        animation: fadeOut 0.2s ease-in forwards;
+        /* Desktop just fades instead of sliding down */
     }
 }
 

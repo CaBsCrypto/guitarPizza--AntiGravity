@@ -102,28 +102,10 @@ export class ProofGenerator {
       comboBonus: stats.comboBonus,
     });
 
-    const artifact = await loadArtifact();
-
-    if (artifact) {
-      try {
-        const result = await ProofGenerator._generateNoirProof(stats, artifact);
-        console.log(
-          `[ProofGenerator] Real Noir UltraHonk proof: ${result.proofBytes.length} bytes | ` +
-          `public inputs: ${result.publicInputs.join(', ')}`
-        );
-        return {
-          receipt: Buffer.from(result.proofBytes),
-          stats,
-          isRealProof: true,
-        };
-      } catch (err) {
-        console.error('[ProofGenerator] Noir proof generation failed, using fallback:', err);
-        // Fall through to legacy receipt
-      }
-    }
-
-    // ── Fallback: legacy journal + seal ────────────────────────────────────
-    console.warn('[ProofGenerator] Using legacy receipt (no real ZK proof).');
+    // ── TEMPORARY FIX: Skip real ZK generation to prevent browser freeze ──
+    // The @noir-lang wasm initialization is currently 404ing in Vite and 
+    // blocking the main thread before throwing the CompileError.
+    console.warn('[ProofGenerator] Bypassing real Noir proof generation (Temporary Fix).');
     await new Promise(r => setTimeout(r, 1500)); // simulate generation delay
     return {
       receipt: buildReceipt(stats),

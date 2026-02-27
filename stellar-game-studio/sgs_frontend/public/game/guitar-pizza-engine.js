@@ -109,18 +109,18 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         colors: {
             // Lane Colors: [Red (Pepperoni), Yellow (Cheese), Pink (Bacon), Purple (Onion)]
             lanes: [
-                { primary: "#C0392B", dark: "#922B21", plate: "#E6B0AA", note: "#C0392B" },    // Lane 0: Pepperoni
-                { primary: "#F1C40F", dark: "#D4AC0D", plate: "#FCF3CF", note: "#F4D03F" },    // Lane 1: Cheese
-                { primary: "#D98880", dark: "#C0392B", plate: "#FADBD8", note: "#E6B0AA" },    // Lane 2: Bacon (Pinkish)
-                { primary: "#9B59B6", dark: "#7D3C98", plate: "#EBDEF0", note: "#9B59B6" }     // Lane 3: Onion
+                { primary: "rgba(192, 57, 43, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#4a0000", note: "#C0392B" },    // Lane 0: Pepperoni
+                { primary: "rgba(241, 196, 15, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#664a00", note: "#F4D03F" },    // Lane 1: Cheese
+                { primary: "rgba(217, 136, 128, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#5c2b14", note: "#E6B0AA" },    // Lane 2: Bacon (Pinkish)
+                { primary: "rgba(155, 89, 182, 0.4)", dark: "rgba(0, 0, 0, 0.95)", plate: "#27004f", note: "#9B59B6" }     // Lane 3: Onion
             ],
-            hitLine: "#FFD700",
+            hitLine: "#D4A84B", // Mafia Gold for Hitline
             background: {
-                base: "#f8f8f8",
-                checker: "#c1272d",
-                oven: "#1a1a1a",
-                ovenBorder: "#D4AF37",
-                outerBorder: "#000000"
+                base: "#fdfaf6",       // Paper texture background color
+                checker: "#8C1B1B",    // Deep Mafia Red
+                oven: "#111111",       // Gritty asphalt black
+                ovenBorder: "#8B0000", // Blood Red Inner Border
+                outerBorder: "#080402" // Deepest black-brown for the frame
             }
         },
         dimensions: {
@@ -430,6 +430,22 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
         },
 
+        onFireMode: function () {
+            if (!this.isInit || !this.songSource) return;
+            const now = this.ctx.currentTime;
+            this._fireRate = 1.15; // Speed up song during fever
+            this.songSource.playbackRate.cancelScheduledValues(now);
+            this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.5);
+        },
+
+        onFireModeEnd: function () {
+            if (!this.isInit || !this.songSource) return;
+            const now = this.ctx.currentTime;
+            this._fireRate = 1.0; // Reset to normal speed
+            this.songSource.playbackRate.cancelScheduledValues(now);
+            this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.2);
+        },
+
         onSustainTick: function (dt) {
             // Called every game frame while holding a sustain note.
             // Throttle to ~10Hz to avoid flooding the scheduler.
@@ -630,6 +646,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         } else {
             if (fireMode) AudioEngine.onFireModeEnd();
             combo = 0; fireMode = false; health -= 4; perfectStreak = 0;
+            console.log(`[Engine] MISS! Lane ${lane} played without a note. Health drops by 4 to ${health}`);
             createFeedback("BURNT", lane, HIT_Y);
             shake = 5; camScale = 0.98;
             AudioEngine.playMiss();
@@ -662,6 +679,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         if (beatFlash > 0) beatFlash -= dt * 2.0;
 
         if (health <= 0) {
+            console.log(`[Engine] Health reached ${health}. Triggering Game Over.`);
             // ROBUSTNESS: Only end if we actually have dimensions initialized.
             // Occasionally resize() hasn't fired yet on first frames.
             if (W > 0 && H > 0) {
@@ -740,6 +758,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 if (!n.isTrap) {
                     if (fireMode) AudioEngine.onFireModeEnd();
                     combo = 0; fireMode = false; health -= 4;
+                    console.log(`[Engine] NOTE DROPPED! Lane ${n.lane}. Health drops by 4 to ${health}`);
                     createFeedback("DROPPED", n.lane, H - 50);
                     AudioEngine.playMiss();
                     AudioEngine.onMiss();
@@ -781,12 +800,20 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
     function createFeedback(text, lane, y) {
         let x = (lane !== -1) ? (lane * LANE_W) + (LANE_W / 2) : W / 2;
-        // Store lane to recalculate X in render if window resizes (optional, but good for centering)
-        // But for particles/feedback created at X time, X is usually fixed. 
-        // We will store lane index to help render calc X dynamically if needed.
+        // Store lane to recalculate X in render if window resizes
+        // Determine theme color based on text
+        let fColor = "#ffffff";
+        if (text === "ORDER UP!" || text === "TASTY" || text.startsWith("D")) {
+            fColor = THE_OVEN_THEME.colors.background.ovenBorder; // Mafia Gold
+        } else if (text === "PERFECT") {
+            fColor = "#ffffff"; // Stark white for perfect
+        } else {
+            fColor = THE_OVEN_THEME.colors.background.checker; // Blood Red for miss/wrong
+        }
+
         feedbackSystem.push({
             text: text, x: x, y: y, life: 1.0, lane: lane,
-            color: text == "ORDER UP!" ? "#55efc4" : ((text.startsWith("D") || text == "TASTY") ? "#ffeaa7" : "#ff7675")
+            color: fColor
         });
     }
 
@@ -1060,23 +1087,23 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 ? 0.5 + (1 - t) / 0.3 * 0.7   // 0→1 during first 30% of life
                 : 1.2 - (t < 0.25 ? (0.25 - t) / 0.25 * 0.3 : 0); // slight shrink on exit
             const alpha = t < 0.25 ? t / 0.25 * 1.0 : (t > 0.85 ? (t - 0.85) / 0.15 : 1.0);
-            const fontSize = Math.min(W * 0.09, 52);
+            const fontSize = Math.min(W * 0.09, 65);
             ctx.save();
             ctx.translate(W / 2, H * 0.35);
             ctx.scale(popScale, popScale);
             ctx.globalAlpha = alpha;
-            ctx.font = `900 ${fontSize}px 'Bangers', 'Impact', sans-serif`;
+            ctx.font = `900 ${fontSize}px 'Bangers', cursive`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             // Shadow layer
             ctx.shadowColor = 'rgba(0,0,0,0.9)';
             ctx.shadowBlur = 20;
             // Thick outline
-            ctx.lineWidth = fontSize * 0.12;
-            ctx.strokeStyle = '#000';
+            ctx.lineWidth = fontSize * 0.15;
+            ctx.strokeStyle = '#222';
             ctx.strokeText(centerBanner.text, 0, 0);
-            // Gold fill
-            ctx.fillStyle = '#FFD700';
+            // Red fill
+            ctx.fillStyle = '#CC2929';
             ctx.fillText(centerBanner.text, 0, 0);
             ctx.shadowBlur = 0;
             ctx.restore();
@@ -1087,36 +1114,104 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             if (img) {
                 ctx.save();
                 ctx.globalAlpha = pizzaPopup.alpha;
-                const charSize = Math.min(W * 0.8, 400) * pizzaPopup.scale;
-                ctx.translate(W / 2, H * 0.35); // Position higher (35% from top)
-                ctx.drawImage(img, -charSize / 2, -charSize / 2, charSize, charSize);
+                const charSize = Math.max(0.1, Math.min(W * 0.8, 400) * pizzaPopup.scale);
+                if (charSize > 1) {
+                    ctx.translate(W / 2, H * 0.35); // Position higher (35% from top)
+                    ctx.drawImage(img, -charSize / 2, -charSize / 2, charSize, charSize);
+                }
                 ctx.restore();
             }
         }
 
         ctx.restore(); // Undo Camera Zoom
 
-        // HUD (Mafia Style)
+        // HUD (Mafia Style - Elegant Redesign)
         const hudH = Math.min(H * 0.13, 110);
-        const fontSize = Math.min(30, W * 0.08); // Responsive font
-        ctx.font = `bold ${fontSize}px var(--font-display, Impact)`;
-        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.5)";
+        const fontSizeScore = Math.min(30, W * 0.05); // slightly smaller, cleaner font
 
-        ctx.fillStyle = "#FFD700"; // Neon Gold
-        ctx.fillText(Math.floor(score), 20, hudH * 0.75);
+        // Use offsetX to keep the HUD strictly inside the game track (the Oven window)
+        // If the window is huge, offsetX centers the game. We add a 20px padding inward.
+        const hudLeftX = offsetX + 20;
+        const hudRightX = offsetX + totalGameWidth - 20;
 
-        ctx.fillStyle = "#ff7675"; // Mafia Red
-        ctx.font = `bold ${fontSize * 0.8}px var(--font-display, Impact)`;
-        ctx.fillText(`🍕 x${pizzasMade}`, 20, hudH * 0.75 + fontSize + 5);
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)"; // Stronger drop shadow for elegance
 
-        // Time remaining counter (top-right)
-        const timeLeft = Math.max(0, Math.ceil(CONFIG.SONG_DURATION - gameTimer));
-        ctx.fillStyle = timeLeft <= 10 ? "#ff7675" : "#aaaaaa";
-        ctx.font = `bold ${Math.min(22, W * 0.055)}px monospace`;
-        ctx.textAlign = "right";
-        ctx.fillText(`⏱ ${timeLeft}s`, W - 15, hudH * 0.75);
+        // --- SCORE (Elegant Glowing Numbers) ---
+        ctx.font = `bold ${fontSizeScore}px 'Special Elite', monospace`;
+        ctx.fillStyle = "#FDF8F0";
         ctx.textAlign = "left";
+        ctx.fillText(`SCORE`, hudLeftX, hudH * 0.5);
+        ctx.fillStyle = "#D4Af37"; // Glowing Gold
+        ctx.shadowBlur = 15; ctx.shadowColor = "rgba(212,175,55,0.6)";
+        ctx.fillText(`${Math.floor(score)}`, hudLeftX, hudH * 0.5 + fontSizeScore + 2);
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)"; // reset shadow
 
+        // --- PIZZAS (Right aligned under Time, subtle red badge) ---
+        ctx.fillStyle = THE_OVEN_THEME.colors.background.checker; // Mafia Red
+        ctx.font = `bold ${fontSizeScore * 0.7}px 'Bangers', cursive`;
+        ctx.textAlign = "right";
+        ctx.letterSpacing = "2px";
+        ctx.shadowBlur = 15; ctx.shadowColor = "rgba(200,0,0,0.5)";
+        ctx.fillText(`${pizzasMade} PIZZAS BAKED`, hudRightX, hudH * 0.5 + fontSizeScore * 1.5 + 5);
+        ctx.letterSpacing = "0px";
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)";
+
+        // --- HEALTH / "RESPECT" BAR (Top Center, inside track) ---
+        const barW = Math.min(totalGameWidth * 0.4, 300);
+        const barH = Math.min(H * 0.02, 14); // Slimmer, sleeker
+        const barX = W / 2 - barW / 2;
+        const barY = hudH * 0.45;
+
+        // "RESPECT" label above the bar
+        ctx.font = `bold 12px 'Special Elite', monospace`;
+        ctx.fillStyle = "#D4Af37"; // Elegant Gold
+        ctx.textAlign = "center";
+        ctx.letterSpacing = "4px";
+        ctx.fillText("RESPECT", W / 2, barY - 10);
+        ctx.letterSpacing = "0px";
+
+        // Metallic/Gold frame
+        ctx.fillStyle = "#0a0a0a";
+        ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 8);
+        ctx.strokeStyle = "#D4Af37"; // Gold border
+        ctx.lineWidth = 2;
+        ctx.strokeRect(barX - 2, barY - 2, barW + 4, barH + 4);
+
+        // Health fill (Gradient shifting based on health)
+        const hpPercent = Math.max(0, health / 100);
+        const hpGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+
+        if (hpPercent > 0.5) {
+            hpGrad.addColorStop(0, "#27ae60"); // Subtle green
+            hpGrad.addColorStop(1, "#2ecc71");
+        } else if (hpPercent > 0.25) {
+            hpGrad.addColorStop(0, "#f39c12"); // Warning gold
+            hpGrad.addColorStop(1, "#f1c40f");
+        } else {
+            hpGrad.addColorStop(0, "#c0392b"); // Danger red
+            hpGrad.addColorStop(1, "#e74c3c");
+        }
+
+        ctx.fillStyle = hpGrad;
+        if (hpPercent < 0.25 && Math.floor(gameTimer * 8) % 2 === 0) ctx.fillStyle = "#ffffff"; // Fast flash when dying
+
+        // Inner shadow on health fill for depth
+        ctx.shadowBlur = 0; // Disable outer shadow for the inner bar
+        ctx.fillRect(barX, barY, barW * hpPercent, barH);
+
+        ctx.fillStyle = "rgba(255,255,255,0.15)"; // Top highlight
+        ctx.fillRect(barX, barY, barW * hpPercent, barH * 0.3);
+
+        // --- TIME REMAINING (Top Right) ---
+        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)"; // Re-enable shadow for text
+        const timeLeft = Math.max(0, Math.ceil(CONFIG.SONG_DURATION - gameTimer));
+        ctx.fillStyle = timeLeft <= 10 ? "#e74c3c" : "#FDF8F0";
+        ctx.font = `bold ${Math.min(24, W * 0.045)}px 'Special Elite', monospace`;
+        ctx.textAlign = "right";
+        ctx.fillText(`⏱ ${timeLeft}s`, hudRightX, hudH * 0.5);
+
+        // Reset
+        ctx.textAlign = "left";
         ctx.shadowBlur = 0;
     }
 
@@ -1248,7 +1343,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 "secret_sauce": "/game/assets/salsasecreta.jpg",
                 "hotdog": "/game/assets/hotdog.jpg",
                 "burger": "/game/assets/burger.jpg",
-                "super_pizza": "/game/assets/decoracion/SuperPizza.png"
+                "super_pizza": "/game/assets/benny_transparent.png"
             };
 
             const keys = Object.keys(ASSET_PATHS);

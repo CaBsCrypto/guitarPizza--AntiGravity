@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import wasm from "vite-plugin-wasm"
+import topLevelAwait from "vite-plugin-top-level-await"
 
 export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? "/guitarPizza--AntiGravity/" : "/",
-  plugins: [react()],
+  plugins: [react(), wasm(), topLevelAwait()],
   // Load .env files from the parent directory (repo root)
   envDir: '..',
   define: {
