@@ -5,7 +5,7 @@ import wasm from "vite-plugin-wasm"
 import topLevelAwait from "vite-plugin-top-level-await"
 
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? "/guitarPizza--AntiGravity/" : "/",
+  base: process.env.VERCEL ? "/" : (mode === 'production' ? "/guitarPizza--AntiGravity/" : "/"),
   plugins: [react(), wasm(), topLevelAwait()],
   // Load .env files from the parent directory (repo root)
   envDir: '..',
