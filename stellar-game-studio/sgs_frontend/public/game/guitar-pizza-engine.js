@@ -636,7 +636,18 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             score += (perfect ? 100 + (combo * 10) : 50 + (combo * 5)) * multiplier;
             combo++;
             if (combo > maxCombo) maxCombo = combo;
-            if (combo >= 20 && !fireMode) { fireMode = true; AudioEngine.onFireMode(); }
+
+            // Cool combo streak popups
+            if (combo > 0 && combo % 10 === 0 && !fireMode) {
+                createFeedback("COMBO " + combo + "!", -1, H * 0.4);
+            }
+
+            if (combo >= 20 && !fireMode) {
+                fireMode = true;
+                AudioEngine.onFireMode();
+                createFeedback("🔥🔥 FEVER MODE! 🔥🔥", -1, H * 0.5);
+                shake = 15;
+            }
 
             health = Math.min(100, health + (perfect ? 3 : 1));
             createExplosion(targetNote.lane, HIT_Y, targetNote.color, perfect);
@@ -767,7 +778,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                     if (fireMode) AudioEngine.onFireModeEnd();
                     combo = 0; fireMode = false; health -= 4;
                     console.log(`[Engine] NOTE DROPPED! Lane ${n.lane}. Health drops by 4 to ${health}`);
-                    createFeedback("DROPPED", n.lane, H - 50);
+                    createFeedback("DROPPED!", n.lane, H - 50);
+                    shake = 12; // Heavy shake on dropped note
+                    camScale = 0.95;
                     AudioEngine.playMiss();
                     AudioEngine.onMiss();
                 } else {
