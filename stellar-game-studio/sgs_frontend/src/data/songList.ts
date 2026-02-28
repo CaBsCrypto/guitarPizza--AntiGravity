@@ -23,7 +23,7 @@ export const SONGS: Song[] = [
     bpm: 95,
     available: true,
     start: 28,
-    duration: 155,
+    duration: 151,
   },
   {
     id: 'rare-pizzas',
@@ -34,7 +34,7 @@ export const SONGS: Song[] = [
     bpm: 115, // Faster!
     available: false, // Set to true dynamically or by saving state
     start: 28,
-    duration: 155,
+    duration: 151,
   },
   {
     id: 'pizza-mind',
