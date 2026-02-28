@@ -176,8 +176,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     const [showSettings, setShowSettings] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [language, setLanguage] = useState<'es' | 'en'>(() => {
-        try { return (localStorage.getItem('gp_language') as 'es' | 'en') ?? 'es'; }
-        catch { return 'es'; }
+        try { return (localStorage.getItem('gp_language') as 'es' | 'en') ?? 'en'; }
+        catch { return 'en'; }
     });
     const t = TRANSLATIONS[language];
 
