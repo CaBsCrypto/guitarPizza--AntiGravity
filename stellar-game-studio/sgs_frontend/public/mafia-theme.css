@@ -33,7 +33,7 @@
    ============================================================ */
 #restaurant-table-bg {
     background-color: #1a0a05;
-    background-image: url('/game/assets/FONDOJUEGO.png');
+    background-image: url('game/assets/FONDOJUEGO.png');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;

@@ -8,7 +8,7 @@
 /* ── GLOBAL OVERRIDES when landing is active ── */
 body:has(.hp-root) {
   /* Pizzeria scene runs as a fixed full-page background */
-  background-image: url('/game/assets/FONDOJUEGO.png');
+  background-image: var(--bg-pizzeria, url('/game/assets/FONDOJUEGO.png'));
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;
@@ -110,7 +110,7 @@ body:has(.hp-root) .rs-footer-quote {
   position: absolute;
   /* Make the background slightly larger than the container so it doesn't reveal edges when moved */
   inset: -5%;
-  background: url('/game/assets/FONDOJUEGO.png');
+  background: var(--bg-pizzeria, url('/game/assets/FONDOJUEGO.png'));
   background-size: cover;
   background-position: center bottom;
   background-repeat: no-repeat;
@@ -562,7 +562,7 @@ body:has(.hp-root) .rs-footer-quote {
 .hp-active {
   background-color: #1a0c08;
   /* Dark Fallback */
-  background-image: url('/game/assets/FONDOJUEGO.png');
+  background-image: var(--bg-pizzeria, url('/game/assets/FONDOJUEGO.png'));
   background-attachment: fixed;
   background-size: cover;
   background-position: center;

@@ -27,6 +27,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [dragOffset, setDragOffset] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--bg-pizzeria', `url(${import.meta.env.BASE_URL}game/assets/FONDOJUEGO.png)`);
+  }, []);
+
   const handleEnterKitchen = () => {
     setIsTransitioning(true);
     setTimeout(() => {

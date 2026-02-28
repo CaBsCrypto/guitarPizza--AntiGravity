@@ -15,6 +15,7 @@ declare global {
     interface Window {
         initGuitarPizza: (canvas: HTMLCanvasElement | null, userAddress: string, onComplete: (score: number, inputLog?: any[]) => void, songUrl?: string, t?: any) => () => void;
         BASE64_ASSETS: Record<string, string>;
+        GP_BASE_PATH?: string;
     }
 }
 
@@ -430,6 +431,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                     addLog("[GuitarPizza] initGuitarPizza undefined, loading engine...");
                     setStatus(t.loadingEngine);
 
+                    window.GP_BASE_PATH = import.meta.env.BASE_URL;
                     const baseUrl = import.meta.env.BASE_URL;
                     const primaryPath = `${baseUrl}game/guitar-pizza-engine.js`.replace('//', '/');
 

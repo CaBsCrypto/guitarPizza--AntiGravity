@@ -92,7 +92,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     // --- PIZZA BOX PLATE ASSETS (4 per lane) ---
     const PLATE_ASSETS = { closed: [null, null, null, null], open: [null, null, null, null] };
     (function loadBoxAssets() {
-        const base = '/game/assets/';
+        const base = (window.GP_BASE_PATH || '/') + 'game/assets/';
         const closedNames = ['cajacerrada1.png', 'cajacerrada2.png', 'caja cerrada 3.png', 'cajacerrada4.png'];
         const openNames = ['pizzaAbierta1.png', 'pizzaAbierta2.png', 'pizzaAbierta3.png', 'pizzaAbierta4.png'];
         for (let i = 0; i < 4; i++) {
@@ -1369,15 +1369,16 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     // --- ASSET LOADING ---
     function loadImages() {
         return new Promise((resolve) => {
+            const base = (window.GP_BASE_PATH || '/');
             const ASSET_PATHS = {
-                "pepperoni": "/game/assets/pepperoni.jpg",
-                "cheese": "/game/assets/mixta.jpg",
-                "bacon": "/game/assets/tomatos.jpg",
-                "onion": "/game/assets/veg.jpg",
-                "secret_sauce": "/game/assets/salsasecreta.jpg",
-                "hotdog": "/game/assets/hotdog.jpg",
-                "burger": "/game/assets/burger.jpg",
-                "super_pizza": "/game/assets/benny_transparent.png"
+                "pepperoni": base + "game/assets/pepperoni.jpg",
+                "cheese": base + "game/assets/mixta.jpg",
+                "bacon": base + "game/assets/tomatos.jpg",
+                "onion": base + "game/assets/veg.jpg",
+                "secret_sauce": base + "game/assets/salsasecreta.jpg",
+                "hotdog": base + "game/assets/hotdog.jpg",
+                "burger": base + "game/assets/burger.jpg",
+                "super_pizza": base + "game/assets/benny_transparent.png"
             };
 
             const keys = Object.keys(ASSET_PATHS);
