@@ -8,10 +8,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     // Parse all song params from the URL query string
     const _songParams = (function () {
         try {
-            const u = new URL(typeof songUrl === 'string' && songUrl.includes('?') ? songUrl : 'http://x?' + (songUrl || ''));
-            const bpm = parseInt(u.searchParams.get('bpm') || '0', 10);
-            const start = parseFloat(u.searchParams.get('start') || '0');
-            const duration = parseFloat(u.searchParams.get('duration') || '0');
+            const queryString = typeof songUrl === 'string' && songUrl.includes('?') ? songUrl.substring(songUrl.indexOf('?')) : '';
+            const u = new URLSearchParams(queryString);
+            const bpm = parseInt(u.get('bpm') || '0', 10);
+            const start = parseFloat(u.get('start') || '0');
+            const duration = parseFloat(u.get('duration') || '0');
             return { bpm: bpm > 0 ? bpm : 128, start: start || 0, duration: duration > 0 ? duration : 80 };
         } catch (e) { return { bpm: 128, start: 0, duration: 80 }; }
     })();
@@ -297,7 +298,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         init: function () {
             if (this.isInit) {
-                if (this.ctx.state === 'suspended') this.ctx.resume();
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    // Only resume if called from a user gesture (startGame)
+                    try { this.ctx.resume(); } catch (e) { }
+                }
                 return;
             }
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -305,7 +309,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             this.masterGain = this.ctx.createGain();
             this.masterGain.gain.value = 0.35;
             this.masterGain.connect(this.ctx.destination);
-            if (this.ctx.state === 'suspended') this.ctx.resume();
+            // It will be suspended, we will resume it later
             this.isInit = true;
         },
         setVolume: function (value) {
@@ -318,12 +322,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         // ── MUSIC ─────────────────────────────────────────────────────────────
         loadSong: async function (url) {
-            if (!this.isInit || !url) return;
+            if (!this.isInit) this.init(); // Init context early (will be suspended)
+            if (!url) return;
             try {
                 const resp = await fetch(url);
                 const arrayBuffer = await resp.arrayBuffer();
                 this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-                console.log('[AudioEngine] Song loaded:', url);
+                console.log('[AudioEngine] Song loaded and decoded:', url);
             } catch (e) {
                 console.warn('[AudioEngine] Failed to load song:', e);
             }
@@ -1323,10 +1328,16 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         console.log('[Engine] startGame — rate:' + songRate + ' diff:' + diffStart + ' seg:' + resolvedStart + 's–' + (resolvedStart + resolvedDuration) + 's (' + resolvedDuration + 's)');
         _difficultyStart = diffStart;
         AudioEngine._fireRate = songRate;
-        AudioEngine.init();
+        AudioEngine.init(); // This will resume the context since we are in a user gesture
         AudioEngine.stopSong();
         if (songUrl) {
-            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
+            if (AudioEngine.songBuffer) {
+                // Already loaded via pre-load! Play immediately!
+                AudioEngine.playSong(songRate, resolvedStart, resolvedDuration);
+            } else {
+                // Not loaded yet, fetch now
+                AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
+            }
         }
         resetGame();
         lastTime = performance.now();
@@ -1459,6 +1470,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
     // --- CLEANUP ---
     // --- EXPOSED API ---
+    // Pre-load the song so it's ready when the player clicks Start
+    if (songUrl) {
+        AudioEngine.loadSong(songUrl);
+    }
+
     return {
         cleanup: () => {
             shouldRun = false;

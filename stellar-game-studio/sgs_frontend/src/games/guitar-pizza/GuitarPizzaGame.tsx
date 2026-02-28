@@ -499,6 +499,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                     if (chosenSong.bpm) params.set('bpm', String(chosenSong.bpm));
                     params.set('start', String(chosenSong.start ?? 0));
                     params.set('duration', String(chosenSong.duration ?? 80));
+                    params.set('v', '3');
                     const resolvedSongUrl = `${baseUrl}?${params.toString()}`;
                     addLog(`[GuitarPizza] Song: ${chosenSong.title} @ ${chosenSong.bpm ?? '?'}BPM | ${chosenSong.start}s–${(chosenSong.start ?? 0) + (chosenSong.duration ?? 80)}s`);
                     const result = window.initGuitarPizza(canvasRef.current, userAddress, async (finalScore: number, inputLog: any[] = []) => {
