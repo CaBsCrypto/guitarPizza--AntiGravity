@@ -433,7 +433,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                     window.GP_BASE_PATH = import.meta.env.BASE_URL;
                     const baseUrl = import.meta.env.BASE_URL;
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js`.replace('//', '/');
+                    // Append version parameter to bust aggressive browser cache of public assets
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=2`.replace('//', '/');
 
                     addLog(`[GuitarPizza] Loading engine from: ${primaryPath}`);
                     await loadScript(primaryPath);

@@ -97,10 +97,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         const openNames = ['pizzaAbierta1.png', 'pizzaAbierta2.png', 'pizzaAbierta3.png', 'pizzaAbierta4.png'];
         for (let i = 0; i < 4; i++) {
             const c = new window.Image();
-            c.src = base + closedNames[i];
+            c.src = base + closedNames[i] + "?v=2";
             c.onload = () => { PLATE_ASSETS.closed[i] = c; };
             const o = new window.Image();
-            o.src = base + openNames[i];
+            o.src = base + openNames[i] + "?v=2";
             o.onload = () => { PLATE_ASSETS.open[i] = o; };
         }
     })();
@@ -1371,14 +1371,14 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         return new Promise((resolve) => {
             const base = (window.GP_BASE_PATH || '/');
             const ASSET_PATHS = {
-                "pepperoni": base + "game/assets/pepperoni.jpg",
-                "cheese": base + "game/assets/mixta.jpg",
-                "bacon": base + "game/assets/tomatos.jpg",
-                "onion": base + "game/assets/veg.jpg",
-                "secret_sauce": base + "game/assets/salsasecreta.jpg",
-                "hotdog": base + "game/assets/hotdog.jpg",
-                "burger": base + "game/assets/burger.jpg",
-                "super_pizza": base + "game/assets/benny_transparent.png"
+                "pepperoni": base + "game/assets/pepperoni.jpg?v=2",
+                "cheese": base + "game/assets/mixta.jpg?v=2",
+                "bacon": base + "game/assets/tomatos.jpg?v=2",
+                "onion": base + "game/assets/veg.jpg?v=2",
+                "secret_sauce": base + "game/assets/salsasecreta.jpg?v=2",
+                "hotdog": base + "game/assets/hotdog.jpg?v=2",
+                "burger": base + "game/assets/burger.jpg?v=2",
+                "super_pizza": base + "game/assets/benny_transparent.png?v=2"
             };
 
             const keys = Object.keys(ASSET_PATHS);
