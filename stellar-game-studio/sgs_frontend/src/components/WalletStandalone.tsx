@@ -1,4 +1,5 @@
 import { useWalletStandalone } from '../hooks/useWalletStandalone';
+import { useSliceBalance } from '../hooks/useSliceBalance';
 import './WalletStandalone.css';
 
 export function WalletStandalone() {
@@ -13,11 +14,20 @@ export function WalletStandalone() {
     disconnect,
   } = useWalletStandalone();
 
+  const { balance } = useSliceBalance();
+
   const address = typeof publicKey === 'string' ? publicKey : '';
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
 
   return (
     <div className="wallet-standalone">
+      {/* $SLICE balance chip — visible only when wallet is connected */}
+      {isConnected && balance !== null && (
+        <div className="slice-balance-chip">
+          🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
+        </div>
+      )}
+
       {!isConnected ? (
         <button
           className="wallet-standalone-button"

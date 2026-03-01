@@ -13,6 +13,8 @@
 
 import { Buffer } from 'buffer';
 import { keccak_256 } from '@noble/hashes/sha3.js';
+import { Contract, Address, TransactionBuilder, scValToNative } from '@stellar/stellar-sdk';
+import * as SorobanRpc from '@stellar/stellar-sdk/rpc';
 import { Client as GuitarPizzaClient } from '../contracts/guitar-pizza';
 import { getContractId } from '../utils/constants';
 
@@ -22,6 +24,7 @@ const CONTRACT_IDS = {
   zkLeaderboard: getContractId('zk-leaderboard'),
   dailyRecipe: getContractId('daily-recipe'),
   achievement_vault: getContractId('achievement-vault'),
+  sliceToken: getContractId('slice-token'),
 } as const;
 
 const RPC_URL = 'https://soroban-testnet.stellar.org';
@@ -677,7 +680,36 @@ export class StellarContractService {
     }
   }
 
-  // ─── 12. Full post-game flow ─────────────────────────────────────────────
+  // ─── 12. SLICE token balance ─────────────────────────────────────────────
+  /**
+   * Query the player's $SLICE balance from the slice-token SEP-41 contract.
+   * Returns balance in whole tokens (divides by 10^7 decimals).
+   */
+  static async getSliceBalance(playerAddress: string): Promise<number> {
+    const contractId = CONTRACT_IDS.sliceToken;
+    if (!contractId) return 0;
+    try {
+      const server = new SorobanRpc.Server(RPC_URL);
+      const contract = new Contract(contractId);
+      const tx = new TransactionBuilder(
+        await server.getAccount(playerAddress),
+        { fee: '100', networkPassphrase: NETWORK_PASS },
+      )
+        .addOperation(contract.call('balance', new Address(playerAddress).toScVal()))
+        .setTimeout(30)
+        .build();
+      const result = await server.simulateTransaction(tx);
+      if (SorobanRpc.Api.isSimulationSuccess(result) && result.result) {
+        const raw = scValToNative(result.result.retval);
+        return Number(raw) / 1e7;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  // ─── 13. Full post-game flow ─────────────────────────────────────────────
   /**
    * Convenience: runs all post-game contract calls in sequence.
    * 1. submit_score to guitar-pizza
