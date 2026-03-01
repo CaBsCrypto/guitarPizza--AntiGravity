@@ -23,7 +23,7 @@ export const SONGS: Song[] = [
     bpm: 95,
     available: true,
     start: 28,
-    duration: 151,
+    duration: 150,
   },
   {
     id: 'rare-pizzas',
@@ -45,7 +45,7 @@ export const SONGS: Song[] = [
     bpm: 90,
     available: true,
     start: 0,
-    duration: 98,
+    duration: 99.5,
   },
   {
     id: 'dao-it',
@@ -56,7 +56,7 @@ export const SONGS: Song[] = [
     bpm: 110,
     available: true,
     start: 0,
-    duration: 167,
+    duration: 168.2,
   },
   {
     id: 'want-to-pie',
@@ -67,7 +67,7 @@ export const SONGS: Song[] = [
     bpm: 95,
     available: true,
     start: 0,
-    duration: 32,
+    duration: 30.4,
   },
   {
     id: 'pizza-shortie',
@@ -78,7 +78,7 @@ export const SONGS: Song[] = [
     bpm: 105,
     available: true,
     start: 0,
-    duration: 80,
+    duration: 80.8,
   },
   {
     id: 'pizza-pop',
@@ -89,7 +89,7 @@ export const SONGS: Song[] = [
     bpm: 115,
     available: true,
     start: 0,
-    duration: 104,
+    duration: 104.6,
   },
   {
     id: 'wow-rare',
@@ -100,7 +100,7 @@ export const SONGS: Song[] = [
     bpm: 98,
     available: true,
     start: 0,
-    duration: 75,
+    duration: 75.7,
   },
   {
     id: 'pizza-tron',
@@ -111,7 +111,7 @@ export const SONGS: Song[] = [
     bpm: 120,
     available: true,
     start: 0,
-    duration: 142,
+    duration: 137.9,
   },
   {
     id: 'pizzadao-meta',
@@ -122,7 +122,7 @@ export const SONGS: Song[] = [
     bpm: 95,
     available: true,
     start: 0,
-    duration: 59,
+    duration: 60,
   },
   {
     id: 'aint-no-za',
@@ -133,7 +133,7 @@ export const SONGS: Song[] = [
     bpm: 88,
     available: true,
     start: 0,
-    duration: 136,
+    duration: 136.7,
   },
   {
     id: 'slice-heaven',
@@ -144,7 +144,7 @@ export const SONGS: Song[] = [
     bpm: 92,
     available: true,
     start: 0,
-    duration: 159,
+    duration: 160.2,
   },
   {
     id: 'molto-bene',
@@ -155,7 +155,7 @@ export const SONGS: Song[] = [
     bpm: 100,
     available: true,
     start: 0,
-    duration: 65,
+    duration: 66,
   },
 ];
 
