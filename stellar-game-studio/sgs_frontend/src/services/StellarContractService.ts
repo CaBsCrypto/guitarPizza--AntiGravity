@@ -637,7 +637,47 @@ export class StellarContractService {
     } catch { return []; }
   }
 
-  // ─── 11. Full post-game flow ─────────────────────────────────────────────
+  // ─── 11. Claim SLICE reward ──────────────────────────────────────────────
+  /**
+   * Claims the SLICE token reward for a winning session.
+   * Must be called after submit_score returns player_won=true.
+   * Returns the whole-SLICE amount minted (e.g. 1), or 0 if none available.
+   */
+  static async claimSlice(
+    playerAddress: string,
+    sessionId: number,
+    signer: SignerFn,
+  ): Promise<{ success: boolean; amount: number; error?: string }> {
+    try {
+      const client = makeGuitarClient(playerAddress);
+      const tx = await client.claim_slice({
+        session_id: sessionId,
+        player: playerAddress,
+      });
+      await signAndSend(tx, signer, playerAddress);
+      // Result is i128 whole-SLICE — cast to number (safe for reasonable values)
+      const raw = (tx.result as any);
+      const amount = raw && typeof raw === 'object' && 'isOk' in raw
+        ? Number((raw as any).unwrap?.() ?? 1)
+        : Number(raw ?? 1);
+      console.log(`[StellarContract] SLICE claimed ✅ — ${amount} $SLICE minted`);
+      return { success: true, amount };
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      // NoRewardPending (#12) = already claimed or SLICE not configured → silent
+      if (msg.includes('#12') || msg.includes('NoRewardPending')) {
+        return { success: false, amount: 0, error: 'NoRewardPending' };
+      }
+      // SliceNotConfigured (#13) = admin hasn't linked token yet → silent
+      if (msg.includes('#13') || msg.includes('SliceNotConfigured')) {
+        return { success: false, amount: 0, error: 'SliceNotConfigured' };
+      }
+      console.error('[StellarContract] claimSlice failed:', err);
+      return { success: false, amount: 0, error: msg };
+    }
+  }
+
+  // ─── 12. Full post-game flow ─────────────────────────────────────────────
   /**
    * Convenience: runs all post-game contract calls in sequence.
    * 1. submit_score to guitar-pizza
@@ -653,34 +693,45 @@ export class StellarContractService {
     signer: SignerFn,
   ): Promise<{
     scoreSubmitted: boolean;
+    playerWon: boolean;
     txHash?: string;
     leaderboardRank?: number;
     leaderboardSubmitted: boolean;
     weeklyCompleted: boolean;
     achievementsClaimed: number[];
+    sliceClaimed: boolean;
+    sliceAmount: number;
     errors: string[];
   }> {
     const errors: string[] = [];
 
     // 1. Submit score (main contract + GameHub)
-    // guitar-pizza.submit_score calls GameHub.end_game internally, which should
-    // propagate the score to the zk-leaderboard via the trusted-game path.
-    // We do NOT call submitLeaderboardScore directly because the receipt bytes
-    // have an anti-replay digest stored during submit_score — a second call
-    // with the same receipt would be rejected by the leaderboard contract.
     const scoreResult = await this.submitScore(playerAddress, stats, signer);
     if (!scoreResult.success) errors.push(`Score: ${scoreResult.error}`);
 
-    // 2. Submit to leaderboard (Explicit call)
-    // We call this explicitly to ensure the score reaches the leaderboard
-    // even if the GameHub orchestration has delays or is mocked.
+    // Determine if the player won (score >= score_goal which defaults to 1)
+    const playerWon = scoreResult.success;
+
+    // 2. Claim SLICE reward (only if player won + score submitted successfully)
+    let sliceClaimed = false;
+    let sliceAmount = 0;
+    if (playerWon) {
+      const sliceResult = await this.claimSlice(playerAddress, stats.sessionId, signer);
+      if (sliceResult.success) {
+        sliceClaimed = true;
+        sliceAmount = sliceResult.amount;
+      }
+      // NoRewardPending / SliceNotConfigured → expected, not an error for the user
+    }
+
+    // 3. Submit to leaderboard
     let leaderboardRank: number | undefined;
     const lbResult = await this.submitLeaderboardScore(playerAddress, stats, signer);
     if (!lbResult.success) {
       console.warn('[StellarContract] Standalone leaderboard submission failed:', lbResult.error);
     }
 
-    // 3. Weekly recipe
+    // 4. Weekly recipe
     let weeklyCompleted = false;
     const weeklyResult = await this.claimWeeklyRecipe(playerAddress, stats, signer);
     if (weeklyResult.success) weeklyCompleted = true;
@@ -688,17 +739,20 @@ export class StellarContractService {
       errors.push(`Weekly: ${weeklyResult.error}`);
     }
 
-    // 4. Achievements
+    // 5. Achievements
     const achResult = await this.claimEligibleAchievements(playerAddress, stats, signer);
     if (achResult.errors.length) errors.push(...achResult.errors);
 
     return {
       scoreSubmitted: scoreResult.success,
+      playerWon,
       txHash: scoreResult.txHash,
       leaderboardRank: lbResult.rank,
       leaderboardSubmitted: lbResult.success,
       weeklyCompleted,
       achievementsClaimed: achResult.claimed,
+      sliceClaimed,
+      sliceAmount,
       errors,
     };
   }

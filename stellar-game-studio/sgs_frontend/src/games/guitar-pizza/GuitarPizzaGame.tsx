@@ -222,6 +222,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     const [isVerifying, setIsVerifying] = useState(false);
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
     const [txHash, setTxHash] = useState<string | null>(null);
+    const [sliceEarned, setSliceEarned] = useState<number>(0);
 
     // TX pop-up after game completion
     const [showTxPopup, setShowTxPopup] = useState(false);
@@ -338,6 +339,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     const handleStartGame = () => {
         // Reset leaderboard submission status for the new game
         setLbSubmitStatus('none');
+        setSliceEarned(0);
         if (engineRef.current && engineRef.current.startGame) {
             addLog("[GuitarPizza] Calling engine.startGame()");
             engineRef.current.startGame();
@@ -603,6 +605,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             if (result.achievementsClaimed.length > 0) {
                                 const names = ['Perfect Run', 'Trap Master', 'Fever God', 'Iron Chef'];
                                 result.achievementsClaimed.forEach(id => addLog(`🏅 Badge earned: ${names[id] ?? id}`));
+                            }
+                            if (result.sliceClaimed) {
+                                addLog(`💰 +${result.sliceAmount} $SLICE earned!`);
+                                setSliceEarned(result.sliceAmount);
                             }
                             if (result.errors.length > 0) {
                                 result.errors.forEach(e => console.warn('[StellarContract]', e));
@@ -1818,6 +1824,29 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         );
                                     })}
                                 </div>
+
+                                {/* SLICE reward banner */}
+                                {sliceEarned > 0 && (
+                                    <div style={{
+                                        background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))',
+                                        border: '1px solid rgba(212,175,55,0.6)',
+                                        borderRadius: '10px',
+                                        padding: '0.75rem 1rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                    }}>
+                                        <span style={{ fontSize: '1.6rem' }}>🍕</span>
+                                        <div>
+                                            <div style={{ color: '#d4af37', fontWeight: 'bold', fontSize: '1rem', letterSpacing: '0.05em' }}>
+                                                +{sliceEarned} $SLICE {language === 'es' ? 'ganados' : 'earned'}
+                                            </div>
+                                            <div style={{ color: '#a08828', fontSize: '0.72rem', marginTop: '2px' }}>
+                                                {language === 'es' ? 'Acreditados en tu wallet' : 'Minted to your wallet on-chain'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Actions */}
                                 <button

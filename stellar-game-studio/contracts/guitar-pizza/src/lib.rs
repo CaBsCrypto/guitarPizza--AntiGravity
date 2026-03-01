@@ -58,6 +58,13 @@ pub trait GameHub {
     fn end_game(env: Env, session_id: u32, player1_won: bool);
 }
 
+/// External interface for the $SLICE token contract.
+/// guitar-pizza is the sole authorized minter.
+#[contractclient(name = "SliceTokenClient")]
+pub trait SliceToken {
+    fn mint(env: Env, to: Address, amount_slice: i128);
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -73,6 +80,8 @@ pub enum Error {
     PlayerMismatch = 9,
     HubNotConfigured = 10,
     Unauthorized = 11,
+    NoRewardPending = 12,
+    SliceNotConfigured = 13,
 }
 
 #[contracttype]
@@ -93,6 +102,14 @@ pub struct Session {
     pub pizzas_completed: u32,
 }
 
+/// Configuration for SLICE rewards.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SliceConfig {
+    /// Whole SLICE units awarded per winning session (e.g. 1 = 1 SLICE).
+    pub slice_per_win: i128,
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
@@ -101,6 +118,9 @@ pub enum DataKey {
     Session(u32),
     ActiveSession(Address),
     ProofDigest(BytesN<32>),
+    SliceToken,           // Address of the $SLICE token contract
+    SliceConfig,          // SliceConfig — reward rules
+    PendingReward(u32),   // i128 whole SLICE — unclaimed reward for session_id
 }
 
 #[contract]
@@ -285,6 +305,24 @@ impl GuitarPizzaContract {
         let hub_addr = Self::require_hub(&env)?;
         GameHubClient::new(&env, &hub_addr).end_game(&session_id, &player1_won);
 
+        // If player won and SLICE is configured, park a claimable reward.
+        // Stored in temporary storage so it auto-expires with the session window.
+        if player_won {
+            if let Some(cfg) = env
+                .storage()
+                .instance()
+                .get::<_, SliceConfig>(&DataKey::SliceConfig)
+            {
+                if cfg.slice_per_win > 0 {
+                    let rwd_key = DataKey::PendingReward(session_id);
+                    env.storage().temporary().set(&rwd_key, &cfg.slice_per_win);
+                    env.storage()
+                        .temporary()
+                        .extend_ttl(&rwd_key, GAME_TTL_THRESHOLD, GAME_TTL_LEDGERS);
+                }
+            }
+        }
+
         Ok(player_won)
     }
 
@@ -336,6 +374,110 @@ impl GuitarPizzaContract {
         admin.require_auth();
         env.deployer().update_current_contract_wasm(new_wasm_hash);
         Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // SLICE token integration
+    // -----------------------------------------------------------------------
+
+    /// Set the $SLICE token contract address.
+    /// Only admin. Call this once after deploying slice-token to testnet/mainnet.
+    pub fn set_slice_token(env: Env, slice_token: Address) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not set");
+        admin.require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::SliceToken, &slice_token);
+        Ok(())
+    }
+
+    /// Configure how many whole SLICE a player earns per winning session.
+    /// `slice_per_win = 0` effectively disables rewards without removing the token address.
+    pub fn set_slice_config(env: Env, slice_per_win: i128) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not set");
+        admin.require_auth();
+        assert!(slice_per_win >= 0, "SLICE: negative reward");
+        let cfg = SliceConfig { slice_per_win };
+        env.storage()
+            .instance()
+            .set(&DataKey::SliceConfig, &cfg);
+        Ok(())
+    }
+
+    /// Claim the SLICE reward for a winning session.
+    ///
+    /// The player calls this after `submit_score` returns `true`.
+    /// On success mints `slice_per_win` whole SLICE to the player via the
+    /// $SLICE contract and removes the pending reward (no double-claim).
+    ///
+    /// Returns the amount of whole SLICE minted.
+    pub fn claim_slice(env: Env, session_id: u32, player: Address) -> Result<i128, Error> {
+        player.require_auth();
+
+        // Verify session ownership and outcome.
+        let session: Session = env
+            .storage()
+            .temporary()
+            .get(&DataKey::Session(session_id))
+            .ok_or(Error::SessionNotFound)?;
+
+        if session.player != player {
+            return Err(Error::NotPlayer);
+        }
+
+        // Fetch and immediately remove the pending reward (atomic — no double-claim).
+        let rwd_key = DataKey::PendingReward(session_id);
+        let amount: i128 = env
+            .storage()
+            .temporary()
+            .get(&rwd_key)
+            .ok_or(Error::NoRewardPending)?;
+        env.storage().temporary().remove(&rwd_key);
+
+        // Resolve the SLICE token contract address.
+        let slice_addr: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::SliceToken)
+            .ok_or(Error::SliceNotConfigured)?;
+
+        // Cross-contract mint — guitar-pizza is the authorized minter in SliceToken.
+        SliceTokenClient::new(&env, &slice_addr).mint(&player, &amount);
+
+        env.events().publish(
+            (Symbol::new(&env, "slice_claimed"), player.clone()),
+            (session_id, amount),
+        );
+
+        Ok(amount)
+    }
+
+    // -----------------------------------------------------------------------
+    // SLICE queries
+    // -----------------------------------------------------------------------
+
+    pub fn get_slice_token(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::SliceToken)
+    }
+
+    pub fn get_slice_config(env: Env) -> Option<SliceConfig> {
+        env.storage().instance().get(&DataKey::SliceConfig)
+    }
+
+    /// How many whole SLICE are claimable for a session (0 if none / already claimed).
+    pub fn get_pending_reward(env: Env, session_id: u32) -> i128 {
+        env.storage()
+            .temporary()
+            .get(&DataKey::PendingReward(session_id))
+            .unwrap_or(0)
     }
 
     // -----------------------------------------------------------------------
