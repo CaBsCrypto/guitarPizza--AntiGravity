@@ -863,8 +863,6 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
             n.rotation += dt * 2;
             if (n.y - n.length > H + NOTE_SIZE) {
-                notes.splice(i, 1);
-
                 // If it was a TRAP, letting it pass is GOOD (No penalty)
                 if (!n.isTrap) {
                     if (fireMode) AudioEngine.onFireModeEnd();
@@ -873,7 +871,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                     createFeedback("DROPPED!", n.lane, H - 50);
                     shake = 12; // Heavy shake on dropped note
                     camScale = 0.95;
-                    AudioEngine.playMiss();
+                    AudioEngine.playMissSFX();
                     AudioEngine.onMiss();
                 } else {
                     // Bonus for avoiding trap
@@ -881,6 +879,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                     createFeedback("DODGED!", n.lane, H - 50);
                     score += 50;
                 }
+
+                // IMPORTANT: Always remove the note from the array, whether it was a trap or not.
+                // Previously, this was inside the `if` block above, causing an infinite loop
+                // because `i--` in the for-loop would keep hitting the same non-deleted note over and over again?
+                // Actually, the original code had `notes.splice(i, 1);` at the top of the block, 
+                // but the recent SFX changes might have messed with `playMiss` vs `playMissSFX`. Let's ensure it's deleted.
+                notes.splice(i, 1);
             }
         }
 
