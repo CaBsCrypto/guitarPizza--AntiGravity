@@ -794,8 +794,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         // Particles update
         for (let i = particles.length - 1; i >= 0; i--) {
-            particles[i].x += particles[i].vx * dt; particles[i].y += particles[i].vy * dt;
-            particles[i].life -= dt * 2.5;
+            particles[i].vy += 2000 * dt; // Gravity pulls them down
+            particles[i].x += particles[i].vx * dt;
+            particles[i].y += particles[i].vy * dt;
+            if (particles[i].rotation !== undefined) {
+                particles[i].rotation += particles[i].vr * dt;
+            }
+            particles[i].life -= dt * 1.5; // Slightly longer life to see them fall
             if (particles[i].life <= 0) particles.splice(i, 1);
         }
 
@@ -809,12 +814,17 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
     function createExplosion(lane, y, color, big) {
         const tempX = (lane * LANE_W) + (LANE_W / 2);
-        const count = big ? 25 : 15;
+        const count = big ? 35 : 15;
         for (let i = 0; i < count; i++) {
             particles.push({
                 x: tempX, y: y,
-                vx: (Math.random() - 0.5) * (W * 0.6), vy: (Math.random() - 0.5) * (W * 0.6),
-                color: color, life: 1.0, size: Math.random() * (W * 0.03) + 4
+                vx: (Math.random() - 0.5) * (W * 0.8),
+                vy: -Math.random() * (H * 0.7) - (H * 0.2), // Jump up (pop)
+                color: color,
+                life: 1.0,
+                size: Math.random() * (W * 0.03) + 6,
+                rotation: Math.random() * Math.PI * 2,
+                vr: (Math.random() - 0.5) * 15 // rotation speed
             });
         }
     }
@@ -935,6 +945,33 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
             ctx.fillStyle = gradient; ctx.fillRect(x, 0, LANE_W, H);
             ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = THE_OVEN_THEME.dimensions.laneBorderWidth; ctx.strokeRect(x, 0, LANE_W, H);
+        }
+
+        // 1.5 Pulsing background combo over lanes, under notes
+        if (combo >= 5) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(offsetX, 0, totalGameWidth, H);
+            ctx.clip(); // Ensure it doesn't bleed outside the oven track
+
+            const isFever = fireMode;
+            const cbx = offsetX + totalGameWidth / 2;
+            const cby = H * 0.5;
+            const baseFontSize = W * 0.25;
+            const pulse = beatFlash;
+            // Easing the pulse
+            const size = baseFontSize * (1.0 + pulse * 0.15);
+
+            ctx.translate(cbx, cby);
+            ctx.globalAlpha = isFever ? 0.3 + pulse * 0.3 : 0.15 + pulse * 0.15;
+            ctx.font = `900 italic ${size}px 'Impact'`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = isFever ? '#ff4500' : '#ffffff';
+            ctx.shadowColor = isFever ? '#ff4500' : '#D4Af37';
+            ctx.shadowBlur = isFever ? 40 : 20;
+            ctx.fillText(combo + "x", 0, 0);
+            ctx.restore();
         }
 
         // 2. Draw Elegant Division / Delivery Counter for the Pizzas
@@ -1100,10 +1137,15 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             ctx.restore();
         });
 
-        // Visuals
+        // Visuals (Particles / Crumbs)
         particles.forEach(p => {
-            ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+            ctx.save();
+            ctx.globalAlpha = p.life < 0.2 ? p.life * 5 : 1.0; // Fade out near the end
+            ctx.fillStyle = p.color;
+            ctx.translate(p.x, p.y);
+            if (p.rotation !== undefined) ctx.rotate(p.rotation);
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); // Square crumbs look better as food
+            ctx.restore();
         });
         ctx.globalAlpha = 1.0;
 
