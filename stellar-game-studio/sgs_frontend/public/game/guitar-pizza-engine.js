@@ -427,6 +427,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.songSource.playbackRate.setValueAtTime(1.02, now);
                 this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.03, 0.14);
             }
+
+            // Trigger synthesized sound effect
+            this.playHitSplat(isPerfect);
         },
 
         onMiss: function () {
@@ -445,6 +448,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.songSource.playbackRate.linearRampToValueAtTime(1.06, now + 0.18);
                 this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.2, 0.5);
             }
+
+            // Trigger error buzzer SFX
+            this.playMissSFX();
         },
 
         onFireMode: function () {
@@ -541,18 +547,95 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             osc.start();
             osc.stop(this.ctx.currentTime + decay);
         },
-        playChord: function (lane) {
-            const roots = [110, 130.81, 146.83, 164.81];
-            const root = roots[lane];
-            [root, root * 1.5, root * 2].forEach(freq => this.playTone(freq, "sawtooth", 0.05, 0.3));
+
+        playHitSplat: function (isPerfect) {
+            if (!this.isInit) return;
+            const now = this.ctx.currentTime;
+
+            // 1. Kick/Thump (Deep sine sweep)
+            const osc = this.ctx.createOscillator();
+            const oscGain = this.ctx.createGain();
+            osc.type = 'sine';
+
+            // Pitch sweep down
+            osc.frequency.setValueAtTime(isPerfect ? 180 : 130, now);
+            osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+            // Volume envelope
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(isPerfect ? 0.9 : 0.6, now + 0.01);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+            osc.connect(oscGain);
+            oscGain.connect(this.masterGain);
+            osc.start(now);
+            osc.stop(now + 0.15);
+
+            // 2. "Splat" Noise (Short white noise burst)
+            const bufferSize = this.ctx.sampleRate * 0.1; // 100ms
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1; // White noise
+            }
+
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = buffer;
+            const noiseFilter = this.ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = isPerfect ? 2500 : 1500; // Crunchier/higher for perfect
+
+            const noiseGain = this.ctx.createGain();
+            noiseGain.gain.setValueAtTime(0, now);
+            noiseGain.gain.linearRampToValueAtTime(isPerfect ? 0.4 : 0.2, now + 0.01);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + (isPerfect ? 0.08 : 0.05));
+
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(this.masterGain);
+
+            noise.start(now);
         },
-        playMiss: function () { /* silent — onMiss() handles music disruption */ },
+
+        playMissSFX: function () {
+            if (!this.isInit) return;
+            const now = this.ctx.currentTime;
+
+            // Dissonant, low frequency "Burnt Buzzer"
+            const osc1 = this.ctx.createOscillator();
+            const osc2 = this.ctx.createOscillator();
+            const oscGain = this.ctx.createGain();
+
+            osc1.type = 'sawtooth';
+            osc2.type = 'square';
+
+            osc1.frequency.setValueAtTime(110, now); // A2
+            osc2.frequency.setValueAtTime(118, now); // Dissonant beating
+
+            // Slight pitch bend down to sound broken
+            osc1.frequency.linearRampToValueAtTime(80, now + 0.4);
+            osc2.frequency.linearRampToValueAtTime(85, now + 0.4);
+
+            oscGain.gain.setValueAtTime(0, now);
+            oscGain.gain.linearRampToValueAtTime(0.5, now + 0.05);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            osc1.connect(oscGain);
+            osc2.connect(oscGain);
+            oscGain.connect(this.masterGain);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.4);
+            osc2.stop(now + 0.4);
+        },
+
         playOvenBell: function () {
-            // Subtle chime — vol 0.06 (was 0.3)
-            this.playTone(880, "sine", 0.01, 1.2, 0.06);
-            this.playTone(1108.73, "sine", 0.01, 1.0, 0.05);
-            this.playTone(1318.51, "sine", 0.01, 0.8, 0.04);
-            this.playTone(1760, "sine", 0.01, 0.6, 0.03);
+            // Bright, ringing metallic bell for completed pizza
+            this.playTone(1046.50, "sine", 0.01, 1.5, 0.15); // C6
+            this.playTone(1318.51, "sine", 0.01, 1.3, 0.1);  // E6
+            this.playTone(1567.98, "sine", 0.01, 1.0, 0.08); // G6
+            this.playTone(2093.00, "sine", 0.01, 0.8, 0.05); // C7
         }
     };
 
