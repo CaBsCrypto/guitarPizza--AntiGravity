@@ -1093,7 +1093,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         {SONGS.map((song) => {
                                             const isSelected = selectedSong.id === song.id;
                                             const mins = Math.floor(song.duration / 60);
-                                            const secs = song.duration % 60;
+                                            const secs = Math.floor(song.duration % 60);
                                             return (
                                                 <button
                                                     key={song.id}
@@ -1103,49 +1103,81 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         gap: '0.75rem',
-                                                        padding: '0.7rem 0.9rem',
+                                                        padding: '0.8rem 1rem',
                                                         borderRadius: '12px',
-                                                        border: isSelected ? '2px solid var(--ph-gold)' : '2px solid transparent',
+                                                        border: isSelected ? '1px solid var(--ph-gold)' : '1px solid rgba(255,255,255,0.05)',
                                                         background: isSelected
-                                                            ? 'rgba(212,175,55,0.15)'
+                                                            ? 'linear-gradient(90deg, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0.05) 100%)'
                                                             : song.available
-                                                                ? 'rgba(255,255,255,0.06)'
+                                                                ? 'rgba(0,0,0,0.4)'
                                                                 : 'rgba(0,0,0,0.2)',
+                                                        backdropFilter: 'blur(8px)',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
                                                         opacity: song.available ? 1 : 0.4,
                                                         textAlign: 'left',
                                                         color: '#fff',
                                                         width: '100%',
-                                                        transition: 'all 0.15s ease',
+                                                        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                        transform: 'scale(1)',
+                                                        boxShadow: isSelected ? '0 0 15px rgba(212,175,55,0.3)' : 'none',
                                                     }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!isSelected && song.available) {
+                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                                                            e.currentTarget.style.transform = 'scale(1.02)';
+                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)';
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!isSelected && song.available) {
+                                                            e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
+                                                            e.currentTarget.style.transform = 'scale(1)';
+                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.05)';
+                                                        }
+                                                    }}
+                                                    onMouseDown={(e) => { if (song.available) e.currentTarget.style.transform = 'scale(0.98)' }}
+                                                    onMouseUp={(e) => { if (song.available && !isSelected) e.currentTarget.style.transform = 'scale(1.02)' }}
                                                 >
-                                                    {/* Track number */}
-                                                    <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#888', minWidth: '22px' }}>
-                                                        {song.available ? String(song.index).padStart(2, '0') : '🔒'}
-                                                    </span>
+                                                    {/* Track number or Spinning Record */}
+                                                    <div style={{ width: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                        {isSelected ? (
+                                                            <div className="spin-slow" style={{ fontSize: '1.2rem', filter: 'drop-shadow(0 0 5px gold)' }}>💿</div>
+                                                        ) : (
+                                                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: '#888', fontWeight: 'bold' }}>
+                                                                {song.available ? String(song.index).padStart(2, '0') : '🔒'}
+                                                            </span>
+                                                        )}
+                                                    </div>
 
                                                     {/* Info */}
                                                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                        <div style={{ fontWeight: 'bold', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        <div style={{
+                                                            fontWeight: 'bold',
+                                                            fontSize: isSelected ? '1.05rem' : '0.95rem',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            color: isSelected ? '#fff' : '#ddd',
+                                                            transition: 'font-size 0.2s ease'
+                                                        }}>
                                                             {song.title}
                                                         </div>
-                                                        <div style={{ fontSize: '0.75rem', color: '#aaa', marginTop: '1px' }}>
+                                                        <div style={{ fontSize: '0.75rem', color: isSelected ? 'var(--ph-gold)' : '#aaa', marginTop: '2px', fontWeight: isSelected ? 'bold' : 'normal' }}>
                                                             {song.artist}
                                                         </div>
                                                     </div>
 
                                                     {/* Meta */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', fontSize: '0.72rem', color: '#888', flexShrink: 0 }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', fontSize: '0.75rem', color: isSelected ? '#ddd' : '#888', flexShrink: 0 }}>
                                                         {song.available && (
                                                             <>
-                                                                <span>{song.bpm} BPM</span>
-                                                                <span>{mins}:{String(secs).padStart(2, '0')}</span>
+                                                                <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold' }}>{song.bpm} BPM</span>
+                                                                <span style={{ fontFamily: 'var(--font-mono)' }}>{mins}:{String(secs).padStart(2, '0')}</span>
                                                             </>
                                                         )}
                                                         {!song.available && (
-                                                            <span style={{ color: '#666' }}>Pronto</span>
+                                                            <span style={{ color: '#666', fontStyle: 'italic' }}>Private</span>
                                                         )}
-                                                        {isSelected && <span style={{ color: 'var(--ph-gold)', fontSize: '0.9rem' }}>♪</span>}
                                                     </div>
                                                 </button>
                                             );

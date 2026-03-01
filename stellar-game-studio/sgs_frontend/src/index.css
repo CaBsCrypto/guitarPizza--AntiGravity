@@ -63,3 +63,8 @@ code {
   border-radius: 3px;
   color: var(--color-accent);
 }
+
+.spin-slow {
+  animation: vinyl-spin 4s linear infinite;
+  display: inline-block;
+}
