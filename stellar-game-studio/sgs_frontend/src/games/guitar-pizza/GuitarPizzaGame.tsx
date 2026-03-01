@@ -1090,13 +1090,19 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                         {/* ── SONG PICKER ─────────────────────────────── */}
                         {(view === 'songpicker' || closingView === 'songpicker') && (
                             <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                                    background: '#0a0a0a',
+                                    backgroundImage: 'radial-gradient(circle at top, #1a1a1a, #050505)',
+                                    border: '1px solid var(--ph-gold)',
+                                    boxShadow: '0 0 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(212,175,55,0.05)',
+                                    color: '#fff'
+                                }}>
+                                    <div className="modal-header" style={{ borderBottomColor: 'rgba(212,175,55,0.2)' }}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{ borderColor: 'var(--ph-gold)', color: 'var(--ph-gold)' }}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title">🎵 {language === 'es' ? 'ÁLBUM' : 'TRACKLIST'}</h2>
-                                        <div style={{ width: 40, fontSize: '0.75rem', color: '#888', textAlign: 'right' }}>
+                                        <h2 className="modal-title" style={{ color: 'var(--ph-gold)', textShadow: '0 2px 10px rgba(212,175,55,0.3)', letterSpacing: '2px' }}>🎵 {language === 'es' ? 'ÁLBUM' : 'TRACKLIST'}</h2>
+                                        <div style={{ width: 40, fontSize: '0.85rem', color: 'var(--ph-gold)', textAlign: 'right', fontWeight: 'bold' }}>
                                             {SONGS.filter(s => s.available).length}/{SONGS.length}
                                         </div>
                                     </div>
@@ -1114,41 +1120,39 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '0.75rem',
-                                                        padding: '0.8rem 1rem',
-                                                        borderRadius: '12px',
-                                                        border: isSelected ? '1px solid var(--ph-gold)' : '1px solid rgba(255,255,255,0.05)',
+                                                        gap: '1rem',
+                                                        padding: '0.85rem 1rem',
+                                                        borderRadius: '14px',
+                                                        border: isSelected ? '1px solid rgba(212,175,55,0.8)' : '1px solid rgba(255,255,255,0.03)',
                                                         background: isSelected
-                                                            ? 'linear-gradient(90deg, rgba(212,175,55,0.25) 0%, rgba(212,175,55,0.05) 100%)'
+                                                            ? 'linear-gradient(90deg, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0.4) 100%)'
                                                             : song.available
-                                                                ? 'rgba(0,0,0,0.4)'
-                                                                : 'rgba(0,0,0,0.2)',
-                                                        backdropFilter: 'blur(8px)',
+                                                                ? 'rgba(255,255,255,0.03)'
+                                                                : 'rgba(0,0,0,0.3)',
+                                                        boxShadow: isSelected ? '0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(212,175,55,0.1)' : '0 4px 10px rgba(0,0,0,0.4)',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
                                                         opacity: song.available ? 1 : 0.4,
                                                         textAlign: 'left',
                                                         color: '#fff',
                                                         width: '100%',
                                                         transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                                        transform: 'scale(1)',
-                                                        boxShadow: isSelected ? '0 0 15px rgba(212,175,55,0.3)' : 'none',
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isSelected && song.available) {
-                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                                                            e.currentTarget.style.transform = 'scale(1.02)';
-                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.2)';
+                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!isSelected && song.available) {
-                                                            e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
-                                                            e.currentTarget.style.transform = 'scale(1)';
-                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.05)';
+                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.03)';
                                                         }
                                                     }}
-                                                    onMouseDown={(e) => { if (song.available) e.currentTarget.style.transform = 'scale(0.98)' }}
-                                                    onMouseUp={(e) => { if (song.available && !isSelected) e.currentTarget.style.transform = 'scale(1.02)' }}
+                                                    onMouseDown={(e) => { if (song.available) e.currentTarget.style.transform = 'translateY(2px)' }}
+                                                    onMouseUp={(e) => { if (song.available && !isSelected) e.currentTarget.style.transform = 'translateY(-2px)' }}
                                                 >
                                                     {/* Track number or Spinning Record */}
                                                     <div style={{ width: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -1162,19 +1166,30 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     </div>
 
                                                     {/* Info */}
-                                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                                    <div style={{ flex: 1, overflow: 'hidden', paddingRight: '0.5rem' }}>
                                                         <div style={{
-                                                            fontWeight: 'bold',
-                                                            fontSize: isSelected ? '1.05rem' : '0.95rem',
+                                                            fontWeight: '800',
+                                                            fontSize: isSelected ? '1.1rem' : '0.95rem',
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
-                                                            color: isSelected ? '#fff' : '#ddd',
-                                                            transition: 'font-size 0.2s ease'
+                                                            color: isSelected ? 'var(--ph-gold)' : '#fff',
+                                                            letterSpacing: '1px',
+                                                            transition: 'all 0.2s ease',
+                                                            textShadow: isSelected ? '0 0 8px rgba(212,175,55,0.4)' : 'none'
                                                         }}>
                                                             {song.title}
                                                         </div>
-                                                        <div style={{ fontSize: '0.75rem', color: isSelected ? 'var(--ph-gold)' : '#aaa', marginTop: '2px', fontWeight: isSelected ? 'bold' : 'normal' }}>
+                                                        <div style={{
+                                                            fontSize: '0.75rem',
+                                                            color: isSelected ? '#fff' : '#888',
+                                                            marginTop: '4px',
+                                                            whiteSpace: 'nowrap',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            fontWeight: 'bold',
+                                                            opacity: 0.8
+                                                        }}>
                                                             {song.artist}
                                                         </div>
                                                     </div>
