@@ -1092,17 +1092,26 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
                                     background: '#0a0a0a',
-                                    backgroundImage: 'radial-gradient(circle at top, #1a1a1a, #050505)',
-                                    border: '1px solid var(--ph-gold)',
-                                    boxShadow: '0 0 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(212,175,55,0.05)',
-                                    color: '#fff'
+                                    backgroundImage: 'radial-gradient(circle at top, #1f1a0a, #050505)',
+                                    border: '2px solid var(--ph-gold)',
+                                    boxShadow: '0 0 40px rgba(0,0,0,0.9), 0 0 15px rgba(212,175,55,0.2), inset 0 0 30px rgba(212,175,55,0.1)',
+                                    color: '#fff',
+                                    borderRadius: '24px 24px 0 0'
                                 }}>
-                                    <div className="modal-header" style={{ borderBottomColor: 'rgba(212,175,55,0.2)' }}>
-                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{ borderColor: 'var(--ph-gold)', color: 'var(--ph-gold)' }}>
+                                    <div className="modal-header" style={{ borderBottom: '1px solid rgba(212,175,55,0.3)', paddingBottom: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
+                                            borderColor: 'var(--ph-gold)',
+                                            color: 'var(--ph-gold)',
+                                            background: 'rgba(212,175,55,0.1)',
+                                            boxShadow: '0 0 10px rgba(212,175,55,0.2)'
+                                        }}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <h2 className="modal-title" style={{ color: 'var(--ph-gold)', textShadow: '0 2px 10px rgba(212,175,55,0.3)', letterSpacing: '2px' }}>🎵 {language === 'es' ? 'ÁLBUM' : 'TRACKLIST'}</h2>
-                                        <div style={{ width: 40, fontSize: '0.85rem', color: 'var(--ph-gold)', textAlign: 'right', fontWeight: 'bold' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                            <h2 className="modal-title" style={{ color: '#ffd700', textShadow: '0 2px 15px rgba(255,215,0,0.4)', letterSpacing: '3px', fontSize: '1.6rem', textAlign: 'center' }}>🎵 {language === 'es' ? 'LA COLECCIÓN' : 'THE COLLECTION'}</h2>
+                                            <div style={{ fontSize: '0.75rem', color: '#aaa', letterSpacing: '2px', marginTop: '4px', textTransform: 'uppercase' }}>{language === 'es' ? 'Discos de Oro' : 'Gold Records'}</div>
+                                        </div>
+                                        <div style={{ width: 40, fontSize: '0.9rem', color: '#ffd700', textAlign: 'right', fontWeight: '900', textShadow: '0 0 5px rgba(255,215,0,0.5)' }}>
                                             {SONGS.filter(s => s.available).length}/{SONGS.length}
                                         </div>
                                     </div>
@@ -1120,40 +1129,45 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '1rem',
-                                                        padding: '0.85rem 1rem',
-                                                        borderRadius: '14px',
-                                                        border: isSelected ? '1px solid rgba(212,175,55,0.8)' : '1px solid rgba(255,255,255,0.03)',
+                                                        gap: '1.2rem',
+                                                        padding: '1rem',
+                                                        borderRadius: '16px',
+                                                        border: isSelected ? '2px solid #ffd700' : '1px solid rgba(212,175,55,0.15)',
                                                         background: isSelected
-                                                            ? 'linear-gradient(90deg, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0.4) 100%)'
+                                                            ? 'linear-gradient(135deg, #ffd700 0%, #e0b800 100%)'
                                                             : song.available
-                                                                ? 'rgba(255,255,255,0.03)'
-                                                                : 'rgba(0,0,0,0.3)',
-                                                        boxShadow: isSelected ? '0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(212,175,55,0.1)' : '0 4px 10px rgba(0,0,0,0.4)',
+                                                                ? 'linear-gradient(90deg, rgba(30,26,16,0.8) 0%, rgba(10,10,10,0.9) 100%)'
+                                                                : 'rgba(0,0,0,0.5)',
+                                                        boxShadow: isSelected ? '0 8px 20px rgba(0,0,0,0.6), 0 0 20px rgba(255,215,0,0.3), inset 0 2px 5px rgba(255,255,255,0.3)' : '0 4px 10px rgba(0,0,0,0.4)',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
                                                         opacity: song.available ? 1 : 0.4,
                                                         textAlign: 'left',
-                                                        color: '#fff',
+                                                        color: isSelected ? '#000' : '#fff',
                                                         width: '100%',
-                                                        transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                        transition: 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                        position: 'relative',
+                                                        overflow: 'hidden'
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isSelected && song.available) {
-                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.1)';
+                                                            e.currentTarget.style.background = 'linear-gradient(90deg, rgba(45,39,24,0.9) 0%, rgba(20,20,20,0.95) 100%)';
+                                                            e.currentTarget.style.transform = 'translateY(-3px)';
+                                                            e.currentTarget.style.border = '1px solid rgba(212,175,55,0.4)';
+                                                            e.currentTarget.style.boxShadow = '0 6px 15px rgba(0,0,0,0.6), 0 0 10px rgba(212,175,55,0.1)';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!isSelected && song.available) {
-                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                                                            e.currentTarget.style.background = 'linear-gradient(90deg, rgba(30,26,16,0.8) 0%, rgba(10,10,10,0.9) 100%)';
                                                             e.currentTarget.style.transform = 'translateY(0)';
-                                                            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.03)';
+                                                            e.currentTarget.style.border = '1px solid rgba(212,175,55,0.15)';
+                                                            e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.4)';
                                                         }
                                                     }}
                                                     onMouseDown={(e) => { if (song.available) e.currentTarget.style.transform = 'translateY(2px)' }}
-                                                    onMouseUp={(e) => { if (song.available && !isSelected) e.currentTarget.style.transform = 'translateY(-2px)' }}
+                                                    onMouseUp={(e) => { if (song.available && !isSelected) e.currentTarget.style.transform = 'translateY(-3px)' }}
                                                 >
+                                                    {isSelected && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '50%', background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)', pointerEvents: 'none' }} />}
                                                     {/* Track number or Spinning Record */}
                                                     <div style={{ width: '30px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         {isSelected ? (
@@ -1166,45 +1180,58 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     </div>
 
                                                     {/* Info */}
-                                                    <div style={{ flex: 1, overflow: 'hidden', paddingRight: '0.5rem' }}>
+                                                    <div style={{ flex: 1, overflow: 'hidden', paddingRight: '0.5rem', zIndex: 1 }}>
                                                         <div style={{
-                                                            fontWeight: '800',
-                                                            fontSize: isSelected ? '1.1rem' : '0.95rem',
+                                                            fontWeight: '900',
+                                                            fontSize: isSelected ? '1.15rem' : '1rem',
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
-                                                            color: isSelected ? 'var(--ph-gold)' : '#fff',
+                                                            color: isSelected ? '#000' : '#ffd700',
                                                             letterSpacing: '1px',
-                                                            transition: 'all 0.2s ease',
-                                                            textShadow: isSelected ? '0 0 8px rgba(212,175,55,0.4)' : 'none'
+                                                            transition: 'all 0.25s ease',
+                                                            textShadow: isSelected ? 'none' : '0 2px 4px rgba(0,0,0,0.8)'
                                                         }}>
                                                             {song.title}
                                                         </div>
                                                         <div style={{
                                                             fontSize: '0.75rem',
-                                                            color: isSelected ? '#fff' : '#888',
-                                                            marginTop: '4px',
+                                                            color: isSelected ? '#333' : '#aaa',
+                                                            marginTop: '6px',
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             fontWeight: 'bold',
-                                                            opacity: 0.8
+                                                            opacity: 0.9,
+                                                            letterSpacing: '0.5px'
                                                         }}>
                                                             {song.artist}
                                                         </div>
                                                     </div>
 
-                                                    {/* Meta */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', fontSize: '0.75rem', color: isSelected ? '#ddd' : '#888', flexShrink: 0 }}>
-                                                        {song.available && (
-                                                            <>
-                                                                <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold' }}>{song.bpm} BPM</span>
-                                                                <span style={{ fontFamily: 'var(--font-mono)' }}>{mins}:{String(secs).padStart(2, '0')}</span>
-                                                            </>
-                                                        )}
-                                                        {!song.available && (
-                                                            <span style={{ color: '#666', fontStyle: 'italic' }}>Private</span>
-                                                        )}
+                                                    {/* Right side stats */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', minWidth: '60px', zIndex: 1 }}>
+                                                        <div style={{
+                                                            fontSize: '0.65rem',
+                                                            fontWeight: '900',
+                                                            background: isSelected ? 'rgba(0,0,0,0.8)' : 'rgba(212,175,55,0.15)',
+                                                            color: isSelected ? '#ffd700' : 'var(--ph-gold)',
+                                                            padding: '3px 8px',
+                                                            borderRadius: '6px',
+                                                            border: isSelected ? '1px solid rgba(255,215,0,0.3)' : '1px solid rgba(212,175,55,0.3)',
+                                                            whiteSpace: 'nowrap',
+                                                            letterSpacing: '0.5px'
+                                                        }}>
+                                                            {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
+                                                        </div>
+                                                        <div style={{
+                                                            fontSize: '0.8rem',
+                                                            fontFamily: 'var(--font-mono)',
+                                                            color: isSelected ? '#111' : '#888',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            {mins}:{secs.toString().padStart(2, '0')}
+                                                        </div>
                                                     </div>
                                                 </button>
                                             );
