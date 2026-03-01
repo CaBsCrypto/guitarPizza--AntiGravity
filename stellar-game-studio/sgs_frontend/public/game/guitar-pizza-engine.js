@@ -234,15 +234,27 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
     };
 
-    const onTouchStart = (e) => {
-        if (gameState !== STATE.GAME) return;
-        e.preventDefault();
+    const getTouchLane = (clientX) => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
+        const x = (clientX - rect.left) * scaleX;
+
+        // Match the centering logic from render()
+        const totalGameWidth = 4 * LANE_W;
+        const offsetX = (W - totalGameWidth) / 2;
+
+        // Offset the touch X by the blank margin on the left
+        const lane = Math.floor((x - offsetX) / LANE_W);
+        return lane;
+    };
+
+    const onTouchStart = (e) => {
+        if (gameState !== STATE.GAME) return;
+        // On mobile, preventing default here might block interactions, but we need it to stop scrolling
+        e.preventDefault();
+
         for (let i = 0; i < e.changedTouches.length; i++) {
-            const t = e.changedTouches[i];
-            const x = (t.clientX - rect.left) * scaleX;
-            const lane = Math.floor(x / LANE_W);
+            const lane = getTouchLane(e.changedTouches[i].clientX);
             if (lane >= 0 && lane < 4) {
                 Input.held[lane] = true;
                 triggerInput(lane);
@@ -253,12 +265,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     const onTouchEnd = (e) => {
         if (gameState !== STATE.GAME) return;
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
+
         for (let i = 0; i < e.changedTouches.length; i++) {
-            const t = e.changedTouches[i];
-            const x = (t.clientX - rect.left) * scaleX;
-            const lane = Math.floor(x / LANE_W);
+            const lane = getTouchLane(e.changedTouches[i].clientX);
             if (lane >= 0 && lane < 4) Input.held[lane] = false;
         }
     };
