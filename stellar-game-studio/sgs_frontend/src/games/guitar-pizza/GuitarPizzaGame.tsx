@@ -216,6 +216,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     }, [view]);
 
     const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
+    const selectedSongRef = useRef(selectedSong);
+    useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
+
     const [isVerifying, setIsVerifying] = useState(false);
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
     const [txHash, setTxHash] = useState<string | null>(null);
@@ -491,8 +494,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
             if (window.initGuitarPizza) {
                 try {
-                    // Check if initGuitarPizza returns an object (new version) or function (old version fallback)
-                    const chosenSong = selectedSong.available ? selectedSong : (SONGS.find(s => s.available) ?? selectedSong);
+                    // Read the latest selected song from the ref to avoid stale closures
+                    const latestSelectedSong = selectedSongRef.current;
+                    const chosenSong = latestSelectedSong.available ? latestSelectedSong : (SONGS.find(s => s.available) ?? latestSelectedSong);
                     const baseUrl = `${import.meta.env.BASE_URL}${songPath(chosenSong)}`.replace('//', '/');
                     // Append song params as query params so the engine uses the correct segment
                     const params = new URLSearchParams();
