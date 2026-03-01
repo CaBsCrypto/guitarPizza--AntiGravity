@@ -713,11 +713,19 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
         return () => {
             clearTimeout(timer);
-            addLog("[GuitarPizza] Cleanup called.");
+            addLog(`[GuitarPizza] Cleanup called for song: ${selectedSong.id}`);
             if (engineRef.current) {
                 engineRef.current.cleanup();
                 engineRef.current = null;
             }
+        };
+        // Re-run the entire initialization when the selected song changes!
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSong.id]);
+
+    // Run-once cleanup for global CSS and lingering timers on unmount
+    useEffect(() => {
+        return () => {
             // Clear TX popup timers if component unmounts mid-countdown
             if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
             if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
