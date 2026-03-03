@@ -35,7 +35,4 @@ nul
 build_error.txt
 *.tsbuildinfo
 
-# Audio assets (large binaries — not tracked in git)
-stellar-game-studio/sgs_frontend/public/game/assets/audio/*.mp3
-stellar-game-studio/sgs_frontend/public/game/assets/audio/*.webm
-stellar-game-studio/sgs_frontend/public/game/assets/audio/*.ogg
+

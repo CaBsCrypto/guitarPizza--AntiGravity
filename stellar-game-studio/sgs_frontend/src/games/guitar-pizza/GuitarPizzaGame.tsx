@@ -792,12 +792,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             pointerEvents: 'none' // Let clicks pass through if needed, though usually blocking is fine
                         }}>
                             <div style={{
-                                background: 'rgba(0, 0, 0, 0.85)',
+                                background: '#FFF8E7',
                                 backdropFilter: 'blur(10px)',
                                 padding: '1.5rem',
                                 borderRadius: '16px',
-                                border: '2px solid var(--color-accent)',
-                                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                                border: '3px dashed #8B0000',
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(139,0,0,0.2)',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
@@ -806,7 +806,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 {status && (
                                     <h2 style={{
                                         fontFamily: 'var(--font-display)',
-                                        color: 'var(--color-accent)',
+                                        color: '#8B0000',
                                         fontSize: '1.4rem',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.1em',
@@ -817,7 +817,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 )}
                                 {error && (
                                     <p style={{
-                                        color: 'var(--color-error)',
+                                        color: '#E74C3C',
                                         fontSize: '0.9rem',
                                         margin: 0,
                                         fontWeight: 'bold'
@@ -842,10 +842,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                 </div>
 
                                 <div style={{ flex: 1, overflowY: 'auto' }}>
-                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                            <Globe size={20} color="#666" />
-                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{t.language}</span>
+                                            <Globe size={20} color="#8B0000" />
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.language}</span>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button
@@ -853,8 +853,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                 style={{
                                                     padding: '0.5rem 1rem',
                                                     borderRadius: '8px',
-                                                    border: '1px solid #ddd',
-                                                    background: language === 'es' ? 'var(--color-accent)' : '#fff',
+                                                    border: '1px solid #D0B488',
+                                                    background: language === 'es' ? 'var(--color-accent)' : '#F9F5EB',
                                                     color: language === 'es' ? '#fff' : '#333',
                                                     fontWeight: 'bold',
                                                     cursor: 'pointer'
@@ -865,8 +865,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                 style={{
                                                     padding: '0.5rem 1rem',
                                                     borderRadius: '8px',
-                                                    border: '1px solid #ddd',
-                                                    background: language === 'en' ? 'var(--color-accent)' : '#fff',
+                                                    border: '1px solid #D0B488',
+                                                    background: language === 'en' ? 'var(--color-accent)' : '#F9F5EB',
                                                     color: language === 'en' ? '#fff' : '#333',
                                                     fontWeight: 'bold',
                                                     cursor: 'pointer'
@@ -876,59 +876,59 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     </div>
 
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>{t.chefName}</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.chefName}</label>
                                         <input
                                             type="text"
                                             value={chefName}
                                             onChange={(e) => setChefName(e.target.value)}
-                                            style={{ width: '100%', padding: '0.8rem', background: '#f5f5f5', border: '1px solid #ddd', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
+                                            style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
                                         />
                                     </div>
 
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>{t.xHandle}</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.xHandle}</label>
                                         <input
                                             type="text"
                                             value={xHandle}
                                             onChange={(e) => setXHandle(e.target.value)}
-                                            style={{ width: '100%', padding: '0.8rem', background: '#f5f5f5', border: '1px solid #ddd', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
+                                            style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
                                         />
                                     </div>
 
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#aaa', fontSize: '0.9rem' }}>{t.wallet}</label>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.wallet}</label>
                                         <div style={{ padding: '0.8rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: '0.9rem', wordBreak: 'break-all', color: '#27ae60' }}>
                                             {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : "Not Connected"}
                                         </div>
                                     </div>
 
-                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{t.volume}</span>
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.volume}</span>
                                         <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 50, height: 50, padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}>
-                                            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                                            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} color="#FFF" />}
                                         </button>
                                     </div>
 
                                     {/* ── MY TXs HISTORY ───────────────────────────────── */}
                                     <div style={{ marginBottom: '1rem', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-                                            <span style={{ fontSize: '1rem', fontWeight: 'bold' }}>⛓ {t.myTxs}</span>
+                                            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8B0000' }}>⛓ {t.myTxs}</span>
                                             <span style={{ fontSize: '0.75rem', color: '#999' }}>({txHistory.length})</span>
                                         </div>
 
                                         {txHistory.length === 0 ? (
-                                            <div style={{ textAlign: 'center', color: '#bbb', fontSize: '0.85rem', padding: '1rem', background: '#f9f9f9', borderRadius: '8px', border: '1px dashed #ddd' }}>
+                                            <div style={{ textAlign: 'center', color: '#8B0000', fontSize: '0.85rem', padding: '1rem', background: '#F9F5EB', borderRadius: '8px', border: '1px dashed #D0B488' }}>
                                                 {t.noTxs}
                                             </div>
                                         ) : (
-                                            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #e5e5e5' }}>
+                                            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #E0D4B8' }}>
                                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                                                     <thead>
-                                                        <tr style={{ background: '#f0f0f0', color: '#555', textAlign: 'left' }}>
-                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: '600' }}>Type</th>
-                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: '600', textAlign: 'right' }}>Score</th>
-                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: '600' }}>Date</th>
-                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: '600' }}>TX</th>
+                                                        <tr style={{ background: '#E0D4B8', color: '#8B0000', textAlign: 'left' }}>
+                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>Type</th>
+                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold', textAlign: 'right' }}>Score</th>
+                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold' }}>Date</th>
+                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>TX</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -937,11 +937,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                             const d = new Date(tx.timestamp);
                                                             const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
                                                             return (
-                                                                <tr key={i} style={{ borderTop: '1px solid #eee', background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                                                <tr key={i} style={{ borderTop: '1px solid #E0D4B8', background: i % 2 === 0 ? '#FFF8E7' : '#F9F5EB' }}>
                                                                     <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
                                                                         {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}
                                                                     </td>
-                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#555', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#8B0000', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                                                                         {tx.score.toLocaleString()}
                                                                     </td>
                                                                     <td style={{ padding: '0.4rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
@@ -969,7 +969,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                                 </div>
 
-                                <button className="close-btn" onClick={() => setShowSettings(false)} style={{ width: '100%' }}>{t.backToCooking}</button>
+                                <button className="primary-btn" onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: '1rem', padding: '1rem', fontSize: '1rem' }}>{t.backToCooking}</button>
                             </div>
                         </div>
                     )}
@@ -1012,49 +1012,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             zIndex: 1
                         }}>
 
-                            <div className="logo-container">
+                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.2rem' }}>
                                 <h1 className="main-logo">RHYTHM<br />SLICE</h1>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                                    <p className="subtitle">PIZZA KITCHEN</p>
-                                    {/* Mafia noir vinyl SVG — asymmetric gold highlight makes spin obvious */}
-                                    <button
-                                        onClick={() => setView('songpicker')}
-                                        title={selectedSong.title}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            padding: 0,
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            animation: 'vinyl-spin 3s linear infinite',
-                                            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.8))',
-                                        }}
-                                    >
-                                        <svg width="50" height="50" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                            {/* Outer disc — near black */}
-                                            <circle cx="50" cy="50" r="49" fill="#0d0d0d" stroke="#d4af37" strokeWidth="1.5" strokeOpacity="0.5" />
-                                            {/* Groove rings — concentric thin circles */}
-                                            {[38, 33, 28, 23].map(r => (
-                                                <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#1e1e1e" strokeWidth="1.2" />
-                                            ))}
-                                            {/* Dark red label ring — Italian vintage style */}
-                                            <circle cx="50" cy="50" r="21" fill="#5a0f0f" />
-                                            <circle cx="50" cy="50" r="20" fill="#7a1515" />
-                                            {/* Label ring decorative border */}
-                                            <circle cx="50" cy="50" r="20" fill="none" stroke="#a02020" strokeWidth="1" />
-                                            {/* Center spindle hole */}
-                                            <circle cx="50" cy="50" r="4.5" fill="#d4af37" />
-                                            {/* Asymmetric specular highlight — top-right arc, makes spin VERY visible */}
-                                            <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(255,230,100,0.55)" strokeWidth="4" fill="none" strokeLinecap="round" />
-                                            {/* Softer secondary highlight */}
-                                            <path d="M 65 22 A 33 33 0 0 1 78 42" stroke="rgba(255,255,255,0.18)" strokeWidth="2" fill="none" strokeLinecap="round" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                <p className="subtitle" style={{ marginBottom: '0' }}>PIZZA KITCHEN</p>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem', width: '80%', maxWidth: '300px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.5rem', width: '80%', maxWidth: '300px' }}>
                                 <button id="startBtn"
                                     onClick={handleStartGame}
                                     disabled={!engineRef.current}
@@ -1063,7 +1026,69 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
-                                <div className="grid grid-cols-2 gap-2 mt-2 w-full">
+                                {/* Subtle Music Selector Between Buttons */}
+                                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '0.1rem', marginBottom: '0.1rem' }}>
+                                    <button
+                                        onClick={() => setView('songpicker')}
+                                        title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.5rem',
+                                            background: 'rgba(20, 5, 5, 0.4)',
+                                            border: '1px solid rgba(139, 0, 0, 0.5)',
+                                            borderRadius: '20px',
+                                            padding: '0.2rem 0.8rem 0.2rem 0.2rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: 0.9,
+                                            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                                            width: '100%'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1.02)';
+                                            e.currentTarget.style.opacity = '1';
+                                            e.currentTarget.style.borderColor = 'rgba(139, 0, 0, 0.8)';
+                                            e.currentTarget.style.background = 'rgba(20, 5, 5, 0.6)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                            e.currentTarget.style.opacity = '0.9';
+                                            e.currentTarget.style.borderColor = 'rgba(139, 0, 0, 0.5)';
+                                            e.currentTarget.style.background = 'rgba(20, 5, 5, 0.4)';
+                                        }}
+                                    >
+                                        <div style={{
+                                            animation: 'vinyl-spin 3s linear infinite',
+                                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))',
+                                            display: 'flex',
+                                            flexShrink: 0
+                                        }}>
+                                            <svg width="20" height="20" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="50" cy="50" r="49" fill="#0d0d0d" stroke="#d4af37" strokeWidth="1.5" strokeOpacity="0.5" />
+                                                {[38, 33, 28, 23].map(r => (
+                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#1e1e1e" strokeWidth="1.2" />
+                                                ))}
+                                                <circle cx="50" cy="50" r="21" fill="#5a0f0f" />
+                                                <circle cx="50" cy="50" r="20" fill="#7a1515" />
+                                                <circle cx="50" cy="50" r="20" fill="none" stroke="#a02020" strokeWidth="1" />
+                                                <circle cx="50" cy="50" r="4.5" fill="#d4af37" />
+                                                <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(255,230,100,0.55)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                                            </svg>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#D0B488', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>
+                                                {selectedSong.title}
+                                            </span>
+                                            <span style={{ fontSize: '0.50rem', color: '#FFF8E7', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.7 }}>
+                                                {language === 'es' ? 'Cambiar Pista' : 'Change Track'}
+                                            </span>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
                                         style={{ position: 'relative', overflow: 'hidden' }}
@@ -1093,48 +1118,40 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                         {/* MODALS OVERLAY */}
 
-                        {/* ── SONG PICKER (PIZZA BOX EDITION) ─────────────────────────────── */}
+                        {/* ── SONG PICKER (MAFIA EDITION) ─────────────────────────────── */}
                         {(view === 'songpicker' || closingView === 'songpicker') && (
                             <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
-                                    background: '#e6c280', // Cardboard color
-                                    border: '4px solid #b38b59', // Darker cardboard edge
-                                    boxShadow: '0 20px 50px rgba(0,0,0,0.8), inset 0 0 60px rgba(139, 90, 43, 0.4)',
-                                    color: '#3e2723',
-                                    borderRadius: '8px', // Boxy corners
-                                    paddingTop: '2rem',
-                                    position: 'relative',
-                                    overflow: 'hidden'
+                                    background: '#FFF8E7',
+                                    border: '6px solid #8B0000',
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
+                                    color: '#333',
+                                    borderRadius: '16px',
+                                    paddingTop: '1.5rem',
+                                    paddingBottom: '2rem'
                                 }}>
-                                    {/* Decorative Pizza Box Flap */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: 0, left: 0, width: '100%', height: '14px',
-                                        background: 'repeating-linear-gradient(45deg, #c1272d, #c1272d 15px, #ffffff 15px, #ffffff 30px)',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                    }} />
-
-                                    <div className="modal-header" style={{ borderBottom: '3px dashed #b38b59', paddingBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+                                    <div className="modal-header" style={{
+                                        borderBottom: '3px dashed #8B0000',
+                                        paddingBottom: '1.2rem',
+                                        marginBottom: '0.5rem'
+                                    }}>
                                         <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
-                                            borderColor: '#c1272d',
-                                            color: '#fff',
-                                            background: '#c1272d',
-                                            boxShadow: '3px 3px 0 rgba(0,0,0,0.2)',
-                                            borderRadius: '8px', // Square button for boxy feel
-                                            flexShrink: 0
+                                            background: '#8B0000',
+                                            color: 'white',
+                                            border: '2px solid #5C0000'
                                         }}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 10px', transform: 'rotate(-2deg)' }}>
-                                            <h2 className="modal-title" style={{ color: '#c1272d', textShadow: '2px 2px 0px #fff', letterSpacing: '1px', fontSize: '1.5rem', textAlign: 'center', fontFamily: 'var(--font-display)', margin: 0, whiteSpace: 'nowrap' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
-                                            <div style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 'bold', marginTop: '4px', textTransform: 'uppercase', background: '#fff', padding: '2px 6px', border: '2px solid #166534', transform: 'rotate(2deg)', whiteSpace: 'nowrap' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 10px' }}>
+                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
+                                            <div style={{ fontSize: '0.85rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.15em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
                                         </div>
-                                        <div style={{ width: 40, fontSize: '1.2rem', color: '#c1272d', textAlign: 'right', fontWeight: '900', textShadow: '1px 1px 0 #fff', flexShrink: 0 }}>
+                                        <div style={{ width: 40, fontSize: '1.2rem', color: '#8B0000', textAlign: 'right', fontWeight: '900' }}>
                                             {SONGS.filter(s => s.available).length}/{SONGS.length}
                                         </div>
                                     </div>
 
-                                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.25rem' }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingRight: '0.5rem', marginTop: '1rem' }}>
                                         {SONGS.map((song) => {
                                             const isSelected = selectedSong.id === song.id;
                                             const mins = Math.floor(song.duration / 60);
@@ -1143,103 +1160,97 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                 <button
                                                     key={song.id}
                                                     disabled={!song.available}
-                                                    onClick={() => { setSelectedSong(song); closeModalWithAnimation('lobby'); }}
+                                                    onClick={() => setSelectedSong(song)}
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '1rem',
-                                                        padding: '0.75rem 1rem',
-                                                        borderRadius: '6px',
-                                                        border: isSelected ? '3px solid #c1272d' : '2px solid rgba(139, 90, 43, 0.4)',
-                                                        background: isSelected
-                                                            ? '#fff9e6' // Bright pizza dough color
-                                                            : song.available
-                                                                ? 'rgba(255,255,255,0.4)' // Plain cardboard tint
-                                                                : 'rgba(0,0,0,0.1)', // Disabled state
-                                                        boxShadow: isSelected ? '4px 4px 0 rgba(193, 39, 45, 0.3)' : '3px 3px 0 rgba(139, 90, 43, 0.2)',
+                                                        gap: '0.8rem',
+                                                        padding: '0.8rem 1rem',
+                                                        borderRadius: '8px',
+                                                        border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
+                                                        background: isSelected ? 'rgba(39, 174, 96, 0.1)' : '#fff',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
                                                         opacity: song.available ? 1 : 0.6,
                                                         textAlign: 'left',
-                                                        color: '#3e2723',
+                                                        color: '#333',
                                                         width: '100%',
-                                                        transition: 'all 0.15s ease',
-                                                        position: 'relative'
+                                                        transition: 'all 0.2s ease',
+                                                        boxShadow: isSelected ? '0 4px 12px rgba(39, 174, 96, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)'
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isSelected && song.available) {
-                                                            e.currentTarget.style.background = '#fff';
-                                                            e.currentTarget.style.transform = 'translateY(-2px) translateX(-2px)';
-                                                            e.currentTarget.style.boxShadow = '5px 5px 0 rgba(139, 90, 43, 0.3)';
+                                                            e.currentTarget.style.background = '#F9F5EB';
+                                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                                            e.currentTarget.style.borderColor = '#D0B488';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!isSelected && song.available) {
-                                                            e.currentTarget.style.background = 'rgba(255,255,255,0.4)';
-                                                            e.currentTarget.style.transform = 'translateY(0) translateX(0)';
-                                                            e.currentTarget.style.boxShadow = '3px 3px 0 rgba(139, 90, 43, 0.2)';
+                                                            e.currentTarget.style.background = '#fff';
+                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                            e.currentTarget.style.borderColor = '#E0D4B8';
                                                         }
                                                     }}
-                                                    onMouseDown={(e) => { if (song.available) { e.currentTarget.style.transform = 'translateY(2px) translateX(2px)'; e.currentTarget.style.boxShadow = 'none'; } }}
-                                                    onMouseUp={(e) => { if (song.available && !isSelected) { e.currentTarget.style.transform = 'translateY(-2px) translateX(-2px)'; e.currentTarget.style.boxShadow = '5px 5px 0 rgba(139, 90, 43, 0.3)'; } }}
                                                 >
                                                     {/* Track number or Pizza Slice */}
-                                                    <div style={{ width: '35px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                    <div style={{ width: '40px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         {isSelected ? (
-                                                            <div style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.2))', transform: 'rotate(15deg)' }}>🍕</div>
+                                                            <div style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
                                                         ) : (
-                                                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#b38b59', fontWeight: '900' }}>
+                                                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: song.available ? '#8B0000' : '#aaa', fontWeight: 'bold' }}>
                                                                 {song.available ? `#${song.index}` : '🔒'}
                                                             </span>
                                                         )}
                                                     </div>
 
                                                     {/* Info */}
-                                                    <div style={{ flex: 1, overflow: 'hidden', paddingRight: '0.5rem', zIndex: 1 }}>
+                                                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', paddingRight: '0.4rem' }}>
                                                         <div style={{
                                                             fontWeight: '900',
-                                                            fontSize: isSelected ? '1.2rem' : '1.05rem',
+                                                            fontSize: isSelected ? '1.1rem' : '1rem',
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
-                                                            color: isSelected ? '#c1272d' : '#5d4037',
+                                                            color: isSelected ? '#27AE60' : '#8B0000',
                                                             textTransform: 'uppercase',
-                                                            letterSpacing: '0.5px',
-                                                            transition: 'all 0.15s ease'
+                                                            letterSpacing: '0.05em',
+                                                            transition: 'all 0.2s ease'
                                                         }}>
                                                             {song.title}
                                                         </div>
                                                         <div style={{
                                                             fontSize: '0.8rem',
-                                                            color: '#8d6e63',
-                                                            marginTop: '2px',
+                                                            color: isSelected ? '#14532D' : '#666',
+                                                            marginTop: '4px',
                                                             whiteSpace: 'nowrap',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
-                                                            fontWeight: '700'
+                                                            fontWeight: '600'
                                                         }}>
                                                             {song.artist}
                                                         </div>
                                                     </div>
 
                                                     {/* Right side stats */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '60px', zIndex: 1 }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
                                                         <div style={{
                                                             fontSize: '0.7rem',
                                                             fontWeight: '900',
-                                                            background: isSelected ? '#166534' : 'transparent',
-                                                            color: isSelected ? '#fff' : '#166534',
+                                                            background: isSelected ? '#27AE60' : '#EAE3D1',
+                                                            color: isSelected ? 'white' : '#666',
                                                             padding: '2px 6px',
-                                                            border: '2px solid #166534',
-                                                            transform: 'rotate(2deg)',
-                                                            boxShadow: isSelected ? '2px 2px 0 rgba(0,0,0,0.2)' : 'none'
+                                                            border: isSelected ? '1px solid #1E8449' : '1px solid #D1C5AD',
+                                                            borderRadius: '6px',
+                                                            letterSpacing: '0.05em',
+                                                            boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.3)' : 'none'
                                                         }}>
                                                             {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
                                                         </div>
                                                         <div style={{
                                                             fontSize: '0.9rem',
-                                                            fontFamily: 'var(--font-display)',
-                                                            color: '#5d4037',
-                                                            fontWeight: '900'
+                                                            fontFamily: 'var(--font-mono)',
+                                                            color: isSelected ? '#1E8449' : '#333',
+                                                            fontWeight: 'bold'
                                                         }}>
                                                             {mins}:{secs.toString().padStart(2, '0')}
                                                         </div>
@@ -1250,11 +1261,52 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     </div>
 
                                     <button
-                                        className="primary-btn"
-                                        style={{ width: '100%', marginTop: '0.5rem' }}
-                                        onClick={() => closeModalWithAnimation('lobby')}
+                                        style={{
+                                            width: '100%',
+                                            marginTop: '1.5rem',
+                                            padding: '1rem',
+                                            fontSize: '1.1rem',
+                                            background: '#8B0000',
+                                            color: 'white',
+                                            border: '2px solid #5C0000',
+                                            borderRadius: '8px',
+                                            fontWeight: 'bold',
+                                            boxShadow: '0 4px 0 #5C0000',
+                                            opacity: engineRef.current ? 1 : 0.5,
+                                            cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.1em',
+                                            transition: 'transform 0.1s, box-shadow 0.1s'
+                                        }}
+                                        disabled={!engineRef.current}
+                                        onMouseDown={(e) => {
+                                            if (engineRef.current) {
+                                                e.currentTarget.style.transform = 'translateY(4px)';
+                                                e.currentTarget.style.boxShadow = '0 0 0 #5C0000';
+                                            }
+                                        }}
+                                        onMouseUp={(e) => {
+                                            if (engineRef.current) {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 4px 0 #5C0000';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (engineRef.current) {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 4px 0 #5C0000';
+                                            }
+                                        }}
+                                        onClick={() => {
+                                            if (engineRef.current) {
+                                                setTimeout(() => {
+                                                    closeModalWithAnimation('lobby');
+                                                    handleStartGame();
+                                                }, 150);
+                                            }
+                                        }}
                                     >
-                                        🔥 {language === 'es' ? 'ENCENDER HORNO' : 'READY — FIRE UP OVEN'}
+                                        {engineRef.current ? `🔥 ${language === 'es' ? 'JUGAR AHORA' : 'PLAY NOW'}` : `🔥 ${t.heatingUp}`}
                                     </button>
                                 </div>
                             </div>
@@ -1299,10 +1351,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                                             return (
                                                 <div key={item.id} className="store-item" style={{
-                                                    background: isOwned ? 'rgba(39, 174, 96, 0.1)' : '#f9f9f9',
+                                                    background: isOwned ? 'rgba(39, 174, 96, 0.1)' : '#F9F5EB',
                                                     padding: '0.8rem',
                                                     borderRadius: '12px',
-                                                    border: isOwned ? '1px solid #27ae60' : '1px solid #ddd',
+                                                    border: isOwned ? '1px solid #27ae60' : '1px solid #D0B488',
                                                     textAlign: 'center',
                                                     display: 'flex',
                                                     flexDirection: 'column',
@@ -1336,7 +1388,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                             );
                                         })}
 
-                                        <div className="store-item" style={{ background: '#eee', padding: '0.8rem', borderRadius: '12px', border: '1px dashed #bbb', textAlign: 'center', opacity: 0.6, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                        <div className="store-item" style={{ background: '#F9F5EB', padding: '0.8rem', borderRadius: '12px', border: '1px dashed #D0B488', textAlign: 'center', opacity: 0.6, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
                                             <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: 'bold' }}>Mystery Pack</div>
                                             <div style={{ color: '#999', fontSize: '0.8rem', marginTop: '0.5rem' }}>???</div>
@@ -1420,17 +1472,17 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                             alignItems: 'center',
                                                             gap: '0.75rem',
                                                             padding: '0.75rem 0.5rem',
-                                                            borderBottom: '1px solid #eee',
+                                                            borderBottom: '1px solid #E0D4B8',
                                                             background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
                                                             borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
                                                         }}>
                                                             <span style={{ fontSize: '1.3rem', minWidth: '2rem', textAlign: 'center' }}>{medal}</span>
                                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontSize: '0.85rem', fontWeight: isMe ? 'bold' : 'normal', fontFamily: 'monospace', color: isMe ? '#27ae60' : '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                <div style={{ fontSize: '0.85rem', fontWeight: isMe ? 'bold' : 'normal', fontFamily: 'monospace', color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                     {shortAddr}{isMe ? ' (you)' : ''}
                                                                 </div>
                                                             </div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#c0932f', whiteSpace: 'nowrap' }}>
+                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#27ae60', whiteSpace: 'nowrap' }}>
                                                                 {entry.score.toLocaleString()} pts
                                                             </div>
                                                         </div>
@@ -1468,7 +1520,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <p style={{ lineHeight: '1.6' }}>
                                             {t.storyBody}
                                         </p>
-                                        <h3 style={{ fontSize: '2rem', color: '#ccafa5', marginTop: '1rem', fontFamily: 'var(--font-title)' }}>{t.don}</h3>
+                                        <h3 style={{ fontSize: '2rem', color: '#8B0000', marginTop: '1rem', fontFamily: 'var(--font-title)' }}>{t.don}</h3>
                                     </div>
                                 </div>
                             </div>
@@ -1487,7 +1539,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
                                     <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
                                         <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
                                             <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '0.5rem' }}>{t.controlsDesc}</p>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
                                                 <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
@@ -1498,7 +1550,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         </section>
 
                                         <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                                                     <div style={{ fontSize: '1.5rem' }}>🎯</div>
@@ -1525,7 +1577,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         </section>
 
                                         <section>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: 'var(--ph-gold)', borderBottom: '1px solid #eee', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
                                             <p style={{ fontSize: '0.9rem', color: '#666' }}>{t.rewardsDesc}</p>
                                         </section>
                                     </div>
@@ -1550,207 +1602,178 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                         alignItems: 'center',
                         justifyContent: 'center',
                     }}>
-                        {/* Popup Card (Elegant Glassmorphism) */}
+                        {/* Popup Card (Receipt Theme V3) */}
                         <div style={{
-                            width: '85%',
-                            maxWidth: '420px',
+                            width: '88%',
+                            maxWidth: '340px',
                             minHeight: '480px',
-                            // Removed the hard black gradient and replaced with elegant bright glass
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            backdropFilter: 'blur(20px)',
-                            borderRadius: '16px',
-                            boxShadow: '0 30px 60px rgba(0,0,0,0.8), inset 0 2px 0 rgba(255,255,255,0.1)',
-                            border: '1px solid rgba(212,175,55, 0.3)', // Subtle gold border
+                            background: 'transparent',
+                            /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
+                            backgroundImage: `
+                                radial-gradient(circle at 10px 0, transparent 9px, #FDFDFD 10px),
+                                linear-gradient(#FDFDFD, #FDFDFD),
+                                radial-gradient(circle at 10px 100%, transparent 9px, #FDFDFD 10px)
+                            `,
+                            backgroundSize: '20px 20px, 100% calc(100% - 38px), 20px 20px',
+                            backgroundPosition: 'top left, center, bottom left',
+                            backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '2.5rem 2rem',
-                            color: 'white',
+                            justifyContent: 'flex-start',
+                            padding: '1.5rem 1.5rem',
+                            color: '#111',
                             position: 'relative',
-                            overflow: 'hidden'
+                            /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
+                            filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.5))'
                         }}>
-                            {/* Decorative Top Accent */}
-                            <div style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '4px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)' }}></div>
+                            {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '15px 0', flex: 1 }}>
 
-                            {/* Aligned Header Section */}
-                            <div style={{ textAlign: 'center', width: '100%', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <h1 id="resTitle" style={{
-                                    fontFamily: 'var(--font-title)',
-                                    fontSize: '1.8rem',
-                                    letterSpacing: '2px',
-                                    color: '#fdf8f0',
-                                    margin: '0',
-                                    lineHeight: '1.1',
-                                    textShadow: '0 4px 10px rgba(0,0,0,0.8)'
-                                }}>
-                                    {t.serviceEnded}
-                                </h1>
-                                <div style={{ width: '120px', height: '2px', background: 'linear-gradient(90deg, transparent, #d4af37, transparent)', marginTop: '0.8rem' }}></div>
-                            </div>
-
-                            {/* Score Content centrally aligned */}
-                            <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                                {/* Huge Glowing Grade */}
-                                <div className="grade" id="resGrade" style={{
-                                    fontSize: '7.5rem',
-                                    fontFamily: 'var(--font-title)',
-                                    fontWeight: 'bold',
-                                    color: 'var(--ph-gold)',
-                                    textShadow: '0 0 30px rgba(212,175,55,0.4), 0 0 10px rgba(255,255,255,0.2)',
-                                    lineHeight: 1,
-                                    marginBottom: '1rem'
-                                }}>S</div>
-
-                                {/* Receipt-style Score Badge */}
-                                <div className="stat-row" style={{
-                                    fontSize: '1.4rem',
-                                    fontFamily: "'Special Elite', monospace",
-                                    color: '#fdf8f0',
-                                    background: 'rgba(0,0,0,0.5)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    padding: '0.6rem 1.5rem',
-                                    borderRadius: '30px',
-                                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)'
-                                }}>
-                                    {t.score}: <span id="resScore" style={{ color: 'var(--ph-gold)', fontWeight: 'bold' }}>0</span>
-                                </div>
-                                <div id="resPizzas" style={{ fontSize: '1.1rem', marginTop: '0.8rem', fontFamily: "'Bangers', cursive", letterSpacing: '1px', color: '#cca243', display: 'none' }}>
-                                    🍕 <span id="resPizzasCount">0</span> {language === 'es' ? ' PIZZAS' : ' PIZZAS BAKED'}
+                                {/* Header Section */}
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '1.2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '2rem', color: '#8B0000', margin: '0 0 0.5rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                        LA FAMIGLIA
+                                    </h2>
+                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.95rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                                        {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
+                                    </div>
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '1rem' }}></div>
                                 </div>
 
-                                {/* On-chain verified score */}
-                                {onChainScore !== null && (
-                                    <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', background: 'rgba(39,174,96,0.15)', border: '1px solid rgba(39,174,96,0.5)', borderRadius: '12px', padding: '0.3rem 1rem', color: '#2ecc71', display: 'inline-block', fontFamily: 'monospace' }}>
-                                        ✅ {t.scoreVerified}: <strong style={{ color: '#fff' }}>{onChainScore.toLocaleString()} pts</strong>
+                                {/* Score Content */}
+                                <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
+
+                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.25rem', marginBottom: '0.8rem', color: '#111' }}>
+                                        <span>{t.score.toUpperCase()}</span>
+                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>0</span>
+                                    </div>
+
+                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.8rem', color: '#444' }}>
+                                        <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
+                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>0</span>
+                                    </div>
+
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '1rem 0' }}></div>
+
+                                    {/* Huge Grade Stamp */}
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '1rem 0 1rem 0' }}>
+                                        <div className="grade" id="resGrade" style={{
+                                            fontSize: '5rem',
+                                            fontFamily: "'Bangers', cursive",
+                                            fontWeight: 'bold',
+                                            color: '#cc0000',
+                                            opacity: 0.85,
+                                            transform: 'rotate(-5deg)',
+                                            border: '5px solid #cc0000',
+                                            borderRadius: '12px',
+                                            padding: '0 1.5rem',
+                                            lineHeight: 1.1,
+                                            boxShadow: 'inset 0 0 0 3px #FDFDFD, inset 0 0 0 5px #cc0000', // Double border effect
+                                        }}>S</div>
+                                    </div>
+
+                                    {/* On-chain verified score */}
+                                    {onChainScore !== null && (
+                                        <div style={{ width: '100%', marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                            <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '4px 0', width: '100%', letterSpacing: '1px' }}>
+                                                *** {language === 'es' ? 'COPIA VERIFICADA' : 'VERIFIED COPY'} ***
+                                            </div>
+                                            <div>
+                                                {t.scoreVerified.toUpperCase()}: <strong>{onChainScore.toLocaleString()} PTS</strong>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Verification Status or Actions */}
+                                {isVerifying ? (
+                                    <div style={{
+                                        width: '100%',
+                                        marginTop: '2rem',
+                                        textAlign: 'center',
+                                        fontFamily: "'Special Elite', monospace"
+                                    }}>
+                                        {proofStatus === 'generating' ? (
+                                            <>
+                                                <p style={{ color: '#333', fontSize: '1.2rem', marginBottom: '0.5rem', animation: 'pulse 1.5s infinite' }}>
+                                                    {language === 'es' ? 'IMPRIMIENDO TICKET...' : 'PRINTING RECEIPT...'}
+                                                </p>
+                                                <div style={{ fontSize: '0.85rem', color: '#888' }}>{t.securing}</div>
+                                            </>
+                                        ) : proofStatus === 'success' ? (
+                                            <div style={{ color: '#111', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px', borderTop: '2px dotted #111', borderBottom: '2px dotted #111', padding: '10px 0' }}>
+                                                {language === 'es' ? 'TRANSACCIÓN APROBADA' : 'TX APPROVED'}
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: '#cc0000', fontWeight: 'bold', borderTop: '2px dashed #cc0000', borderBottom: '2px dashed #cc0000', padding: '10px 0' }}>
+                                                {language === 'es' ? 'PAGO RECHAZADO' : 'PAYMENT DECLINED'}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginTop: 'auto' }}>
+                                        <button
+                                            id="restartBtn"
+                                            className="primary-btn"
+                                            onClick={handleCookAgain}
+                                            style={{ width: '100%', padding: '1.2rem', fontSize: '1.2rem', boxShadow: 'none' }}
+                                        >
+                                            🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
+                                        </button>
+
+                                        {onChainScore !== null && onChainScore >= 4000 ? (
+                                            <button
+                                                id="nextLevelBtn"
+                                                className="primary-btn"
+                                                onClick={handleNextLevel}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '1.2rem',
+                                                    fontSize: '1.2rem',
+                                                    background: '#E67E22',
+                                                    borderColor: '#D35400',
+                                                    boxShadow: 'none',
+                                                    textTransform: 'uppercase'
+                                                }}
+                                            >
+                                                🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
+                                            </button>
+                                        ) : (
+                                            <button
+                                                id="nextLevelBtn"
+                                                style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
+                                                disabled
+                                                title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
+                                            >
+                                                🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
+                                            </button>
+                                        )}
+
+                                        <button
+                                            id="backToLobbyBtn"
+                                            onClick={handleBackToLobby}
+                                            style={{
+                                                width: '100%',
+                                                padding: '1rem',
+                                                fontSize: '1.1rem',
+                                                fontFamily: "'Special Elite', monospace",
+                                                background: 'transparent',
+                                                border: '2px dashed #8B0000',
+                                                borderRadius: '12px',
+                                                color: '#8B0000',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                        >
+                                            {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
+                                        </button>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Verification Status or Actions */}
-                            {isVerifying ? (
-                                <div style={{
-                                    background: 'rgba(0,0,0,0.4)',
-                                    padding: '1.2rem',
-                                    borderRadius: '12px',
-                                    width: '100%',
-                                    marginTop: '1.5rem',
-                                    textAlign: 'center',
-                                    border: '1px solid rgba(212,175,55,0.2)',
-                                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
-                                }}>
-                                    {proofStatus === 'generating' ? (
-                                        <>
-                                            <p style={{ color: 'var(--ph-gold)', fontFamily: 'var(--font-title)', fontSize: '1.2rem', letterSpacing: '1px', marginBottom: '0.3rem' }}>{t.verifying}</p>
-                                            <div style={{ fontSize: '0.85rem', color: '#aaa', fontFamily: "'Special Elite', monospace" }}>{t.securing}</div>
-                                        </>
-                                    ) : proofStatus === 'success' ? (
-                                        <div style={{ color: '#2ecc71', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px' }}>
-                                            ✅ {t.verified} ON-CHAIN
-                                        </div>
-                                    ) : (
-                                        <div style={{ color: '#e74c3c', fontWeight: 'bold' }}>❌ {t.failed}</div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', width: '100%', marginTop: '1.5rem' }}>
-                                    <button
-                                        id="restartBtn"
-                                        onClick={handleCookAgain}
-                                        style={{
-                                            width: '100%',
-                                            padding: '1.2rem',
-                                            fontSize: '1.2rem',
-                                            fontFamily: 'var(--font-title)',
-                                            letterSpacing: '2px',
-                                            background: 'linear-gradient(135deg, #a71d1d, #600202)',
-                                            border: '1px solid #ff4d4d',
-                                            boxShadow: '0 4px 15px rgba(139,0,0,0.6), inset 0 2px 0 rgba(255,100,100,0.4)',
-                                            borderRadius: '12px',
-                                            color: '#fff',
-                                            cursor: 'pointer',
-                                            textTransform: 'uppercase',
-                                            transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.filter = 'brightness(1.2)';
-                                            e.currentTarget.style.transform = 'scale(1.03)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.filter = 'none';
-                                            e.currentTarget.style.transform = 'scale(1)';
-                                        }}
-                                        onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
-                                        onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.03)' }}
-                                    >
-                                        🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
-                                    </button>
-
-                                    {onChainScore !== null && onChainScore >= 4000 ? (
-                                        <button
-                                            id="nextLevelBtn"
-                                            onClick={handleNextLevel}
-                                            style={{
-                                                width: '100%',
-                                                padding: '1.2rem',
-                                                fontSize: '1.2rem',
-                                                fontFamily: 'var(--font-title)',
-                                                letterSpacing: '2px',
-                                                background: 'linear-gradient(135deg, #d4af37, #997a00)',
-                                                border: '1px solid #f9e596',
-                                                boxShadow: '0 4px 15px rgba(212,175,55,0.4), inset 0 2px 0 rgba(255,255,255,0.4)',
-                                                borderRadius: '12px',
-                                                color: '#111',
-                                                cursor: 'pointer',
-                                                textTransform: 'uppercase',
-                                                transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.filter = 'brightness(1.15)';
-                                                e.currentTarget.style.transform = 'scale(1.03)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.filter = 'none';
-                                                e.currentTarget.style.transform = 'scale(1)';
-                                            }}
-                                            onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)' }}
-                                            onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.03)' }}
-                                        >
-                                            🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
-                                        </button>
-                                    ) : (
-                                        <button
-                                            id="nextLevelBtn"
-                                            style={{ width: '100%', padding: '0.9rem', fontSize: '1rem', fontFamily: 'var(--font-title)', opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                                            disabled
-                                            title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
-                                        >
-                                            🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
-                                        </button>
-                                    )}
-
-                                    <button
-                                        id="backToLobbyBtn"
-                                        onClick={handleBackToLobby}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.9rem',
-                                            fontSize: '0.95rem',
-                                            fontFamily: "'Special Elite', monospace",
-                                            background: 'transparent',
-                                            border: '1px solid rgba(255,255,255,0.2)',
-                                            borderRadius: '12px',
-                                            color: '#aaa',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#fff'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa'; }}
-                                    >
-                                        {language === 'es' ? 'SALIR' : 'EXIT KITCHEN'}
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -1767,13 +1790,13 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                             justifyContent: 'center',
                         }}>
                             <div style={{
-                                background: 'linear-gradient(160deg, #1a1a2e 0%, #0f0f1a 100%)',
-                                border: '2px solid #27ae60',
+                                background: '#FFF8E7',
+                                border: '3px solid #27ae60',
                                 borderRadius: '16px',
                                 padding: '1.5rem',
                                 width: '88%',
                                 maxWidth: '360px',
-                                boxShadow: '0 0 40px rgba(39,174,96,0.3)',
+                                boxShadow: '0 10px 40px rgba(39,174,96,0.3)',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '1rem',
@@ -1784,13 +1807,13 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
                                             ⛓ {language === 'es' ? 'SELLADO EN STELLAR' : 'SEALED ON STELLAR'}
                                         </div>
-                                        <div style={{ color: '#aaa', fontSize: '0.75rem', marginTop: '2px' }}>
+                                        <div style={{ color: '#555', fontSize: '0.75rem', marginTop: '2px', fontWeight: 'bold' }}>
                                             {language === 'es' ? 'Puntaje verificado en cadena' : 'Score verified on-chain'}
                                         </div>
                                     </div>
                                     <button
                                         onClick={closeTxPopup}
-                                        style={{ background: 'none', border: '1px solid #555', borderRadius: '50%', width: 28, height: 28, color: '#aaa', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                        style={{ background: '#F9F5EB', border: '1px solid #D0B488', borderRadius: '50%', width: 28, height: 28, color: '#8B0000', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                     >✕</button>
                                 </div>
 

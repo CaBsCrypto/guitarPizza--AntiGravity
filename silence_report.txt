@@ -1,0 +1,60 @@
+File: 01_Sauce (feat. IFE SENOJ & TAJ.).mp3
+  start: 0.0
+  duration: 178.0
+
+File: 01_sauce.mp3
+  start: 0.0
+  duration: 178.0
+
+File: 02_Rare Pizzas.mp3
+  start: 0.0
+  duration: 60.6
+
+File: 03_Pizza Mind.mp3
+  start: 0.0
+  duration: 99.5
+
+File: 04_DAO It.mp3
+  start: 0.0
+  duration: 168.2
+
+File: 05_I Ate Myself and Want To Pie.mp3
+  start: 0.0
+  duration: 30.4
+
+File: 06_Pizza Shortie.mp3
+  start: 0.0
+  duration: 80.8
+
+File: 07_Pizza Pop.mp3
+  start: 0.0
+  duration: 104.6
+
+File: 08_Wow! That's Rare Pizzas.mp3
+  start: 0.0
+  duration: 75.7
+
+File: 09_Pizza Tron.mp3
+  start: 0.0
+  duration: 137.9
+
+File: 10_PizzaDAO (We in the Metaverse).mp3
+  start: 0.0
+  duration: 60.0
+
+File: 11_Ain't No Za (if The Homies Can't Have a Slice).mp3
+  start: 0.0
+  duration: 136.7
+
+File: 12_Slice of Heaven.mp3
+  start: 0.0
+  duration: 160.2
+
+File: 13_Molto Bene.mp3
+  start: 0.0
+  duration: 66.0
+
+File: 14_Rare Pizzas Mixtape Outro.mp3
+  start: 0.0
+  duration: 6.0
+

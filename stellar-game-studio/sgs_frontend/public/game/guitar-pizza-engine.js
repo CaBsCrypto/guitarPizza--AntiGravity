@@ -1257,9 +1257,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             // ... strict text scaling ...
             const s = Math.min(1.5, 1 + (1.0 - f.life));
             ctx.globalAlpha = f.life;
-            ctx.font = "900 " + Math.min(LANE_W * 0.5, 60) + "px 'Impact'";
+            ctx.font = "900 " + Math.min(LANE_W * 0.5, 60) + "px 'Bangers'";
             ctx.textAlign = "center";
-            ctx.lineWidth = 4; ctx.strokeStyle = "white"; ctx.strokeText(f.text, 0, 0);
+            ctx.lineWidth = 4; ctx.strokeStyle = "#8B0000"; ctx.strokeText(f.text, 0, 0);
+            ctx.lineWidth = 2; ctx.strokeStyle = "#FFF8E7"; ctx.strokeText(f.text, 0, 0); // Double stroke for legibility
             ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
             ctx.restore();
         });
@@ -1322,25 +1323,22 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)"; // Stronger drop shadow for elegance
 
-        // --- SCORE (Elegant Glowing Numbers) ---
+        // --- SCORE (Classic Pizzeria Theme) ---
         ctx.font = `bold ${fontSizeScore}px 'Special Elite', monospace`;
-        ctx.fillStyle = "#FDF8F0";
+        ctx.fillStyle = "#8B0000"; // Dark Red
         ctx.textAlign = "left";
+        ctx.shadowBlur = 0; // Remove neon blur
         ctx.fillText(`SCORE`, hudLeftX, hudH * 0.5);
-        ctx.fillStyle = "#D4Af37"; // Glowing Gold
-        ctx.shadowBlur = 15; ctx.shadowColor = "rgba(212,175,55,0.6)";
+        ctx.fillStyle = "#27ae60"; // Classic Green
         ctx.fillText(`${Math.floor(score)}`, hudLeftX, hudH * 0.5 + fontSizeScore + 2);
-        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)"; // reset shadow
 
-        // --- PIZZAS (Right aligned under Time, subtle red badge) ---
-        ctx.fillStyle = THE_OVEN_THEME.colors.background.checker; // Mafia Red
+        // --- PIZZAS BAKED ---
+        ctx.fillStyle = "#8B0000"; // Dark Red
         ctx.font = `bold ${fontSizeScore * 0.7}px 'Bangers', cursive`;
         ctx.textAlign = "right";
-        ctx.letterSpacing = "2px";
-        ctx.shadowBlur = 15; ctx.shadowColor = "rgba(200,0,0,0.5)";
+        ctx.letterSpacing = "1px";
         ctx.fillText(`${pizzasMade} PIZZAS BAKED`, hudRightX, hudH * 0.5 + fontSizeScore * 1.5 + 5);
         ctx.letterSpacing = "0px";
-        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)";
 
         // --- HEALTH / "RESPECT" BAR (Top Center, inside track) ---
         const barW = Math.min(totalGameWidth * 0.4, 300);
@@ -1349,49 +1347,40 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         const barY = hudH * 0.45;
 
         // "RESPECT" label above the bar
-        ctx.font = `bold 12px 'Special Elite', monospace`;
-        ctx.fillStyle = "#D4Af37"; // Elegant Gold
+        ctx.font = `bold 14px 'Special Elite', monospace`;
+        ctx.fillStyle = "#8B0000"; // Dark Red
         ctx.textAlign = "center";
-        ctx.letterSpacing = "4px";
+        ctx.letterSpacing = "2px";
         ctx.fillText("RESPECT", W / 2, barY - 10);
         ctx.letterSpacing = "0px";
 
-        // Metallic/Gold frame
-        ctx.fillStyle = "#0a0a0a";
+        // Cream paper frame with red border
+        ctx.fillStyle = "#FFF8E7";
         ctx.fillRect(barX - 4, barY - 4, barW + 8, barH + 8);
-        ctx.strokeStyle = "#D4Af37"; // Gold border
+        ctx.strokeStyle = "#8B0000"; // Dark Red border
         ctx.lineWidth = 2;
-        ctx.strokeRect(barX - 2, barY - 2, barW + 4, barH + 4);
+        ctx.strokeRect(barX - 4, barY - 4, barW + 8, barH + 8);
 
-        // Health fill (Gradient shifting based on health)
+        // Health fill (Solid colors based on health)
         const hpPercent = Math.max(0, health / 100);
-        const hpGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
 
         if (hpPercent > 0.5) {
-            hpGrad.addColorStop(0, "#27ae60"); // Subtle green
-            hpGrad.addColorStop(1, "#2ecc71");
+            ctx.fillStyle = "#27ae60"; // Classic green
         } else if (hpPercent > 0.25) {
-            hpGrad.addColorStop(0, "#f39c12"); // Warning gold
-            hpGrad.addColorStop(1, "#f1c40f");
+            ctx.fillStyle = "#f39c12"; // Warning gold
         } else {
-            hpGrad.addColorStop(0, "#c0392b"); // Danger red
-            hpGrad.addColorStop(1, "#e74c3c");
+            ctx.fillStyle = "#c0392b"; // Danger red
         }
 
-        ctx.fillStyle = hpGrad;
         if (hpPercent < 0.25 && Math.floor(gameTimer * 8) % 2 === 0) ctx.fillStyle = "#ffffff"; // Fast flash when dying
 
-        // Inner shadow on health fill for depth
-        ctx.shadowBlur = 0; // Disable outer shadow for the inner bar
+        ctx.shadowBlur = 0;
         ctx.fillRect(barX, barY, barW * hpPercent, barH);
 
-        ctx.fillStyle = "rgba(255,255,255,0.15)"; // Top highlight
-        ctx.fillRect(barX, barY, barW * hpPercent, barH * 0.3);
-
         // --- TIME REMAINING (Top Right) ---
-        ctx.shadowBlur = 10; ctx.shadowColor = "rgba(0,0,0,0.9)"; // Re-enable shadow for text
+        ctx.shadowBlur = 0;
         const timeLeft = Math.max(0, Math.ceil(CONFIG.SONG_DURATION - gameTimer));
-        ctx.fillStyle = timeLeft <= 10 ? "#e74c3c" : "#FDF8F0";
+        ctx.fillStyle = timeLeft <= 10 ? "#e74c3c" : "#8B0000";
         ctx.font = `bold ${Math.min(24, W * 0.045)}px 'Special Elite', monospace`;
         ctx.textAlign = "right";
         ctx.fillText(`⏱ ${timeLeft}s`, hudRightX, hudH * 0.5);
