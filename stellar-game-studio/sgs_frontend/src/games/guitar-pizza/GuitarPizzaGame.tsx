@@ -1140,17 +1140,16 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                         <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
                                             background: '#8B0000',
                                             color: 'white',
-                                            border: '2px solid #5C0000'
+                                            border: '2px solid #5C0000',
+                                            flexShrink: 0
                                         }}>
                                             <ArrowLeft size={20} />
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 10px' }}>
-                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
-                                            <div style={{ fontSize: '0.85rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.15em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 5px', minWidth: 0 }}>
+                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.4rem' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
+                                            <div style={{ fontSize: '0.75rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
                                         </div>
-                                        <div style={{ width: 40, fontSize: '1.2rem', color: '#8B0000', textAlign: 'right', fontWeight: '900' }}>
-                                            {SONGS.filter(s => s.available).length}/{SONGS.length}
-                                        </div>
+
                                     </div>
 
                                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingRight: '0.5rem', marginTop: '1rem' }}>
@@ -1165,10 +1164,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     onClick={() => setSelectedSong(song)}
                                                     style={{
                                                         display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.8rem',
-                                                        padding: '0.8rem 1rem',
-                                                        borderRadius: '8px',
+                                                        alignItems: 'flex-start',
+                                                        gap: '0.5rem', // reduced gap to give text more space
+                                                        padding: '0.7rem 0.8rem', // reduced padding from 1rem
+                                                        borderRadius: '10px',
                                                         border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
                                                         background: isSelected ? 'rgba(39, 174, 96, 0.1)' : '#fff',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
@@ -1195,7 +1194,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     }}
                                                 >
                                                     {/* Track number or Pizza Slice */}
-                                                    <div style={{ width: '40px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                    <div style={{ width: '40px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '0.2rem' }}>
                                                         {isSelected ? (
                                                             <div style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
                                                         ) : (
@@ -1206,35 +1205,31 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                                     </div>
 
                                                     {/* Info */}
-                                                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', paddingRight: '0.4rem' }}>
+                                                    <div style={{ flex: 1, minWidth: 0, paddingRight: '0.4rem', paddingTop: '0.2rem' }}>
                                                         <div style={{
                                                             fontWeight: '900',
-                                                            fontSize: isSelected ? '1.1rem' : '1rem',
-                                                            whiteSpace: 'nowrap',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
+                                                            fontSize: isSelected ? '0.95rem' : '0.85rem', // Smaller fonts
                                                             color: isSelected ? '#27AE60' : '#8B0000',
                                                             textTransform: 'uppercase',
-                                                            letterSpacing: '0.05em',
+                                                            lineHeight: '1.15',
+                                                            letterSpacing: '0.02em',
                                                             transition: 'all 0.2s ease'
                                                         }}>
                                                             {song.title}
                                                         </div>
                                                         <div style={{
-                                                            fontSize: '0.8rem',
+                                                            fontSize: '0.7rem',
                                                             color: isSelected ? '#14532D' : '#666',
-                                                            marginTop: '4px',
-                                                            whiteSpace: 'nowrap',
-                                                            overflow: 'hidden',
-                                                            textOverflow: 'ellipsis',
-                                                            fontWeight: '600'
+                                                            marginTop: '3px',
+                                                            fontWeight: '600',
+                                                            lineHeight: '1.15'
                                                         }}>
                                                             {song.artist}
                                                         </div>
                                                     </div>
 
                                                     {/* Right side stats */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0 }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: '8px', flexShrink: 0, paddingTop: '0.2rem' }}>
                                                         <div style={{
                                                             fontSize: '0.7rem',
                                                             fontWeight: '900',
