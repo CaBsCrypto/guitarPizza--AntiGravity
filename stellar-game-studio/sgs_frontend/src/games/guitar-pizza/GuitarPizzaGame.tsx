@@ -1036,54 +1036,54 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '0.8rem',
-                                            background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(255, 20, 147, 0.8))', // Purple to Pink Neon
-                                            border: '2px solid rgba(255, 255, 255, 0.6)',
+                                            background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(178, 34, 34, 0.9))', // Dark Red to Crimson
+                                            border: '2px solid rgba(218, 165, 32, 0.8)', // Goldenrod
                                             borderRadius: '30px',
                                             padding: '0.4rem 1.2rem 0.4rem 0.4rem',
                                             cursor: 'pointer',
                                             transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                                             opacity: 1,
-                                            boxShadow: '0 0 15px rgba(255, 20, 147, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3)',
+                                            boxShadow: '0 0 10px rgba(178, 34, 34, 0.6), inset 0 0 8px rgba(218, 165, 32, 0.3)',
                                             width: '100%',
                                             position: 'relative',
                                             overflow: 'hidden'
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'scale(1.05)';
-                                            e.currentTarget.style.borderColor = '#fff';
-                                            e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 255, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5)';
-                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(138, 43, 226, 0.95), rgba(0, 255, 255, 0.85))';
+                                            e.currentTarget.style.transform = 'scale(1.03)';
+                                            e.currentTarget.style.borderColor = '#FFD700'; // Gold
+                                            e.currentTarget.style.boxShadow = '0 0 20px rgba(218, 165, 32, 0.8), inset 0 0 12px rgba(255, 215, 0, 0.5)';
+                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(178, 34, 34, 1), rgba(205, 92, 92, 0.95))';
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.transform = 'scale(1)';
-                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.6)';
-                                            e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 20, 147, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3)';
-                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(255, 20, 147, 0.8))';
+                                            e.currentTarget.style.borderColor = 'rgba(218, 165, 32, 0.8)';
+                                            e.currentTarget.style.boxShadow = '0 0 10px rgba(178, 34, 34, 0.6), inset 0 0 8px rgba(218, 165, 32, 0.3)';
+                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(178, 34, 34, 0.9))';
                                         }}
                                     >
                                         <div style={{
                                             animation: 'vinyl-spin 2s linear infinite',
-                                            filter: 'drop-shadow(0 0 8px rgba(0,255,255,0.8))',
+                                            filter: 'drop-shadow(0 0 8px rgba(218,165,32,0.6))',
                                             display: 'flex',
                                             flexShrink: 0
                                         }}>
                                             <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="50" cy="50" r="49" fill="#111" stroke="#0ff" strokeWidth="2" strokeOpacity="0.8" />
+                                                <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
                                                 {[38, 33, 28, 23].map(r => (
-                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#ff1493" strokeWidth="1.5" strokeOpacity="0.6" />
+                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
                                                 ))}
-                                                <circle cx="50" cy="50" r="21" fill="#8a2be2" />
-                                                <circle cx="50" cy="50" r="20" fill="#0ff" />
-                                                <circle cx="50" cy="50" r="20" fill="none" stroke="#fff" strokeWidth="1" />
-                                                <circle cx="50" cy="50" r="4.5" fill="#fff" />
-                                                <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(0,255,255,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                                                <circle cx="50" cy="50" r="21" fill="#4A0E0E" />
+                                                <circle cx="50" cy="50" r="20" fill="#DAA520" />
+                                                <circle cx="50" cy="50" r="20" fill="none" stroke="#FFF8DC" strokeWidth="1" />
+                                                <circle cx="50" cy="50" r="4.5" fill="#FFF8DC" />
+                                                <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(218,165,32,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
                                             </svg>
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2 }}>
-                                            <span style={{ fontSize: '0.85rem', color: '#fff', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textShadow: '0 0 5px rgba(255,248,220,0.5)' }}>
                                                 {selectedSong.title}
                                             </span>
-                                            <span style={{ fontSize: '0.55rem', color: '#0ff', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 'bold' }}>
+                                            <span style={{ fontSize: '0.55rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 'bold' }}>
                                                 {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
                                             </span>
                                         </div>
