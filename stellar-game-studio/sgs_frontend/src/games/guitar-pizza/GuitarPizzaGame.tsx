@@ -439,7 +439,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                     window.GP_BASE_PATH = import.meta.env.BASE_URL;
                     const baseUrl = import.meta.env.BASE_URL;
                     // Append version parameter to bust aggressive browser cache of public assets
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=2`.replace('//', '/');
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=3`.replace('//', '/');
 
                     addLog(`[GuitarPizza] Loading engine from: ${primaryPath}`);
                     await loadScript(primaryPath);
@@ -1026,8 +1026,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
-                                {/* Subtle Music Selector Between Buttons */}
-                                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '0.1rem', marginBottom: '0.1rem' }}>
+                                {/* Vibrant Disco Music Selector Between Buttons */}
+                                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
                                     <button
                                         onClick={() => setView('songpicker')}
                                         title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
@@ -1035,54 +1035,56 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '0.5rem',
-                                            background: 'rgba(20, 5, 5, 0.4)',
-                                            border: '1px solid rgba(139, 0, 0, 0.5)',
-                                            borderRadius: '20px',
-                                            padding: '0.2rem 0.8rem 0.2rem 0.2rem',
+                                            gap: '0.8rem',
+                                            background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(255, 20, 147, 0.8))', // Purple to Pink Neon
+                                            border: '2px solid rgba(255, 255, 255, 0.6)',
+                                            borderRadius: '30px',
+                                            padding: '0.4rem 1.2rem 0.4rem 0.4rem',
                                             cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            opacity: 0.9,
-                                            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                                            width: '100%'
+                                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                            opacity: 1,
+                                            boxShadow: '0 0 15px rgba(255, 20, 147, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3)',
+                                            width: '100%',
+                                            position: 'relative',
+                                            overflow: 'hidden'
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'scale(1.02)';
-                                            e.currentTarget.style.opacity = '1';
-                                            e.currentTarget.style.borderColor = 'rgba(139, 0, 0, 0.8)';
-                                            e.currentTarget.style.background = 'rgba(20, 5, 5, 0.6)';
+                                            e.currentTarget.style.transform = 'scale(1.05)';
+                                            e.currentTarget.style.borderColor = '#fff';
+                                            e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 255, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5)';
+                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(138, 43, 226, 0.95), rgba(0, 255, 255, 0.85))';
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.transform = 'scale(1)';
-                                            e.currentTarget.style.opacity = '0.9';
-                                            e.currentTarget.style.borderColor = 'rgba(139, 0, 0, 0.5)';
-                                            e.currentTarget.style.background = 'rgba(20, 5, 5, 0.4)';
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                                            e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 20, 147, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3)';
+                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(138, 43, 226, 0.8), rgba(255, 20, 147, 0.8))';
                                         }}
                                     >
                                         <div style={{
-                                            animation: 'vinyl-spin 3s linear infinite',
-                                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.6))',
+                                            animation: 'vinyl-spin 2s linear infinite',
+                                            filter: 'drop-shadow(0 0 8px rgba(0,255,255,0.8))',
                                             display: 'flex',
                                             flexShrink: 0
                                         }}>
-                                            <svg width="20" height="20" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="50" cy="50" r="49" fill="#0d0d0d" stroke="#d4af37" strokeWidth="1.5" strokeOpacity="0.5" />
+                                            <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="50" cy="50" r="49" fill="#111" stroke="#0ff" strokeWidth="2" strokeOpacity="0.8" />
                                                 {[38, 33, 28, 23].map(r => (
-                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#1e1e1e" strokeWidth="1.2" />
+                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#ff1493" strokeWidth="1.5" strokeOpacity="0.6" />
                                                 ))}
-                                                <circle cx="50" cy="50" r="21" fill="#5a0f0f" />
-                                                <circle cx="50" cy="50" r="20" fill="#7a1515" />
-                                                <circle cx="50" cy="50" r="20" fill="none" stroke="#a02020" strokeWidth="1" />
-                                                <circle cx="50" cy="50" r="4.5" fill="#d4af37" />
-                                                <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(255,230,100,0.55)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                                                <circle cx="50" cy="50" r="21" fill="#8a2be2" />
+                                                <circle cx="50" cy="50" r="20" fill="#0ff" />
+                                                <circle cx="50" cy="50" r="20" fill="none" stroke="#fff" strokeWidth="1" />
+                                                <circle cx="50" cy="50" r="4.5" fill="#fff" />
+                                                <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(0,255,255,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
                                             </svg>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                                            <span style={{ fontSize: '0.75rem', color: '#D0B488', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2 }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#fff', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}>
                                                 {selectedSong.title}
                                             </span>
-                                            <span style={{ fontSize: '0.50rem', color: '#FFF8E7', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.7 }}>
-                                                {language === 'es' ? 'Cambiar Pista' : 'Change Track'}
+                                            <span style={{ fontSize: '0.55rem', color: '#0ff', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 'bold' }}>
+                                                {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
                                             </span>
                                         </div>
                                     </button>

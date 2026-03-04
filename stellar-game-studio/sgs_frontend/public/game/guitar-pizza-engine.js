@@ -440,7 +440,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             this.filterNode.frequency.cancelScheduledValues(now);
             this.filterNode.frequency.setValueAtTime(20000, now);
             this.filterNode.frequency.linearRampToValueAtTime(280, now + 0.07);
-            this.filterNode.frequency.setTargetAtTime(20000, now + 0.55, 1.4);
+            // Stay muffled (around 800Hz) until a correct pizza is hit
+            this.filterNode.frequency.setTargetAtTime(800, now + 0.1, 0.5);
             // Pitch: big dip + wobble back
             if (this.songSource) {
                 this.songSource.playbackRate.cancelScheduledValues(now);
@@ -699,8 +700,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 combo = 0; fireMode = false; health -= 15; perfectStreak = 0;
                 score = Math.max(0, score - 500);
                 createFeedback("WRONG ORDER! 🚫", lane, HIT_Y);
-                AudioEngine.playMiss();
-                AudioEngine.onMiss();
+                AudioEngine.onMiss(); // onMiss already triggers playMissSFX internally
                 shake = 10;
                 return false; // Valid input (it registered), but bad outcome
             }
@@ -760,8 +760,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             console.log(`[Engine] MISS! Lane ${lane} played without a note. Health drops by 4 to ${health}`);
             createFeedback("BURNT", lane, HIT_Y);
             shake = 5; camScale = 0.98;
-            AudioEngine.playMiss();
-            AudioEngine.onMiss();
+            AudioEngine.onMiss(); // onMiss triggers playMissSFX internally
             return false; // MISS
         }
     }
@@ -871,8 +870,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                     createFeedback("DROPPED!", n.lane, H - 50);
                     shake = 12; // Heavy shake on dropped note
                     camScale = 0.95;
-                    AudioEngine.playMissSFX();
-                    AudioEngine.onMiss();
+                    AudioEngine.onMiss(); // onMiss triggers playMissSFX internally
                 } else {
                     // Bonus for avoiding trap
                     trapsAvoided++;
