@@ -1074,9 +1074,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             // If rush hour is active, lanes glow red intensely
             let topColor, botColor;
             if (rushHourActive) {
-                topColor = "rgba(255, 69, 0, 0.9)"; // Orange/Red glow
-                botColor = "rgba(255, 0, 0, 0.7)";
-                if (Math.random() < 0.1) botColor = "rgba(255, 255, 255, 0.8)"; // Lightning flashes
+                // Toned down the red/orange glow to be less dizzying
+                topColor = "rgba(220, 50, 0, 0.4)"; // Much more transparent orange/red
+                botColor = "rgba(200, 0, 0, 0.3)";
+                if (Math.random() < 0.05) botColor = "rgba(255, 100, 100, 0.5)"; // Softer, less frequent flashes
             } else {
                 topColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.9)");
                 botColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.7)");
