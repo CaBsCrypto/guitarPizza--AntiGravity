@@ -829,7 +829,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             // Trigger Rush Hour
             rushHourActive = true;
             rushHourDuration = 6 + Math.random() * 4; // 6 to 10 seconds of chaos
-            createFeedback("MAMMA MIA! RUSH HOUR!", -1, H * 0.4);
+            createFeedback("SYSTEM OVERRIDE!", -1, H * 0.4);
             shake = 20;
             // Next rush hour in 20-30 seconds
             rushHourNextTrigger = rushHourTimer + rushHourDuration + 20 + Math.random() * 10;
@@ -839,7 +839,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             rushHourDuration -= dt;
             if (rushHourDuration <= 0) {
                 rushHourActive = false;
-                createFeedback("RUSH HOUR SURVIVED!", -1, H * 0.4);
+                createFeedback("OVERRIDE COMPLETE", -1, H * 0.4);
                 score += 5000;
                 finishPizza(); // Instant pizza completion as reward
                 health = Math.min(100, health + 20); // Big heal
@@ -970,10 +970,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         let fColor = "#ffffff";
         if (text === "ORDER UP!" || text === "TASTY" || text.startsWith("D")) {
             fColor = THE_OVEN_THEME.colors.background.ovenBorder; // Mafia Gold
-        } else if (text === "PERFECT" || text === "HELD!" || text === "RUSH HOUR SURVIVED!") {
+        } else if (text === "PERFECT" || text === "HELD!" || text === "OVERRIDE COMPLETE") {
             fColor = "#ffffff"; // Stark white for perfect
-        } else if (text.includes("RUSH HOUR")) {
-            fColor = "#ff4500"; // Bright orange/red for rush hour waning
+        } else if (text === "SYSTEM OVERRIDE!") {
+            fColor = "#00ffff"; // Cyan neon for override
         } else {
             fColor = THE_OVEN_THEME.colors.background.checker; // Blood Red for miss/wrong
         }
@@ -1071,13 +1071,24 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const x = offsetX + i * LANE_W;
             const ingredient = THE_OVEN_THEME.colors.lanes[i];
 
-            // If rush hour is active, lanes glow red intensely
+            // If rush hour is active, lanes glow with Cyberpunk Neon Tech Colors
             let topColor, botColor;
             if (rushHourActive) {
-                // Toned down the red/orange glow to be less dizzying
-                topColor = "rgba(220, 50, 0, 0.4)"; // Much more transparent orange/red
-                botColor = "rgba(200, 0, 0, 0.3)";
-                if (Math.random() < 0.05) botColor = "rgba(255, 100, 100, 0.5)"; // Softer, less frequent flashes
+                // Neon Grid / Cyberpunk Aesthetic (Cyan / Magenta)
+                const neonGlows = [
+                    "rgba(0, 255, 255, 0.4)", // Cyan
+                    "rgba(255, 0, 255, 0.4)", // Magenta
+                    "rgba(138, 43, 226, 0.4)", // Blue Violet
+                    "rgba(57, 255, 20, 0.4)"   // Neon Green
+                ];
+                topColor = neonGlows[i % 4];
+
+                // Pulsing bottom color based on time
+                const pulseAlpha = 0.2 + (Math.sin(gameTimer * 10 + i) * 0.5 + 0.5) * 0.2;
+                botColor = topColor.replace(/0\.4\)$/, pulseAlpha + ')');
+
+                // Tech-glitch flash
+                if (Math.random() < 0.03) botColor = "rgba(255, 255, 255, 0.7)";
             } else {
                 topColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.9)");
                 botColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.7)");
@@ -1088,7 +1099,26 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             gradient.addColorStop(1, botColor);
 
             ctx.fillStyle = gradient; ctx.fillRect(x, 0, LANE_W, H);
-            ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = THE_OVEN_THEME.dimensions.laneBorderWidth; ctx.strokeRect(x, 0, LANE_W, H);
+
+            // Tech-Futurist Matrix/Grid overlay during override
+            if (rushHourActive) {
+                ctx.strokeStyle = "rgba(0, 255, 255, 0.15)";
+                ctx.lineWidth = 1;
+                const dashOffset = (gameTimer * 200) % 40;
+                ctx.setLineDash([5, 15]);
+                ctx.lineDashOffset = dashOffset;
+
+                // Draw vertical tech lines
+                ctx.beginPath();
+                ctx.moveTo(x + LANE_W * 0.25, 0); ctx.lineTo(x + LANE_W * 0.25, H);
+                ctx.moveTo(x + LANE_W * 0.75, 0); ctx.lineTo(x + LANE_W * 0.75, H);
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset
+            }
+
+            ctx.strokeStyle = rushHourActive ? "rgba(0, 255, 255, 0.5)" : "rgba(0,0,0,0.3)";
+            ctx.lineWidth = rushHourActive ? 3 : THE_OVEN_THEME.dimensions.laneBorderWidth;
+            ctx.strokeRect(x, 0, LANE_W, H);
         }
 
         // 1.5 Pulsing background combo over lanes, under notes
