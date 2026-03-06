@@ -40,6 +40,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     let pizzaProgress = 0;
     let pizzasMade = 0;
 
+    // --- NEW MECHANICS ---
+    let rushHourActive = false;
+    let rushHourTimer = 0; // Time since last rush hour
+    let rushHourDuration = 0; // How long current rush hour lasts
+    let rushHourNextTrigger = 15; // Trigger first rush hour at 15s
+    let rushHourCompleted = 0;
+
     let highScore = 0; // Local high score
     let totalPerfectHits = 0;
     let totalHits = 0;
@@ -142,6 +149,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         score = 0; combo = 0; maxCombo = 0; health = 100;
         fireMode = false; difficultyMult = _difficultyStart; difficultyTimer = 0;
         pizzaProgress = 0; pizzasMade = 0;
+        rushHourActive = false; rushHourTimer = 0; rushHourDuration = 0; rushHourNextTrigger = 20 + Math.random() * 10;
         perfectStreak = 0; secretIngredients = 0;
         totalPerfectHits = 0; totalHits = 0;
         feverTime = 0; totalTraps = 0; trapsAvoided = 0; totalNotes = 0;
@@ -673,8 +681,16 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         // BPM-synced note scheduling: musical rhythmic patterns
         // Pattern: mix of quarter notes (1 beat), 8th notes (0.5 beat), and 16th (0.25)
         // Weighted to feel musical: more quarter/8th than 16th notes
-        const beatDuration = (60 / CONFIG.BPM) / difficultyMult;
-        const rhythmicPatterns = [1, 1, 0.5, 0.5, 0.5, 0.25, 0.25, 1, 0.5];
+        let beatDuration = (60 / CONFIG.BPM) / difficultyMult;
+
+        let rhythmicPatterns = [1, 1, 0.5, 0.5, 0.5, 0.25, 0.25, 1, 0.5];
+
+        if (rushHourActive) {
+            // Extreme density during rush hour
+            rhythmicPatterns = [0.25, 0.25, 0.125, 0.5, 0.25];
+            beatDuration *= 0.8; // Move faster too
+        }
+
         const mult = rhythmicPatterns[Math.floor(Math.random() * rhythmicPatterns.length)];
         nextNoteTime += beatDuration * mult;
     }
@@ -806,6 +822,29 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         if (fireMode) feverTime += dt;  // accumulate seconds in fever/fire mode
         gameTimer += dt;
+        rushHourTimer += dt;
+
+        // ── RUSH HOUR LOGIC ──
+        if (!rushHourActive && rushHourTimer > rushHourNextTrigger && CONFIG.SONG_DURATION > 30) {
+            // Trigger Rush Hour
+            rushHourActive = true;
+            rushHourDuration = 6 + Math.random() * 4; // 6 to 10 seconds of chaos
+            createFeedback("MAMMA MIA! RUSH HOUR!", -1, H * 0.4);
+            shake = 20;
+            // Next rush hour in 20-30 seconds
+            rushHourNextTrigger = rushHourTimer + rushHourDuration + 20 + Math.random() * 10;
+        }
+
+        if (rushHourActive) {
+            rushHourDuration -= dt;
+            if (rushHourDuration <= 0) {
+                rushHourActive = false;
+                createFeedback("RUSH HOUR SURVIVED!", -1, H * 0.4);
+                score += 5000;
+                finishPizza(); // Instant pizza completion as reward
+                health = Math.min(100, health + 20); // Big heal
+            }
+        }
 
         // ── Box opening: all open at 15% of song ──
         if (CONFIG.SONG_DURATION > 0 && gameTimer / CONFIG.SONG_DURATION >= 0.15) {
@@ -865,8 +904,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 // If it was a TRAP, letting it pass is GOOD (No penalty)
                 if (!n.isTrap) {
                     if (fireMode) AudioEngine.onFireModeEnd();
-                    combo = 0; fireMode = false; health -= 4;
-                    console.log(`[Engine] NOTE DROPPED! Lane ${n.lane}. Health drops by 4 to ${health}`);
+                    combo = 0; fireMode = false; health -= rushHourActive ? 8 : 4; // Double damage during rush hour
+                    console.log(`[Engine] NOTE DROPPED! Lane ${n.lane}. Health drops by ${rushHourActive ? 8 : 4} to ${health}`);
                     createFeedback("DROPPED!", n.lane, H - 50);
                     shake = 12; // Heavy shake on dropped note
                     camScale = 0.95;
@@ -931,8 +970,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         let fColor = "#ffffff";
         if (text === "ORDER UP!" || text === "TASTY" || text.startsWith("D")) {
             fColor = THE_OVEN_THEME.colors.background.ovenBorder; // Mafia Gold
-        } else if (text === "PERFECT") {
+        } else if (text === "PERFECT" || text === "HELD!" || text === "RUSH HOUR SURVIVED!") {
             fColor = "#ffffff"; // Stark white for perfect
+        } else if (text.includes("RUSH HOUR")) {
+            fColor = "#ff4500"; // Bright orange/red for rush hour waning
         } else {
             fColor = THE_OVEN_THEME.colors.background.checker; // Blood Red for miss/wrong
         }
@@ -1030,10 +1071,17 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const x = offsetX + i * LANE_W;
             const ingredient = THE_OVEN_THEME.colors.lanes[i];
 
-            // Gradient BG - Making the lanes much brighter and less transparent
-            // to completely hide the dark background.
-            const topColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.9)");
-            const botColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.7)");
+            // If rush hour is active, lanes glow red intensely
+            let topColor, botColor;
+            if (rushHourActive) {
+                topColor = "rgba(255, 69, 0, 0.9)"; // Orange/Red glow
+                botColor = "rgba(255, 0, 0, 0.7)";
+                if (Math.random() < 0.1) botColor = "rgba(255, 255, 255, 0.8)"; // Lightning flashes
+            } else {
+                topColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.9)");
+                botColor = ingredient.primary.replace(/rgba\(([^,]+),([^,]+),([^,]+),([^)]+)\)/, "rgba($1,$2,$3,0.7)");
+            }
+
             const gradient = ctx.createLinearGradient(x, 0, x, H);
             gradient.addColorStop(0, topColor);
             gradient.addColorStop(1, botColor);
