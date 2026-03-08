@@ -23,6 +23,7 @@ interface GuitarPizzaGameProps {
     userAddress: string;
     onGameComplete: (score: number) => void;
     onBack?: () => void;
+    embed?: boolean;
 }
 
 interface TxRecord {
@@ -151,7 +152,7 @@ const TRANSLATIONS = {
     }
 };
 
-export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarPizzaGameProps) {
+export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = false }: GuitarPizzaGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     // Cleanup ref now holds the engine interface or null
@@ -755,7 +756,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
 
     return (
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
-            {/* Header */}
+            {/* Header — hidden in embed mode */}
+            {!embed && (
             <div className="flex items-center justify-between p-4 border-b z-20" style={{ background: "#0a0705", borderColor: "rgba(201,162,39,0.2)" }}>
                 <div className="flex items-center gap-4">
                     {onBack && (
@@ -771,7 +773,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
                     <Settings size={24} />
                 </button>
             </div>
-
+            )}
             {/* Game Container */}
             <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative' }}>
                 <div id="game-device-screen" className="game-container game-frame" ref={containerRef} style={{ width: 'auto', height: '100%', aspectRatio: '9/16', maxHeight: '100%', position: 'relative', overflow: 'hidden', border: '8px solid #000', borderRadius: '20px', boxShadow: '0 0 50px rgba(0,0,0,0.5)' }}>

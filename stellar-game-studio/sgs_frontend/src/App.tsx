@@ -21,6 +21,7 @@ function App() {
           userAddress={publicKey ?? ''}
           onGameComplete={(_score) => navigate('game')}
           onBack={isEmbed ? undefined : () => navigate('home')}
+          embed={isEmbed}
         />
       )}
     </Layout>
