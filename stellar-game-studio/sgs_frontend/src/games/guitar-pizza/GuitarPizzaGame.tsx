@@ -754,9 +754,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack }: GuitarP
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-[#1a1a1a] text-white font-sans overflow-hidden">
+        <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-[#111] border-b border-[#333] z-20">
+            <div className="flex items-center justify-between p-4 border-b z-20" style={{ background: "#0a0705", borderColor: "rgba(201,162,39,0.2)" }}>
                 <div className="flex items-center gap-4">
                     {onBack && (
                         <button onClick={onBack} className="settings-btn" title="Exit to Library">
