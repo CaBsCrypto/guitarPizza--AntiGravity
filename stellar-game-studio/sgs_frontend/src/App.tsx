@@ -5,8 +5,10 @@ import { HomePage } from './pages/HomePage';
 import { useWallet } from './hooks/useWallet';
 import type { Page } from './types/navigation';
 
+const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1';
+
 function App() {
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(isEmbed ? 'game' : 'home');
   const { publicKey } = useWallet();
 
   const navigate = (next: Page) => setPage(next);
@@ -17,8 +19,8 @@ function App() {
       {page === 'game' && (
         <GuitarPizzaGame
           userAddress={publicKey ?? ''}
-          onGameComplete={(_score) => navigate('home')}
-          onBack={() => navigate('home')}
+          onGameComplete={(_score) => navigate('game')}
+          onBack={isEmbed ? undefined : () => navigate('home')}
         />
       )}
     </Layout>
