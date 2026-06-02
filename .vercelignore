@@ -1,0 +1,24 @@
+# Anchor ignore rules with leading slashes to prevent ignoring sgs_frontend/src/contracts
+/stellar-game-studio/node_modules
+/stellar-game-studio/sgs_frontend/node_modules
+/stellar-game-studio/target
+/stellar-game-studio/contracts
+/contracts
+/target
+/node_modules
+
+# Ignore other development and cache files at the root
+/.git
+/.github
+/.claude
+/.gemini
+/.vercel
+/package-lock.json
+/bun.lock
+/yarn.lock
+/Cargo.lock
+/*.log
+/*.wasm
+/detect_silence.py
+/silence_report.txt
+/yt_dlp_out.txt

@@ -36,3 +36,4 @@ build_error.txt
 *.tsbuildinfo
 
 
+.vercel

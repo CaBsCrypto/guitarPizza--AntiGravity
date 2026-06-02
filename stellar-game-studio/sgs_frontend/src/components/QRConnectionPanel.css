@@ -1,0 +1,400 @@
+/* ════════════════════════════════════════════════════════
+   QR CONNECTION PANEL — Retro-Pixel Pizzeria Theme
+   Colors: #F5EDE0 (Cream), #CC2929 (Red), #1A0A0A (Dark Red)
+   Fonts: Special Elite, Bangers
+ ════════════════════════════════════════════════════════ */
+
+.qr-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(8, 4, 3, 0.92);
+  backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+  animation: qrFadeIn 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.qr-modal {
+  background: #FFF8E7; /* Warm parchment paper bg */
+  border: 4px solid #000;
+  box-shadow: 
+    10px 10px 0 rgba(0, 0, 0, 0.5), 
+    inset 0 0 20px rgba(139, 0, 0, 0.15);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Special Elite', cursive;
+  color: #1a0a0a;
+}
+
+@keyframes qrFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Red-White Checker Ribbon Header */
+.qr-header {
+  background: #CC2929;
+  border-bottom: 4px solid #000;
+  padding: 1.25rem;
+  text-align: center;
+  position: relative;
+}
+
+.qr-header-checker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background-image: linear-gradient(45deg, #fff 25%, transparent 25%), 
+                    linear-gradient(-45deg, #fff 25%, transparent 25%), 
+                    linear-gradient(45deg, transparent 75%, #fff 75%), 
+                    linear-gradient(-45deg, transparent 75%, #fff 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+  opacity: 0.85;
+}
+
+.qr-title {
+  font-family: 'Bangers', cursive;
+  font-size: 2rem;
+  letter-spacing: 0.08em;
+  color: #F5EDE0;
+  text-shadow: 2px 2px 0 #5C0000;
+  margin: 0;
+}
+
+.qr-subtitle {
+  font-size: 0.75rem;
+  color: rgba(245, 237, 224, 0.75);
+  margin-top: 2px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.qr-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: #111;
+  color: #F5EDE0;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.qr-close-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #000;
+  background: #CC2929;
+}
+
+.qr-close-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+/* Modal Body */
+.qr-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Status Strip */
+.qr-status-strip {
+  width: 100%;
+  border: 2px dashed #000;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(139, 0, 0, 0.05);
+}
+
+.qr-status-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #555;
+}
+
+.qr-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.qr-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #000;
+  display: inline-block;
+}
+
+.qr-dot.connecting {
+  background: #f1c40f;
+  animation: qrBlink 1s infinite alternate;
+}
+
+.qr-dot.connected {
+  background: #2ecc71;
+  box-shadow: 0 0 8px #2ecc71;
+}
+
+.qr-dot.disconnected {
+  background: #e74c3c;
+  animation: qrBlink 0.5s infinite alternate;
+}
+
+@keyframes qrBlink {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+/* Layout Split: QR Code + Steps */
+.qr-content-layout {
+  display: flex;
+  width: 100%;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.qr-code-wrapper {
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 12px;
+  padding: 0.75rem;
+  box-shadow: 4px 4px 0 #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-code-img {
+  width: 150px;
+  height: 150px;
+  image-rendering: pixelated;
+}
+
+/* Steps Block */
+.qr-steps {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.qr-step {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.qr-step-num {
+  background: #CC2929;
+  color: #FFF8E7;
+  border: 2px solid #000;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Bangers', cursive;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  line-height: 1;
+  padding-top: 1px;
+}
+
+.qr-step-text {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #333;
+}
+
+.qr-step-text strong {
+  color: #CC2929;
+}
+
+/* Test/Input Room Code Strip */
+.qr-code-strip {
+  width: 100%;
+  background: #eee;
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  box-sizing: border-box;
+}
+
+.qr-code-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #000;
+  letter-spacing: 0.1em;
+  background: #fff;
+  border: 1px solid #000;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* Action buttons */
+.qr-actions {
+  display: flex;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+.qr-btn {
+  flex: 1;
+  font-family: 'Bangers', cursive;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 1rem;
+  border: 2.5px solid #000;
+  border-radius: 8px;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  transition: transform 0.1s, box-shadow 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.qr-btn-primary {
+  background: #f1c40f;
+  color: #000;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.qr-btn-primary:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #000;
+  background: #f39c12;
+}
+
+.qr-btn-primary:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.qr-btn-secondary {
+  background: #e2d6be;
+  color: #333;
+  box-shadow: 3px 3px 0 #000;
+}
+
+.qr-btn-secondary:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #000;
+  background: #ccc2ac;
+}
+
+.qr-btn-secondary:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+/* Key tester */
+.qr-key-tester {
+  width: 100%;
+  background: #fdf5e2;
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+
+.qr-key-tester-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #666;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.qr-keys-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.qr-key-indicator {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #000;
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Bangers', cursive;
+  font-size: 1rem;
+  background: #fff;
+  transition: background 0.08s, transform 0.08s;
+  box-shadow: 2px 2px 0 #000;
+}
+
+.qr-key-indicator.active {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0.5px 0.5px 0 #000;
+}
+
+.qr-key-indicator.k-a.active { background: #ff4d4d; color: #fff; }
+.qr-key-indicator.k-s.active { background: #f1c40f; color: #000; }
+.qr-key-indicator.k-k.active { background: #2ecc71; color: #fff; }
+.qr-key-indicator.k-l.active { background: #9b59b6; color: #fff; }
+
+/* Responsive adjustments */
+@media (max-width: 520px) {
+  .qr-content-layout {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .qr-step {
+    flex-direction: column;
+    align-items: center;
+  }
+}

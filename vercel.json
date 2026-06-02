@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd stellar-game-studio/sgs_frontend && npm install && npm run build",
+  "buildCommand": "cd stellar-game-studio && npm install --legacy-peer-deps && cd sgs_frontend && npm install && npm run build",
   "outputDirectory": "stellar-game-studio/sgs_frontend/dist",
   "framework": null,
   "headers": [
@@ -8,6 +8,13 @@
       "headers": [
         { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
         { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" }
+      ]
+    },
+    {
+      "source": "/assets/(.*).wasm",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Content-Type", "value": "application/wasm" }
       ]
     }
   ]

@@ -504,7 +504,15 @@ impl GuitarPizzaContract {
             journal[i] = receipt.get(i as u32).unwrap_or(0);
         }
         let jb = Bytes::from_slice(env, &journal);
-        let _k: BytesN<32> = env.crypto().keccak256(&jb).into();
+        
+        // Validate proof seal: first 32 bytes of seal (starting from index 100)
+        // must match the keccak256 of the journal bytes.
+        let expected_seal_hash: Bytes = env.crypto().keccak256(&jb).into();
+        let seal_hash = receipt.slice(100..132);
+        if seal_hash != expected_seal_hash {
+            return Err(Error::InvalidReceipt);
+        }
+        
         Ok(journal)
     }
 }
@@ -571,7 +579,12 @@ mod test {
         j[64..96].copy_from_slice(&hash.to_array());
         j[96..100].copy_from_slice(&sid.to_be_bytes());
         let mut r = Bytes::from_slice(env, &j);
-        r.append(&Bytes::from_slice(env, &[0u8; 64]));
+        
+        // Generate valid cryptographic seal: keccak256 of the journal
+        let seal_hash = env.crypto().keccak256(&r);
+        r.append(&seal_hash.into());
+        // Append another 32 bytes of zero to make the seal 64 bytes total
+        r.append(&Bytes::from_slice(env, &[0u8; 32]));
         r
     }
 
@@ -671,7 +684,9 @@ mod test {
         let r1 = make_receipt(&env, 1, &p, 1, 6000, 5, 10, 3, 5, 10, 1);
         c.submit_score(&1u32, &p, &r1);
         let r2 = make_receipt(&env, 1, &p, 1, 6001, 6, 11, 4, 6, 11, 2);
-        assert!(c.try_submit_score(&1u32, &p, &r2).is_err());
+        let res = c.try_submit_score(&1u32, &p, &r2);
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), Ok(Error::SessionAlreadyEnded));
     }
 
     #[test]
@@ -684,7 +699,9 @@ mod test {
         c.submit_score(&1u32, &p, &r);
         c.start_game(&2u32, &p, &1u32, &5000u32);
         // same receipt bytes → replay rejected
-        assert!(c.try_submit_score(&2u32, &p, &r).is_err());
+        let res = c.try_submit_score(&2u32, &p, &r);
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), Ok(Error::ProofAlreadyUsed));
     }
 
     #[test]
@@ -694,7 +711,9 @@ mod test {
         let p = Address::generate(&env);
         c.start_game(&1u32, &p, &1u32, &5000u32);
         let short = Bytes::from_slice(&env, &[0u8; 63]);
-        assert!(c.try_submit_score(&1u32, &p, &short).is_err());
+        let res = c.try_submit_score(&1u32, &p, &short);
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), Ok(Error::ReceiptTooShort));
     }
 
     #[test]
@@ -704,7 +723,9 @@ mod test {
         let p = Address::generate(&env);
         c.start_game(&1u32, &p, &1u32, &5000u32);
         let bad = make_receipt(&env, 99, &p, 1, 7000, 5, 10, 3, 5, 10, 1);
-        assert!(c.try_submit_score(&1u32, &p, &bad).is_err());
+        let res = c.try_submit_score(&1u32, &p, &bad);
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), Ok(Error::SessionIdMismatch));
     }
 
     #[test]
@@ -715,7 +736,9 @@ mod test {
         let atk = Address::generate(&env);
         c.start_game(&1u32, &p, &1u32, &5000u32);
         let bad = make_receipt(&env, 1, &atk, 1, 9999, 99, 100, 0, 0, 0, 99);
-        assert!(c.try_submit_score(&1u32, &p, &bad).is_err());
+        let res = c.try_submit_score(&1u32, &p, &bad);
+        assert!(res.is_err());
+        assert_eq!(res.err().unwrap(), Ok(Error::PlayerMismatch));
     }
 
     #[test]

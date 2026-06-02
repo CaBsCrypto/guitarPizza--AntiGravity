@@ -12,6 +12,16 @@
   color: var(--color-ink);
 }
 
+.rs-shell.rs-game-mode {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.rs-shell.rs-game-mode .rs-footer {
+  display: none !important;
+}
+
 /* ════════════════════════════════════════════════════════
    HEADER — Dark glass bar with red accent stripe
 ════════════════════════════════════════════════════════ */
@@ -167,6 +177,12 @@
   flex: 1;
 }
 
+.rs-main.rs-game-mode {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ════════════════════════════════════════════════════════
    FOOTER — Dark minimal strip
 ════════════════════════════════════════════════════════ */
@@ -217,3 +233,4 @@
     text-align: center;
   }
 }
+

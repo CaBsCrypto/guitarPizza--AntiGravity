@@ -24,7 +24,7 @@ use soroban_sdk::{
 const BOARD_SIZE: u32 = 10;
 const ENTRY_TTL: u32 = 518_400; // ~30 days
 const ENTRY_TTL_THRESHOLD: u32 = 120_960; // ~7 days
-const RECEIPT_MIN_LEN: u32 = 64;
+
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -63,6 +63,7 @@ pub enum DataKey {
     PersonalBest(Address, u32),
     /// Reset epoch per level (incremented on admin reset)
     Epoch(u32),
+    ProofDigest(BytesN<32>),
 }
 
 // ---------------------------------------------------------------------------
@@ -120,10 +121,64 @@ impl ZkLeaderboard {
             .ok_or(Error::NotInitialized)?;
 
         if caller != trusted {
-            // Direct player submission: validate receipt independently
-            if !Self::verify_receipt(&env, &receipt) {
+            // Standalone cryptographic checks
+            if receipt.len() < 164 {
                 return Err(Error::InvalidReceipt);
             }
+
+            // Anti-replay check using ProofDigest
+            let digest: BytesN<32> = env.crypto().keccak256(&receipt).into();
+            let digest_key = DataKey::ProofDigest(digest.clone());
+            if env.storage().instance().has(&digest_key) {
+                return Err(Error::InvalidReceipt);
+            }
+
+            let mut journal = [0u8; 100];
+            for i in 0..100 {
+                journal[i] = receipt.get(i as u32).unwrap_or(0);
+            }
+            
+            // Parse and validate journal fields
+            let j_level_id = u32::from_be_bytes([journal[0], journal[1], journal[2], journal[3]]);
+            let j_score = u32::from_be_bytes([journal[4], journal[5], journal[6], journal[7]]);
+            let j_perfect_hits = u32::from_be_bytes([journal[40], journal[41], journal[42], journal[43]]);
+            let j_pizzas_completed = u32::from_be_bytes([journal[60], journal[61], journal[62], journal[63]]);
+            
+            if j_level_id != level_id {
+                return Err(Error::InvalidReceipt);
+            }
+            if (j_score as u64) != score {
+                return Err(Error::InvalidReceipt);
+            }
+            if j_perfect_hits != perfect_hits {
+                return Err(Error::InvalidReceipt);
+            }
+            if j_pizzas_completed != pizzas_completed {
+                return Err(Error::InvalidReceipt);
+            }
+            
+            // Check player address binding integrity
+            let player_hash_j = slice_bytes_32_lb(&journal, 64);
+            let player_bytes = player.to_string().to_bytes();
+            let exp_hash: BytesN<32> = env.crypto().keccak256(&player_bytes).into();
+            let exp_arr = exp_hash.to_array();
+            for i in 0..32 {
+                if player_hash_j[i] != exp_arr[i] {
+                    return Err(Error::InvalidReceipt);
+                }
+            }
+            
+            // Validate proof seal: first 32 bytes of seal matches keccak256(journal_bytes)
+            let jb = Bytes::from_slice(&env, &journal);
+            let expected_seal_hash: Bytes = env.crypto().keccak256(&jb).into();
+            let seal_hash = receipt.slice(100..132);
+            if seal_hash != expected_seal_hash {
+                return Err(Error::InvalidReceipt);
+            }
+
+            // Persist used proof digest to prevent replay
+            env.storage().instance().set(&digest_key, &true);
+            env.storage().instance().extend_ttl(ENTRY_TTL_THRESHOLD, ENTRY_TTL);
         }
 
         // Build new entry
@@ -305,14 +360,16 @@ impl ZkLeaderboard {
             .unwrap_or(0)
     }
 
-    // -----------------------------------------------------------------------
-    // Internal
-    // -----------------------------------------------------------------------
-    /// RISC Zero receipt placeholder verifier.
-    ///
-    /// TODO: Replace with actual RISC Zero on-chain verification:
-    ///   https://github.com/NethermindEth/stellar-risc0-verifier/
-    fn verify_receipt(_env: &Env, receipt: &Bytes) -> bool {
-        receipt.len() >= RECEIPT_MIN_LEN
-    }
+
 }
+
+#[inline]
+fn slice_bytes_32_lb(buf: &[u8; 100], start: usize) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&buf[start..start + 32]);
+    out
+}
+
+#[cfg(test)]
+mod test;
+

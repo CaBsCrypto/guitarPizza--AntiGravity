@@ -11,6 +11,13 @@ members = [
   "contracts/daily-recipe",
   "contracts/achievement-vault",
   "contracts/slice-token",
+  "contracts/staking-vault",
+  "contracts/pvp-escrow",
+  "contracts/midnight-verifier",
+  "contracts/tournaments",
+  "contracts/nft-collectibles",
+  "contracts/refrigerator-vault",
+  "contracts/pvp-escrow",
 ]
 
 [workspace.dependencies]

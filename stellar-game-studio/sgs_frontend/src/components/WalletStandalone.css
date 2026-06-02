@@ -81,3 +81,211 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Passkey Premium UI Styles ── */
+.wallet-passkey-button {
+  background: rgba(46, 117, 89, 0.15) !important;
+  color: rgba(100, 245, 185, 0.85) !important;
+  border-color: rgba(46, 117, 89, 0.5) !important;
+}
+
+.wallet-passkey-button:hover:not(:disabled) {
+  background: rgba(46, 117, 89, 0.28) !important;
+  border-color: rgba(100, 245, 185, 0.85) !important;
+  color: #E2FFF2 !important;
+}
+
+.passkey-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.passkey-modal {
+  background: rgba(20, 20, 20, 0.95);
+  border: 2px solid rgba(212, 175, 55, 0.35);
+  border-radius: 8px;
+  padding: 1.5rem;
+  width: 320px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 175, 55, 0.1);
+  font-family: var(--font-mono);
+  color: #F5EDE0;
+}
+
+.passkey-modal h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: #d4af37;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px dashed rgba(212, 175, 55, 0.25);
+  padding-bottom: 0.5rem;
+}
+
+.passkey-modal p {
+  font-size: 0.75rem;
+  color: rgba(245, 237, 224, 0.7);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.passkey-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1.5px solid rgba(245, 237, 224, 0.25);
+  border-radius: 4px;
+  color: #F5EDE0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.passkey-input:focus {
+  border-color: rgba(212, 175, 55, 0.7);
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+}
+
+.passkey-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.passkey-btn {
+  padding: 0.4rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.15s;
+}
+
+.passkey-btn-primary {
+  background: rgba(212, 175, 55, 0.15);
+  color: #d4af37;
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.passkey-btn-primary:hover {
+  background: rgba(212, 175, 55, 0.28);
+  border-color: #d4af37;
+  color: #fff;
+}
+
+.passkey-btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(245, 237, 224, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.passkey-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.passkey-account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.passkey-account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.passkey-account-item:hover {
+  background: rgba(212, 175, 55, 0.08);
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.passkey-account-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #F5EDE0;
+}
+
+.passkey-account-address {
+  font-size: 0.6rem;
+  color: rgba(245, 237, 224, 0.4);
+}
+
+/* ── MINT spinning vinyl button ── */
+.mint-vinyl-button {
+  display: flex !important;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(184, 134, 11, 0.15)) !important;
+  color: #DAA520 !important;
+  border: 1.5px solid rgba(212, 175, 55, 0.45) !important;
+  border-radius: 20px !important;
+  padding: 0.3rem 0.75rem !important;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.mint-vinyl-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(184, 134, 11, 0.3)) !important;
+  border-color: #DAA520 !important;
+  color: #FFF8DC !important;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4), 0 4px 15px rgba(0,0,0,0.5);
+  transform: translateY(-1px);
+}
+
+.mint-vinyl-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.mint-vinyl-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mint-vinyl-icon {
+  display: inline-block;
+  animation: vinyl-spin-slow 4s linear infinite;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* Spin fast when minting is active */
+.mint-vinyl-button.minting .mint-vinyl-icon {
+  animation: vinyl-spin-fast 0.6s linear infinite;
+}
+
+@keyframes vinyl-spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes vinyl-spin-fast {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

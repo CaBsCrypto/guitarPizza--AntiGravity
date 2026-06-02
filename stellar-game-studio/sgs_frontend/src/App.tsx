@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Layout } from './components/Layout';
 import { GuitarPizzaGame } from './games/guitar-pizza/GuitarPizzaGame';
 import { HomePage } from './pages/HomePage';
+import { MobileController } from './components/MobileController';
 import { useWallet } from './hooks/useWallet';
 import type { Page } from './types/navigation';
 
@@ -10,6 +11,15 @@ function App() {
   const { publicKey } = useWallet();
 
   const navigate = (next: Page) => setPage(next);
+
+  // Check URL parameters for remote controller mode
+  const queryParams = new URLSearchParams(window.location.search);
+  const isRemoteMode = queryParams.get('mode') === 'remote';
+  const roomCode = queryParams.get('room') ?? '';
+
+  if (isRemoteMode) {
+    return <MobileController roomIdFromUrl={roomCode} />;
+  }
 
   return (
     <Layout currentPage={page} onNavigate={navigate}>
@@ -26,3 +36,4 @@ function App() {
 }
 
 export default App;
+

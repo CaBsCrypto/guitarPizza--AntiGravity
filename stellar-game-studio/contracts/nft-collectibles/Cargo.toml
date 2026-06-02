@@ -1,0 +1,14 @@
+[package]
+name = "nft-collectibles"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+soroban-sdk = "25.0.2"
+
+[dev_dependencies]
+soroban-sdk = { version = "25.0.2", features = ["testutils"] }
