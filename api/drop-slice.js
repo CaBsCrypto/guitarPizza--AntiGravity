@@ -20,7 +20,7 @@ async function handler(req, res) {
     const mintAmount = amount ? Number(amount) : 8; // default 8 SLICE (contract daily limit)
 
     const adminSecret = process.env.ADMIN_SECRET_KEY || process.env.STELLAR_SECRET_KEY || 'SBL476C4C7ZTSWUWWNPFNCFWEW2JIPPWJMZMTCI3QZFVSRQWSTQDVIFN';
-    const contractId = process.env.VITE_SLICE_TOKEN_CONTRACT_ID || 'CDDYOTZUTLLEQST7VVQPUL3XVXJERHQGJ246SA2RWCRROOQQPQKJTGZC';
+    const contractId = process.env.VITE_SLICE_TOKEN_CONTRACT_ID || 'CDQQS675FAF3GXEV4Y5CQVWVHWOONDWMIM2QDVSQUHADA3XDDXSXZOFR';
     const rpcUrl = process.env.VITE_SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org';
     const networkPassphrase = process.env.VITE_NETWORK_PASSPHRASE || Networks.TESTNET;
 
