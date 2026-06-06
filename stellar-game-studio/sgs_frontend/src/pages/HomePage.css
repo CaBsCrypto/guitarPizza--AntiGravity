@@ -1268,27 +1268,96 @@ body:has(.hp-root) .rs-footer-quote {
 }
 
 @media (max-width: 640px) {
+  .hp-hero {
+    min-height: auto;
+    padding: 1.5rem 1rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
   .hp-hero-inner {
     flex-direction: column-reverse;
     align-items: center;
-    padding: 1rem 1.2rem 0.5rem;
-    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    gap: 0.8rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .hp-title-block {
     text-align: center;
     align-items: center;
     max-width: 100%;
+    gap: 0.2rem;
+  }
+
+  .hp-title {
+    margin-bottom: 0.8rem;
+  }
+
+  .hp-title-line1 {
+    font-size: 2.5rem;
+    -webkit-text-stroke: 1px #1a1a1a;
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .hp-title-line2 {
+    font-size: 3.2rem;
+    -webkit-text-stroke: 1px #1a1a1a;
+    margin-top: -0.2rem;
+    text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  .hp-tagline {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    margin: 0.2rem 0;
+  }
+
+  .hp-don-wrap {
+    margin-bottom: 0;
+    max-height: 180px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   .hp-don-img {
-    width: clamp(180px, 65vw, 250px);
-    /* Slightly larger clamp for Benny to preserve details */
-    margin-bottom: 0;
+    max-width: 180px;
+    height: auto;
   }
 
-  .hp-families-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .hp-hero-footer {
+    padding: 0.8rem 1rem;
+  }
+
+  .hp-cta {
+    font-size: 1.1rem !important;
+    padding: 0.7rem 2.2rem !important;
+    box-shadow: 0 4px 0 #5C0000, 0 8px 20px rgba(204, 41, 41, 0.4) !important;
+  }
+
+  .hp-lower-container {
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  .hp-panels-grid {
+    gap: 1.2rem;
+  }
+
+  .hp-panel-inner {
+    padding: 1.5rem 1rem;
+  }
+
+  .hp-intel-stamp {
+    font-size: 1.1rem;
+    top: -0.5rem;
+  }
+
+  .hp-intel-title {
+    font-size: 1.8rem;
   }
 
   .hp-intel-cards {
@@ -1297,26 +1366,19 @@ body:has(.hp-root) .rs-footer-quote {
     gap: 1.5rem;
   }
 
-  .hp-paper-clip {
-    max-width: 100%;
+  .hp-intel-card {
     width: 100%;
+    padding: 1rem;
+    box-sizing: border-box;
   }
 
-  .hp-intel-inner {
-    padding: 2rem 1.5rem;
+  .hp-intel-card:not(:first-child) {
+    margin-top: -15px;
   }
 
-  .hp-flow-card--mid {
-    transform: none;
-  }
-
-  .hp-flow-connector {
-    display: none;
-  }
-
-  .hp-cta {
-    font-size: 1.2rem;
-    padding: 0.8rem 2.5rem;
+  .hp-family-card-3d {
+    width: 210px;
+    padding: 16px 12px 14px 12px;
   }
 
   .hp-lore-quote p {

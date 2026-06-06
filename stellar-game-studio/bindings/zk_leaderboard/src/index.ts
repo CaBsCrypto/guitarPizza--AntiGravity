@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Buffer } from "buffer";
 import { Address } from "@stellar/stellar-sdk";
 import {
@@ -35,7 +34,7 @@ if (typeof window !== "undefined") {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV",
+    contractId: "CBHMKHXQDF7PFWAOCJF6Y2GBNF6HFFYFRXJGW4432OGGXOG547XLZGHK",
   }
 } as const
 
@@ -46,7 +45,7 @@ export const Errors = {
   4: {message:"AdminRequired"}
 }
 
-export type DataKey = {tag: "Admin", values: void} | {tag: "TrustedGame", values: void} | {tag: "Board", values: readonly [u32]} | {tag: "PersonalBest", values: readonly [string, u32]} | {tag: "Epoch", values: readonly [u32]};
+export type DataKey = {tag: "Admin", values: void} | {tag: "TrustedGame", values: void} | {tag: "Board", values: readonly [u32]} | {tag: "PersonalBest", values: readonly [string, u32]} | {tag: "Epoch", values: readonly [u32]} | {tag: "ProofDigest", values: readonly [Buffer]};
 
 
 export interface LeaderboardEntry {
@@ -59,9 +58,16 @@ export interface LeaderboardEntry {
 
 export interface Client {
   /**
-   * Construct and simulate a get_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a get_personal_best transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get personal best for a player on a level.
    */
-  get_admin: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+  get_personal_best: ({player, level_id}: {player: string, level_id: u32}, options?: MethodOptions) => Promise<AssembledTransaction<Option<LeaderboardEntry>>>
+
+  /**
+   * Construct and simulate a reset_leaderboard transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Reset the leaderboard for a level (admin only).
+   */
+  reset_leaderboard: ({level_id}: {level_id: u32}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
 
   /**
    * Construct and simulate a get_epoch transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -73,6 +79,16 @@ export interface Client {
    * Get top-10 leaderboard for a level.
    */
   get_leaderboard: ({level_id}: {level_id: u32}, options?: MethodOptions) => Promise<AssembledTransaction<Array<LeaderboardEntry>>>
+
+  /**
+   * Construct and simulate a get_trusted_game transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_trusted_game: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+
+  /**
+   * Construct and simulate a get_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_admin: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
 
   /**
    * Construct and simulate a set_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -105,23 +121,6 @@ export interface Client {
    */
   set_trusted_game: ({new_game}: {new_game: string}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
 
-  /**
-   * Construct and simulate a reset_leaderboard transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Reset the leaderboard for a level (admin only).
-   */
-  reset_leaderboard: ({level_id}: {level_id: u32}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
-
-  /**
-   * Construct and simulate a get_trusted_game transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   */
-  get_trusted_game: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
-
-  /**
-   * Construct and simulate a get_personal_best transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Get personal best for a player on a level.
-   */
-  get_personal_best: ({player, level_id}: {player: string, level_id: u32}, options?: MethodOptions) => Promise<AssembledTransaction<Option<LeaderboardEntry>>>
-
 }
 export class Client extends ContractClient {
   static async deploy<T = Client>(
@@ -143,30 +142,30 @@ export class Client extends ContractClient {
   constructor(public readonly options: ContractClientOptions) {
     super(
       new ContractSpec([ "AAAABAAAAAAAAAAAAAAABUVycm9yAAAAAAAABAAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAEAAAAAAAAADFVuYXV0aG9yaXplZAAAAAIAAAAAAAAADkludmFsaWRSZWNlaXB0AAAAAAADAAAAAAAAAA1BZG1pblJlcXVpcmVkAAAAAAAABA==",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABQAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAALVHJ1c3RlZEdhbWUAAAAAAQAAACFUb3AtMTAgYm9hcmQgZm9yIGEgZ2l2ZW4gbGV2ZWxfaWQAAAAAAAAFQm9hcmQAAAAAAAABAAAABAAAAAEAAAAkUGVyc29uYWwgYmVzdCBmb3IgKHBsYXllciwgbGV2ZWxfaWQpAAAADFBlcnNvbmFsQmVzdAAAAAIAAAATAAAABAAAAAEAAAAyUmVzZXQgZXBvY2ggcGVyIGxldmVsIChpbmNyZW1lbnRlZCBvbiBhZG1pbiByZXNldCkAAAAAAAVFcG9jaAAAAAAAAAEAAAAE",
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABgAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAALVHJ1c3RlZEdhbWUAAAAAAQAAACFUb3AtMTAgYm9hcmQgZm9yIGEgZ2l2ZW4gbGV2ZWxfaWQAAAAAAAAFQm9hcmQAAAAAAAABAAAABAAAAAEAAAAkUGVyc29uYWwgYmVzdCBmb3IgKHBsYXllciwgbGV2ZWxfaWQpAAAADFBlcnNvbmFsQmVzdAAAAAIAAAATAAAABAAAAAEAAAAyUmVzZXQgZXBvY2ggcGVyIGxldmVsIChpbmNyZW1lbnRlZCBvbiBhZG1pbiByZXNldCkAAAAAAAVFcG9jaAAAAAAAAAEAAAAEAAAAAQAAAAAAAAALUHJvb2ZEaWdlc3QAAAAAAQAAA+4AAAAg",
         "AAAAAQAAAAAAAAAAAAAAEExlYWRlcmJvYXJkRW50cnkAAAAFAAAAAAAAAAxwZXJmZWN0X2hpdHMAAAAEAAAAAAAAABBwaXp6YXNfY29tcGxldGVkAAAABAAAAAAAAAAGcGxheWVyAAAAAAATAAAAAAAAAAVzY29yZQAAAAAAAAYAAAAAAAAACXRpbWVzdGFtcAAAAAAAAAY=",
-        "AAAAAAAAAAAAAAAJZ2V0X2FkbWluAAAAAAAAAAAAAAEAAAPoAAAAEw==",
+        "AAAAAAAAAE9Jbml0aWFsaXplIHRoZSBsZWFkZXJib2FyZCB3aXRoIGFuIGFkbWluIGFuZCB0aGUgdHJ1c3RlZCBnYW1lIGNvbnRyYWN0IGFkZHJlc3MuAAAAAA1fX2NvbnN0cnVjdG9yAAAAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAhnYW1lX2h1YgAAABMAAAAA",
+        "AAAAAAAAACpHZXQgcGVyc29uYWwgYmVzdCBmb3IgYSBwbGF5ZXIgb24gYSBsZXZlbC4AAAAAABFnZXRfcGVyc29uYWxfYmVzdAAAAAAAAAIAAAAAAAAABnBsYXllcgAAAAAAEwAAAAAAAAAIbGV2ZWxfaWQAAAAEAAAAAQAAA+gAAAfQAAAAEExlYWRlcmJvYXJkRW50cnk=",
+        "AAAAAAAAAC9SZXNldCB0aGUgbGVhZGVyYm9hcmQgZm9yIGEgbGV2ZWwgKGFkbWluIG9ubHkpLgAAAAARcmVzZXRfbGVhZGVyYm9hcmQAAAAAAAABAAAAAAAAAAhsZXZlbF9pZAAAAAQAAAABAAAD6QAAAAIAAAAD",
         "AAAAAAAAAAAAAAAJZ2V0X2Vwb2NoAAAAAAAAAQAAAAAAAAAIbGV2ZWxfaWQAAAAEAAAAAQAAAAQ=",
         "AAAAAAAAACNHZXQgdG9wLTEwIGxlYWRlcmJvYXJkIGZvciBhIGxldmVsLgAAAAAPZ2V0X2xlYWRlcmJvYXJkAAAAAAEAAAAAAAAACGxldmVsX2lkAAAABAAAAAEAAAPqAAAH0AAAABBMZWFkZXJib2FyZEVudHJ5",
+        "AAAAAAAAAAAAAAAQZ2V0X3RydXN0ZWRfZ2FtZQAAAAAAAAABAAAD6AAAABM=",
+        "AAAAAAAAAAAAAAAJZ2V0X2FkbWluAAAAAAAAAAAAAAEAAAPoAAAAEw==",
         "AAAAAAAAABVVcGRhdGUgYWRtaW4gYWRkcmVzcy4AAAAAAAAJc2V0X2FkbWluAAAAAAAAAQAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEwAAAAEAAAPpAAAAAgAAAAM=",
         "AAAAAAAAAnhTdWJtaXQgYSB2ZXJpZmllZCBzY29yZSB0byB0aGUgbGVhZGVyYm9hcmQuCgpDYW4gYmUgY2FsbGVkIGJ5OgotIFRoZSB0cnVzdGVkIGd1aXRhci1waXp6YSBjb250cmFjdCAobm8gZXh0cmEgcmVjZWlwdCBuZWVkZWQsIGFscmVhZHkgdmVyaWZpZWQpCi0gQSBwbGF5ZXIgZGlyZWN0bHkgKHJlY2VpcHQgcmVxdWlyZWQgZm9yIHN0YW5kYWxvbmUgdmVyaWZpY2F0aW9uKQoKIyBBcmd1bWVudHMKKiBgY2FsbGVyYCAgICAgICAgICAgLSBBZGRyZXNzIG9mIHRoZSBjYWxsZXIgKGdhbWUgY29udHJhY3Qgb3IgcGxheWVyKQoqIGBwbGF5ZXJgICAgICAgICAgICAtIFRoZSBwbGF5ZXIgd2hvc2Ugc2NvcmUgaXMgYmVpbmcgcmVjb3JkZWQKKiBgbGV2ZWxfaWRgICAgICAgICAgLSBMZXZlbCBpZGVudGlmaWVyCiogYHNjb3JlYCAgICAgICAgICAgIC0gRmluYWwgdmVyaWZpZWQgc2NvcmUKKiBgcGVyZmVjdF9oaXRzYCAgICAgLSBQZXJmZWN0IGhpdCBjb3VudCBmcm9tIGpvdXJuYWwKKiBgcGl6emFzX2NvbXBsZXRlZGAgLSBQaXp6YXMgY29tcGxldGVkIGZyb20gam91cm5hbAoqIGByZWNlaXB0YCAgICAgICAgICAtIFJJU0MgWmVybyByZWNlaXB0IGJ5dGVzIChyZXF1aXJlZCBpZiBjYWxsZXIgIT0gdHJ1c3RlZF9nYW1lKQAAAAxzdWJtaXRfc2NvcmUAAAAHAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAAAAAABnBsYXllcgAAAAAAEwAAAAAAAAAIbGV2ZWxfaWQAAAAEAAAAAAAAAAVzY29yZQAAAAAAAAYAAAAAAAAADHBlcmZlY3RfaGl0cwAAAAQAAAAAAAAAEHBpenphc19jb21wbGV0ZWQAAAAEAAAAAAAAAAdyZWNlaXB0AAAAAA4AAAABAAAD6QAAAAQAAAAD",
-        "AAAAAAAAADZVcGRhdGUgdGhlIHRydXN0ZWQgZ2FtZSBjb250cmFjdCBhZGRyZXNzIChhZG1pbiBvbmx5KS4AAAAAABBzZXRfdHJ1c3RlZF9nYW1lAAAAAQAAAAAAAAAIbmV3X2dhbWUAAAATAAAAAQAAA+kAAAACAAAAAw==",
-        "AAAAAAAAAE9Jbml0aWFsaXplIHRoZSBsZWFkZXJib2FyZCB3aXRoIGFuIGFkbWluIGFuZCB0aGUgdHJ1c3RlZCBnYW1lIGNvbnRyYWN0IGFkZHJlc3MuAAAAAA1fX2NvbnN0cnVjdG9yAAAAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAhnYW1lX2h1YgAAABMAAAAA",
-        "AAAAAAAAAC9SZXNldCB0aGUgbGVhZGVyYm9hcmQgZm9yIGEgbGV2ZWwgKGFkbWluIG9ubHkpLgAAAAARcmVzZXRfbGVhZGVyYm9hcmQAAAAAAAABAAAAAAAAAAhsZXZlbF9pZAAAAAQAAAABAAAD6QAAAAIAAAAD",
-        "AAAAAAAAAAAAAAAQZ2V0X3RydXN0ZWRfZ2FtZQAAAAAAAAABAAAD6AAAABM=",
-        "AAAAAAAAACpHZXQgcGVyc29uYWwgYmVzdCBmb3IgYSBwbGF5ZXIgb24gYSBsZXZlbC4AAAAAABFnZXRfcGVyc29uYWxfYmVzdAAAAAAAAAIAAAAAAAAABnBsYXllcgAAAAAAEwAAAAAAAAAIbGV2ZWxfaWQAAAAEAAAAAQAAA+gAAAfQAAAAEExlYWRlcmJvYXJkRW50cnk=" ]),
+        "AAAAAAAAADZVcGRhdGUgdGhlIHRydXN0ZWQgZ2FtZSBjb250cmFjdCBhZGRyZXNzIChhZG1pbiBvbmx5KS4AAAAAABBzZXRfdHJ1c3RlZF9nYW1lAAAAAQAAAAAAAAAIbmV3X2dhbWUAAAATAAAAAQAAA+kAAAACAAAAAw==" ]),
       options
     )
   }
   public readonly fromJSON = {
-    get_admin: this.txFromJSON<Option<string>>,
+    get_personal_best: this.txFromJSON<Option<LeaderboardEntry>>,
+        reset_leaderboard: this.txFromJSON<Result<void>>,
         get_epoch: this.txFromJSON<u32>,
         get_leaderboard: this.txFromJSON<Array<LeaderboardEntry>>,
+        get_trusted_game: this.txFromJSON<Option<string>>,
+        get_admin: this.txFromJSON<Option<string>>,
         set_admin: this.txFromJSON<Result<void>>,
         submit_score: this.txFromJSON<Result<u32>>,
-        set_trusted_game: this.txFromJSON<Result<void>>,
-        reset_leaderboard: this.txFromJSON<Result<void>>,
-        get_trusted_game: this.txFromJSON<Option<string>>,
-        get_personal_best: this.txFromJSON<Option<LeaderboardEntry>>
+        set_trusted_game: this.txFromJSON<Result<void>>
   }
 }

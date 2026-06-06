@@ -96,13 +96,13 @@
 .main-logo {
     font-family: var(--font-title);
     font-weight: 900;
-    font-size: 3.5rem;
-    /* Reduced from 4rem for better fit */
+    font-size: 3.0rem;
+    /* Reduced from 3.5rem for better fit */
     color: var(--ph-white);
     line-height: 0.95;
     text-transform: uppercase;
     text-align: center;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
 
     /* Neon Glow Effect */
     text-shadow:
@@ -132,9 +132,9 @@
     font-weight: 700;
     color: var(--ph-white);
     background: var(--ph-red);
-    padding: 0.2rem 1rem;
+    padding: 0.15rem 0.8rem;
     letter-spacing: 0.3em;
-    font-size: 1rem;
+    font-size: 0.85rem;
     transform: rotate(2deg);
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
     display: inline-block;
@@ -220,19 +220,21 @@ button {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    background: rgba(26, 26, 26, 0.8) !important;
+    gap: 0.3rem;
+    background: linear-gradient(180deg, #2d2d2d, #141414) !important;
     backdrop-filter: blur(12px) !important;
-    border: 2px solid rgba(255, 215, 0, 0.2) !important;
-    border-radius: 16px !important;
-    padding: 0.5rem 0.5rem !important;
+    border: 2px solid rgba(212, 175, 55, 0.45) !important;
+    border-radius: 99px !important; /* Premium Pill shapes! */
+    padding: 0.3rem 0.8rem !important;
     width: 100% !important;
     box-shadow:
         0 4px 0 #000,
-        0 10px 20px rgba(0, 0, 0, 0.4) !important;
+        0 8px 15px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
     transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .lobby-nav-btn::before {
@@ -246,40 +248,131 @@ button {
 }
 
 .lobby-nav-btn .btn-icon {
-    font-size: 1.8rem;
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+    font-size: 1.3rem;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.3));
     transition: transform 0.2s;
 }
 
 .lobby-nav-btn .btn-text {
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
-    color: #aaa;
-    font-weight: bold;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    color: #FFF8E7;
+    font-weight: 800;
     text-transform: uppercase;
+    text-shadow: 0 1px 1px #000;
 }
 
 .lobby-nav-btn:hover {
-    background: #222 !important;
-    border-color: var(--ph-gold) !important;
-    transform: translateY(-4px) scale(1.02) !important;
+    background: linear-gradient(180deg, #3a3a3a, #1c1c1c) !important;
+    border-color: rgba(255, 215, 0, 0.9) !important;
+    transform: translateY(-3px) scale(1.04) !important;
     box-shadow:
-        0 8px 0 rgba(0, 0, 0, 0.8),
-        0 0 20px rgba(212, 175, 55, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+        0 7px 0 #000,
+        0 12px 22px rgba(212, 175, 55, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
 }
 
 .lobby-nav-btn:hover .btn-icon {
-    transform: scale(1.15);
+    transform: scale(1.2) rotate(-5deg);
 }
 
 .lobby-nav-btn:hover .btn-text {
-    color: var(--ph-gold);
+    color: #FFD700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
 }
 
 .lobby-nav-btn:active {
-    transform: translateY(2px) !important;
-    box-shadow: 0 2px 0 #000 !important;
+    transform: translateY(3px) scale(0.97) !important;
+    box-shadow:
+        0 1px 0 #000,
+        0 2px 5px rgba(0, 0, 0, 0.4),
+        inset 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Lobby Clashes Primary Button (PvP / Duels) */
+.lobby-clashes-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: linear-gradient(180deg, #8B0000, #4A0E0E) !important;
+    border: 3px solid #DAA520 !important;
+    border-radius: 20px !important; /* Premium Rounded Card shape! */
+    padding: 0.4rem 0.5rem !important;
+    width: 100% !important;
+    font-size: 0.92rem !important;
+    font-weight: 900 !important;
+    color: #FFF8E7 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    box-shadow:
+        0px 6px 0px #500,
+        0px 12px 25px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.6) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.lobby-clashes-btn:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow:
+        0px 9px 0px #500,
+        0 0 30px rgba(218, 165, 32, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    filter: brightness(1.1) !important;
+}
+
+.lobby-clashes-btn:active {
+    transform: translateY(5px) scale(0.98) !important;
+    box-shadow:
+        0px 1px 0px #500,
+        0 0 10px rgba(218, 165, 32, 0.2) !important;
+}
+
+/* Lobby Oven Primary Button (Staking / Vault) */
+.lobby-oven-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: linear-gradient(180deg, #1b4d3e, #0e2a22) !important;
+    border: 3px solid #27ae60 !important;
+    border-radius: 20px !important; /* Premium Rounded Card shape! */
+    padding: 0.4rem 0.5rem !important;
+    width: 100% !important;
+    font-size: 0.92rem !important;
+    font-weight: 900 !important;
+    color: #FFF8DC !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    box-shadow:
+        0px 6px 0px #091a14,
+        0px 12px 25px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.6) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.lobby-oven-btn:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow:
+        0px 9px 0px #091a14,
+        0 0 30px rgba(39, 174, 96, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    filter: brightness(1.1) !important;
+}
+
+.lobby-oven-btn:active {
+    transform: translateY(5px) scale(0.98) !important;
+    box-shadow:
+        0px 1px 0px #091a14,
+        0 0 10px rgba(39, 174, 96, 0.2) !important;
 }
 
 /* Close / Back Buttons */
@@ -487,10 +580,8 @@ button {
 .logo-container {
     transform: translateY(0);
     text-align: center;
-    margin-top: 2rem;
-    /* Reduced from 3rem to save space */
-    margin-bottom: 1rem;
-    /* Reduced from 1.5rem */
+    margin-top: 0.3rem;
+    margin-bottom: 0.25rem;
 }
 
 /* Variations - One by One Progressive Fall */
@@ -564,7 +655,7 @@ button {
 
 /* ===== NEW MODAL SYSTEM ===== */
 .modal-backdrop {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -699,7 +790,10 @@ button {
 /* Responsive */
 @media (min-width: 600px) {
     .modal-backdrop {
-        align-items: center;
+        align-items: flex-start;
+        padding-top: 120px;
+        padding-bottom: 2rem;
+        box-sizing: border-box;
     }
 
     .modal-content {
@@ -754,3 +848,91 @@ button {
     box-shadow: 0 4px 0 #5C0000;
     /* keep shadow for 3D look */
 }
+
+/* ============================================================
+   SECTION 9: SPRINT 4 ACCENTS & EFFECTS
+   ============================================================ */
+
+/* Fever Mode Screen Border Glow */
+.fever-border-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 4px solid #FF4500;
+    border-radius: 20px;
+    z-index: 8;
+    animation: feverPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes feverPulse {
+    0% {
+        box-shadow: 0 0 12px #FF4500, inset 0 0 12px #FF4500;
+        border-color: #FF4500;
+    }
+    50% {
+        box-shadow: 0 0 25px #FFD700, inset 0 0 25px #FFD700;
+        border-color: #FFD700;
+    }
+    100% {
+        box-shadow: 0 0 12px #FF4500, inset 0 0 12px #FF4500;
+        border-color: #FF4500;
+    }
+}
+
+/* Fever Multiplier Badge */
+.fever-multiplier-badge {
+    animation: multiplierBounce 0.45s ease-in-out infinite alternate;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    font-family: 'Bangers', 'Fraunces', serif;
+}
+
+@keyframes multiplierBounce {
+    from {
+        transform: scale(1) rotate(-1deg);
+    }
+    to {
+        transform: scale(1.08) rotate(1deg);
+    }
+}
+
+/* Gold Accents for Lanes */
+.gold-lane-overlay {
+    position: absolute;
+    bottom: 0;
+    width: 25%;
+    height: 70%;
+    background: linear-gradient(to top, rgba(218, 165, 32, 0.25) 0%, rgba(218, 165, 32, 0) 100%);
+    border-left: 1px dashed rgba(218, 165, 32, 0.4);
+    border-right: 1px dashed rgba(218, 165, 32, 0.4);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Metronome Pendulum Swing container */
+.metronome-area {
+    width: 100%;
+    height: 150px;
+    background: #F9F5EB;
+    border: 2px solid #D0B488;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+/* Nevera Grid Responsive Utility */
+.nevera-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+}
+
+@media (max-width: 480px) {
+    .nevera-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

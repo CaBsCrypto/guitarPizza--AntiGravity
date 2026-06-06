@@ -10,7 +10,7 @@ interface LayoutProps {
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   return (
-    <div className="rs-shell">
+    <div className={`rs-shell ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>
       {currentPage !== 'game' && (
         <header className="rs-header">
 
@@ -36,7 +36,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
         </header>
       )}
 
-      <main className="rs-main">{children}</main>
+      <main className={`rs-main ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>{children}</main>
 
       {currentPage !== 'game' && (
         <footer className="rs-footer">

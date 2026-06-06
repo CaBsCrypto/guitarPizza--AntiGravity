@@ -1,758 +1,2567 @@
 
+
 import { useEffect, useRef, useState, useCallback } from 'react';
+
 import { Settings, Volume2, VolumeX, ArrowLeft, ShieldCheck, Loader2, Globe } from 'lucide-react';
+
 import { ProofGenerator } from '../../zk/ProofGenerator';
+
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
+
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
+import { multiplayerService } from '../../services/MultiplayerService';
+import { useFriendsStore } from '../../store/friendsSlice';
+
 import { useWallet } from '@/hooks/useWallet';
+
 import { Buffer } from 'buffer';
+
 import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 
+import { CollectionTab } from '../../components/CollectionTab';
+
+
+
 // We'll import the game logic from a separate file or inline it here if feasible
+
 // For now, we assume the game logic is exposed globally via window.GuitarPizza or similar after loading scripts
 
+
+
 declare global {
+
     interface Window {
+
         initGuitarPizza: (canvas: HTMLCanvasElement | null, userAddress: string, onComplete: (score: number, inputLog?: any[]) => void, songUrl?: string, t?: any) => () => void;
+
         BASE64_ASSETS: Record<string, string>;
+
         GP_BASE_PATH?: string;
+
     }
+
 }
 
+
+
 interface GuitarPizzaGameProps {
+
     userAddress: string;
+
     onGameComplete: (score: number) => void;
+
     onBack?: () => void;
     embed?: boolean;
 }
 
+
+
 interface TxRecord {
+
     hash: string;
+
     type: string;   // e.g. "Score Submit", "Leaderboard"
+
     score: number;
+
     timestamp: number; // Date.now()
+
 }
+
+
 
 const EXPLORER_BASE = 'https://stellar.expert/explorer/testnet/tx';
 
+
+
 const TRANSLATIONS = {
+
     es: {
+
         initializing: 'Inicializando...',
+
         loadingAssets: 'Cargando Objetos...',
+
         loadingEngine: 'Cargando Motor...',
+
         openingSession: 'Abriendo sesión...',
+
         startingGame: 'Iniciando Juego...',
+
         market: 'MERCADO',
+
         marketSub: 'Para el aspirante a Don.',
+
         ranking: 'RANKING',
+
         legend: 'LEYENDA',
+
         rules: 'REGLAS',
+
         setup: 'AJUSTES',
+
         fireUp: 'ENCENDER HORNO',
+
         heatingUp: 'CALENTANDO...',
+
         chefName: 'Nombre del Chef',
+
         xHandle: 'Usuario X',
+
         wallet: 'Billetera Conectada',
+
         volume: 'Volumen Maestro',
+
         myTxs: 'Mis Transacciones',
+
         noTxs: 'Sin transacciones aún. ¡Juega para empezar!',
+
         backToCooking: 'VOLVER A LA COCINA',
+
         serviceEnded: 'SERVICIO FINALIZADO',
+
         score: 'PUNTAJE',
+
         cookAgain: 'COCINAR DE NUEVO',
+
         exitKitchen: 'SALIR DE LA COCINA',
+
         verifying: 'GENERANDO PRUEBA...',
+
         securing: 'Asegurando puntaje con Zero-Knowledge',
+
         verified: '✓ VERIFICADO Y SELLADO',
+
         failed: 'Verificación Fallida',
+
         sealed: 'SELLADO EN STELLAR',
+
         scoreVerified: 'Puntaje verificado en cadena',
+
         autoClose: 'Cierre automático en',
+
         challenge: 'DESAFIAR AL TABLERO',
+
         noScores: '¡Sin puntajes aún!',
+
         beFirst: 'Sé el primero en la cadena.',
+
         refresh: 'Refrescar',
+
         back: 'Atrás',
+
         storyIntro: 'NY 1984. Las Familias controlan el queso... Usa el Ritmo para romper su corteza.',
+
         storyBody: 'Demuestra tu valía en la cocina. Toca las notas, hornea las pizzas perfectas y conviértete en el...',
+
         don: 'DON DE LA MASA',
+
         controls: 'CONTROLES',
+
         controlsDesc: 'Toca las teclas cuando los ingredientes lleguen al plato.',
+
         baking: 'HORNEANDO',
+
         precision: 'Precisión',
+
         precisionDesc: 'Los aciertos llenan tu medidor.',
+
         combo: 'Combo / Fiebre',
+
         comboDesc: '¡No falles! Activa el Modo Fiebre.',
+
         orders: 'Pedidos',
+
         ordersDesc: 'Completa pizzas para ganar más.',
+
         rewards: 'RECOMPENSA',
+
         rewardsDesc: '¡Sube en el ranking y desbloquea herramientas!',
+
         language: 'Idioma',
+
         engineLoading: 'Cargando Ingredientes...',
+
         engineLetsCook: '¡A COCINAR! 🍕',
+
         engineLevelComplete: '🎉 ¡NIVEL COMPLETADO!',
+
         engineServiceEnded: 'SERVICIO FINALIZADO'
+
     },
+
     en: {
+
         initializing: 'Initializing...',
+
         loadingAssets: 'Loading Assets (this may take a moment)...',
+
         loadingEngine: 'Loading Game Engine...',
+
         openingSession: 'Opening on-chain session...',
+
         startingGame: 'Starting Game...',
+
         market: 'MARKET',
+
         marketSub: 'Illicit goods for the aspiring Don.',
+
         ranking: 'BOARD',
+
         legend: 'LEGEND',
+
         rules: 'RULES',
+
         setup: 'SETUP',
+
         fireUp: 'FIRE UP OVEN',
+
         heatingUp: 'HEATING UP...',
+
         chefName: 'Chef Name',
+
         xHandle: 'X Handle',
+
         wallet: 'Connected Wallet',
+
         volume: 'Master Volume',
+
         myTxs: 'My TXs',
+
         noTxs: 'No transactions yet. Play a game to start!',
+
         backToCooking: 'BACK TO COOKING',
+
         serviceEnded: 'SERVICE ENDED',
+
         score: 'SCORE',
+
         cookAgain: 'COOK AGAIN',
+
         exitKitchen: 'EXIT KITCHEN',
+
         verifying: 'GENERATING PROOF...',
+
         securing: 'Securing score with Zero-Knowledge',
+
         verified: '✓ VERIFIED & SEALED',
+
         failed: 'Verification Failed',
+
         sealed: 'SEALED ON STELLAR',
+
         scoreVerified: 'Score verified on-chain',
+
         autoClose: 'Auto-closing in',
+
         challenge: 'CHALLENGE THE BOARD',
+
         noScores: 'No scores yet!',
+
         beFirst: 'Be the first chef on-chain.',
+
         refresh: 'Refresh',
+
         back: 'Back',
+
         storyIntro: 'New York, 1984. The Five Families control the cheese... You are the only one with the Rhythm to break their crust.',
+
         storyBody: 'Prove your worth in the kitchen. Hit the notes, bake the perfect pies, and become the...',
+
         don: 'DON OF DOUGH',
+
         controls: 'CONTROLS',
+
         controlsDesc: 'Tap the keys as ingredients reach the plate at the bottom.',
+
         baking: 'BAKING',
+
         precision: 'Precision',
+
         precisionDesc: 'Hits fill your Pizza Meter.',
+
         combo: 'Combo / Fever',
+
         comboDesc: "Don't miss! Activate Fever Mode.",
+
         orders: 'Orders',
+
         ordersDesc: 'Finish pies to increase tips.',
+
         rewards: 'REWARD',
+
         rewardsDesc: 'Climb the ranks and unlock market tools!',
+
         language: 'Language',
+
         engineLoading: 'Loading Ingredients...',
+
         engineLetsCook: "LET'S COOK! 🍕",
+
         engineLevelComplete: '🎉 LEVEL COMPLETE!',
+
         engineServiceEnded: 'SERVICE ENDED'
+
     }
+
 };
 
 export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = false }: GuitarPizzaGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
     const containerRef = useRef<HTMLDivElement>(null);
+
     // Cleanup ref now holds the engine interface or null
+
     const engineRef = useRef<{ cleanup: () => void, setVolume: (v: number) => void, startGame?: () => void } | null>(null);
+
+    // Reactive Friends list from Zustand state store
+    const friends = useFriendsStore((state) => state.friends);
+
     // Tracks the actual on-chain session ID (may differ from local if a session was reused)
+
     const onChainSessionIdRef = useRef<number>(0);
 
+
+
     const [status, setStatus] = useState<string>(TRANSLATIONS['es'].initializing); // Default to es for init
+
     const [error, setError] = useState<string | null>(null);
 
+
+
     // Wallet
+
     const { getContractSigner, networkPassphrase, isConnected } = useWallet();
 
+
+
     // Refs so the game-completion closure always reads the LATEST wallet state
+
     // (the main useEffect has [] deps — without refs it captures stale values)
+
     const isConnectedRef = useRef(isConnected);
+
     const getContractSignerRef = useRef(getContractSigner);
+
     useEffect(() => { isConnectedRef.current = isConnected; }, [isConnected]);
+
     useEffect(() => { getContractSignerRef.current = getContractSigner; }, [getContractSigner]);
 
+
+
     // UI State
+
     const [showSettings, setShowSettings] = useState(false);
+
     const [isMuted, setIsMuted] = useState(false);
+
     const [language, setLanguage] = useState<'es' | 'en'>(() => {
+
         try { return (localStorage.getItem('gp_language') as 'es' | 'en') ?? 'en'; }
+
         catch { return 'en'; }
+
     });
+
     const t = TRANSLATIONS[language];
 
+
+
     useEffect(() => {
+
         localStorage.setItem('gp_language', language);
+
     }, [language]);
 
+
+
     // Market State
+
     const [pizzaBalance, setPizzaBalance] = useState<number>(() => {
+
         try { return parseInt(localStorage.getItem('gp_pizzas_balance') ?? '0', 10) || 0; }
+
         catch { return 0; }
+
     });
+
+
 
     const [inventory, setInventory] = useState<string[]>(() => {
+
         try { return JSON.parse(localStorage.getItem('gp_inventory') ?? '[]'); }
+
         catch { return []; }
+
     });
 
+
+
     useEffect(() => {
+
         localStorage.setItem('gp_pizzas_balance', pizzaBalance.toString());
+
     }, [pizzaBalance]);
 
+
+
     useEffect(() => {
+
         localStorage.setItem('gp_inventory', JSON.stringify(inventory));
+
     }, [inventory]);
 
-    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker'>('lobby');
+
+
+    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign'>('lobby');
+
     const [closingView, setClosingView] = useState<string | null>(null);
 
-    const closeModalWithAnimation = useCallback((targetView: 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' = 'lobby') => {
+
+
+    const closeModalWithAnimation = useCallback((targetView: 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' = 'lobby') => {
+
         setClosingView(view);
+
         setTimeout(() => {
+
             setClosingView(null);
+
             setView(targetView);
+
         }, 200); // Matches the 0.2s in CSS
+
     }, [view]);
 
-    const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
-    const selectedSongRef = useRef(selectedSong);
-    useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
 
-    const [isVerifying, setIsVerifying] = useState(false);
-    const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
-    const [txHash, setTxHash] = useState<string | null>(null);
-    const [sliceEarned, setSliceEarned] = useState<number>(0);
 
-    // TX pop-up after game completion
-    const [showTxPopup, setShowTxPopup] = useState(false);
-    const [popupTxs, setPopupTxs] = useState<TxRecord[]>([]);      // TXs of the current game
-    const [popupCountdown, setPopupCountdown] = useState(8);
-    const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const popupIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Timed-Baking Oven States
 
-    // TX history (persistent across games via localStorage)
-    const [txHistory, setTxHistory] = useState<TxRecord[]>(() => {
-        try { return JSON.parse(localStorage.getItem('gp_tx_history') ?? '[]'); }
-        catch { return []; }
+    const [ovenTab, setOvenTab] = useState<'baking' | 'classic' | 'collection' | 'refrigerator'>('baking');
+
+    const [stakedSlice, setStakedSlice] = useState<number>(() => {
+
+        try { return parseInt(localStorage.getItem('gp_staked_slice') ?? '0', 10) || 0; }
+
+        catch { return 0; }
+
     });
-    // Hold the finalScore to pass to onGameComplete when the popup closes
-    const pendingFinalScoreRef = useRef<number>(0);
 
-    // On-chain verified score (shown only after contract confirmation)
-    const [onChainScore, setOnChainScore] = useState<number | null>(null);
+    const [sliceBalance, setSliceBalance] = useState<number>(0);
+    const [ticketBalance, setTicketBalance] = useState<number>(0);
 
-    // Leaderboard from zk-leaderboard contract
-    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player: string; score: number }>>([]);
-    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
-    const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
-    // Status of the leaderboard submission from the last game
-    const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
+    // ─── PVP Duel States ────────────────────────────────────────────────────
+    const [pvpState, setPvpState] = useState<'menu' | 'waiting' | 'active'>('menu');
+    const [roomCode, setRoomCode] = useState<string>('');
+    const [joinCode, setJoinCode] = useState<string>('');
+    const [selectedWager, setSelectedWager] = useState<number>(10);
+    const [isPvp, setIsPvp] = useState<boolean>(false);
+    // Multiplayer Real-Time states
+    const [mpMatchId, setMpMatchId] = useState<number | null>(null);
+    const [rivalAddress, setRivalAddress] = useState<string | null>(null);
+    const [isMultiplayer, setIsMultiplayer] = useState<boolean>(false);
+    const [mpQueueStatus, setMpQueueStatus] = useState<string>('');
 
-    // Profile State (Persist to local storage later)
-    const [chefName, setChefName] = useState("Chef Anon");
-    const [xHandle, setXHandle] = useState("@");
+    const [rivalData, setRivalData] = useState<{ name: string; score: number; combo: number; isFever: boolean; isMiss: boolean } | null>(null);
+    const [playerPvpStats, setPlayerPvpStats] = useState<{ score: number; combo: number } | null>(null);
 
-    // Results Screen State
-    const [resultParams, setResultParams] = useState({ bgImage: '' });
+    const [ingredients, setIngredients] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gp_ingredients') ?? '{"cheese":5,"pepperoni":4,"bacon":2,"onion":2}');
+        } catch {
+            return { cheese: 5, pepperoni: 4, bacon: 2, onion: 2 };
+        }
+    });
 
-    // ── TX popup helpers ──────────────────────────────────────────────────────
-    const closeTxPopup = useCallback(() => {
-        if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
-        if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
-        setShowTxPopup(false);
-        onGameComplete(pendingFinalScoreRef.current);
-    }, [onGameComplete]);
+    // ─── Refrigerator Vault (Nevera de la Famiglia) State & Helpers ────────
 
-    const openTxPopup = useCallback((txs: TxRecord[], finalScore: number) => {
-        pendingFinalScoreRef.current = finalScore;
-        setPopupTxs(txs);
-        setPopupCountdown(8);
-        setShowTxPopup(true);
+    const INGREDIENT_TOKENS = {
+        cheese: 'CBFQYO2ML6ITTZLO46Z6WXUCOV4FLCRYHUBLC7RLERF5OM2G4Q324UGM',
+        pepperoni: 'CBE5ZVJPGYORQYZ5ZCLBGKX2HUQVCL2HKGR2T5D4SLFGS73VJYVLPNUW',
+        bacon: 'CB4DPSEWXQJHVLIZ3GABBAWNLMKKNZND3KIXPVGAXT6A63DPQMHDK3U5',
+        onion: 'CBUE7F2FEVMUH4AX5VJ777EOXN7QCIQEIDZ36622YGLYSOCE6IRXCQEU',
+    };
 
-        // Countdown every second
-        popupIntervalRef.current = setInterval(() => {
-            setPopupCountdown(prev => {
-                if (prev <= 1) {
-                    if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+    const [frozenIngredients, setFrozenIngredients] = useState<Record<string, number>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gp_frozen_ingredients') ?? '{"cheese":0,"pepperoni":0,"bacon":0,"onion":0}');
+        } catch {
+            return { cheese: 0, pepperoni: 0, bacon: 0, onion: 0 };
+        }
+    });
 
-        // Auto-close after 8 seconds
-        popupTimerRef.current = setTimeout(() => {
-            closeTxPopup();
-        }, 8000);
-    }, [closeTxPopup]);
-
-    // Clear timers on unmount
-    useEffect(() => {
-        return () => {
-            if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
-            if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+    const loadTimestamps = useCallback(() => {
+        try {
+            const saved = localStorage.getItem('gp_ingredient_timestamps');
+            if (saved) return JSON.parse(saved);
+        } catch (e) {
+            console.error(e);
+        }
+        const now = Date.now();
+        return {
+            cheese: Array(5).fill(now),
+            pepperoni: Array(4).fill(now),
+            bacon: Array(2).fill(now),
+            onion: Array(2).fill(now)
         };
     }, []);
 
-    // ── Leaderboard loader ────────────────────────────────────────────────────
-    const loadLeaderboard = useCallback(async () => {
-        setLeaderboardLoading(true);
-        setLeaderboardError(null);
-        try {
-            const entries = await StellarContractService.getLeaderboard(userAddress, 1);
-            const arr = entries as any[];
-            const mapped = arr.slice(0, 10).map((e: any, i: number) => {
-                // e.player may be an Address object or already a string
-                const playerStr = typeof e.player === 'string'
-                    ? e.player
-                    : (e.player?.toString?.() ?? String(e.player ?? ''));
-                // e.score is u64 (BigInt) or number
-                const scoreNum = typeof e.score === 'bigint' ? Number(e.score) : Number(e.score ?? 0);
-                return { rank: i + 1, player: playerStr, score: scoreNum };
-            });
-            setLeaderboard(mapped);
-            if (arr.length === 0) {
-                console.warn('[Leaderboard] No entries returned — board may be empty or query failed.');
+    const addIngredientTimestamps = useCallback((type: string, count: number) => {
+        const ts = loadTimestamps();
+        if (!ts[type]) ts[type] = [];
+        const now = Date.now();
+        for (let i = 0; i < count; i++) {
+            ts[type].push(now);
+        }
+        localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
+    }, [loadTimestamps]);
+
+    const removeIngredientTimestamps = useCallback((type: string, count: number) => {
+        const ts = loadTimestamps();
+        if (ts[type]) {
+            ts[type].sort((a: number, b: number) => a - b);
+            ts[type] = ts[type].slice(count);
+            localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
+        }
+    }, [loadTimestamps]);
+
+    const autoExpireIngredients = useCallback(() => {
+        const ts = loadTimestamps();
+        const now = Date.now();
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        let expiredCount = 0;
+        const expiredDetails: Record<string, number> = { cheese: 0, pepperoni: 0, bacon: 0, onion: 0 };
+        const nextIngredients = { ...ingredients };
+        let changed = false;
+
+        for (const type of ['cheese', 'pepperoni', 'bacon', 'onion']) {
+            if (ts[type] && ts[type].length > 0) {
+                const validTimestamps = ts[type].filter((t: number) => now - t < sevenDaysMs);
+                const expired = ts[type].length - validTimestamps.length;
+                if (expired > 0) {
+                    ts[type] = validTimestamps;
+                    nextIngredients[type] = Math.max(0, (nextIngredients[type] || 0) - expired);
+                    expiredCount += expired;
+                    expiredDetails[type] = expired;
+                    changed = true;
+                }
             }
-        } catch (err) {
-            console.error('[Leaderboard] Failed to load:', err);
-            setLeaderboardError('Could not load leaderboard. Check console.');
-        } finally {
-            setLeaderboardLoading(false);
-        }
-    }, [userAddress]);
-
-    // Audio Toggle Handler
-    const toggleAudio = () => {
-        const newMuteState = !isMuted;
-        setIsMuted(newMuteState);
-        if (engineRef.current) {
-            engineRef.current.setVolume(newMuteState ? 0 : 1);
-        }
-    };
-
-    const addLog = (msg: string) => {
-        console.log(msg);
-    };
-
-    const handleStartGame = () => {
-        // Reset leaderboard submission status for the new game
-        setLbSubmitStatus('none');
-        setSliceEarned(0);
-        if (engineRef.current && engineRef.current.startGame) {
-            addLog("[GuitarPizza] Calling engine.startGame()");
-            engineRef.current.startGame();
-        } else {
-            console.warn("[GuitarPizza] Engine not ready yet.");
-            addLog("[WARN] Engine not ready yet.");
-        }
-    };
-
-    // Called when the player clicks "Cook Again" on the results screen.
-    // Hides the results panel, resets UI state, starts a new on-chain session
-    // (async, non-blocking), then tells the engine to begin a fresh game.
-    const handleCookAgain = async () => {
-        const results = document.getElementById('results');
-        if (results) results.style.display = 'none';
-        setIsVerifying(false);
-        setProofStatus('none');
-        setOnChainScore(null);
-        setLbSubmitStatus('none');
-
-        // Start the game immediately — don't block on the on-chain call
-        if (engineRef.current?.startGame) {
-            engineRef.current.startGame();
         }
 
-        // Open a fresh on-chain session in the background
-        const localSessionId = Math.floor(Math.random() * 1000000);
-        onChainSessionIdRef.current = localSessionId;
+        if (changed) {
+            setIngredients(nextIngredients);
+            localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
+            localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
+            addLog(`🔥 Degradación: Han expirado ${expiredCount} ingredientes frescos de hace más de 7 días: ` +
+                   `${expiredDetails.cheese} Queso, ${expiredDetails.pepperoni} Pepperoni, ` +
+                   `${expiredDetails.bacon} Bacon, ${expiredDetails.onion} Onion.`);
+        }
+    }, [ingredients, loadTimestamps]);
+
+    const fetchRefrigeratorData = useCallback(async () => {
+        const isPlaceholder = !CONTRACT_IDS.refrigeratorVault || CONTRACT_IDS.refrigeratorVault.includes('CONTRACTID') || CONTRACT_IDS.refrigeratorVault.includes('CDREFRIGERATOR') || CONTRACT_IDS.refrigeratorVault.length !== 56;
+        if (!userAddress || userAddress === 'G_DEMO_USER' || !isConnected || isPlaceholder) {
+            return;
+        }
+        try {
+            const cheeseBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.cheese);
+            const pepBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.pepperoni);
+            const baconBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.bacon);
+            const onionBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.onion);
+
+            const nextFrozen = {
+                cheese: cheeseBal,
+                pepperoni: pepBal,
+                bacon: baconBal,
+                onion: onionBal
+            };
+            setFrozenIngredients(nextFrozen);
+            localStorage.setItem('gp_frozen_ingredients', JSON.stringify(nextFrozen));
+        } catch (e) {
+            console.error('fetchRefrigeratorData failed:', e);
+        }
+    }, [userAddress, isConnected]);
+
+    const depositToRefrigerator = async (type: 'cheese' | 'pepperoni' | 'bacon' | 'onion', amount: number) => {
+        if (amount <= 0) return;
+        if ((ingredients as any)[type] < amount) {
+            alert(`⚠️ No tienes suficiente ${type} fresco.`);
+            return;
+        }
+
+        const isPlaceholder = !CONTRACT_IDS.refrigeratorVault || CONTRACT_IDS.refrigeratorVault.includes('CONTRACTID') || CONTRACT_IDS.refrigeratorVault.includes('CDREFRIGERATOR') || CONTRACT_IDS.refrigeratorVault.length !== 56;
+        if (userAddress === 'G_DEMO_USER' || !isConnected || isPlaceholder) {
+            const nextIngredients = { ...ingredients };
+            (nextIngredients as any)[type] -= amount;
+            removeIngredientTimestamps(type, amount);
+
+            const nextFrozen = { ...frozenIngredients };
+            nextFrozen[type] += amount;
+
+            setIngredients(nextIngredients);
+            setFrozenIngredients(nextFrozen);
+
+            localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
+            localStorage.setItem('gp_frozen_ingredients', JSON.stringify(nextFrozen));
+            
+            if (isPlaceholder) {
+                addLog(`❄️ Simulación: Has depositado ${amount} ${type} en la Nevera.`);
+                alert(`❄️ ¡Ingrediente preservado en la Nevera (Simulación Local)! \n(Nota: Contrato no desplegado aún en esta red)`);
+            } else {
+                addLog(`❄️ Local: Has depositado ${amount} ${type} en la Nevera.`);
+                alert(`❄️ ¡Ingrediente preservado con éxito en la Nevera (Modo Demo)!`);
+            }
+            return;
+        }
+
         try {
             const signer = getContractSignerRef.current();
-            const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
-            onChainSessionIdRef.current = startResult.sessionId;
-            addLog(`[GuitarPizza] On-chain session ready (replay): ${startResult.sessionId}`);
+            const tokenAddr = (INGREDIENT_TOKENS as any)[type];
+            addLog(`❄️ Enviando transacción a Soroban para congelar ${amount} ${type}...`);
+            const res = await StellarContractService.depositToRefrigerator(userAddress, tokenAddr, amount, signer);
+            if (res.success) {
+                const nextIngredients = { ...ingredients };
+                (nextIngredients as any)[type] -= amount;
+                removeIngredientTimestamps(type, amount);
+
+                setIngredients(nextIngredients);
+                localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
+
+                await fetchRefrigeratorData();
+                const updatedSlice = await StellarContractService.getSliceBalance(userAddress);
+                setSliceBalance(updatedSlice);
+
+                addLog(`❄️ ¡Congelación exitosa en Stellar Testnet!`);
+                alert(`❄️ ¡Excelente! Ingredientes preservados de por vida on-chain.`);
+            } else {
+                alert(`⚠️ Error al depositar en la Nevera: ${res.error}`);
+            }
+        } catch (e: any) {
+            alert(`⚠️ Error: ${e.message}`);
+        }
+    };
+
+    const withdrawFromRefrigerator = async (type: 'cheese' | 'pepperoni' | 'bacon' | 'onion', amount: number) => {
+        if (amount <= 0) return;
+        if (frozenIngredients[type] < amount) {
+            alert(`⚠️ No tienes suficiente ${type} congelado en la Nevera.`);
+            return;
+        }
+
+        const isPlaceholder = !CONTRACT_IDS.refrigeratorVault || CONTRACT_IDS.refrigeratorVault.includes('CONTRACTID') || CONTRACT_IDS.refrigeratorVault.includes('CDREFRIGERATOR') || CONTRACT_IDS.refrigeratorVault.length !== 56;
+        if (userAddress === 'G_DEMO_USER' || !isConnected || isPlaceholder) {
+            const nextIngredients = { ...ingredients };
+            (nextIngredients as any)[type] += amount;
+            addIngredientTimestamps(type, amount);
+
+            const nextFrozen = { ...frozenIngredients };
+            nextFrozen[type] -= amount;
+
+            setIngredients(nextIngredients);
+            setFrozenIngredients(nextFrozen);
+
+            localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
+            localStorage.setItem('gp_frozen_ingredients', JSON.stringify(nextFrozen));
+            
+            if (isPlaceholder) {
+                addLog(`❄️ Simulación: Has retirado ${amount} ${type} de la Nevera.`);
+                alert(`❄️ ¡Retiro exitoso de la Nevera (Simulación Local)! \n(Nota: Contrato no desplegado aún en esta red)`);
+            } else {
+                addLog(`❄️ Local: Has retirado ${amount} ${type} de la Nevera.`);
+                alert(`❄️ ¡Retiro exitoso de la Nevera (Modo Demo)!`);
+            }
+            return;
+        }
+
+        try {
+            const signer = getContractSignerRef.current();
+            const tokenAddr = (INGREDIENT_TOKENS as any)[type];
+            addLog(`❄️ Enviando transacción a Soroban para retirar ${amount} ${type}...`);
+            const res = await StellarContractService.withdrawFromRefrigerator(userAddress, tokenAddr, amount, signer);
+            if (res.success) {
+                const nextIngredients = { ...ingredients };
+                (nextIngredients as any)[type] += amount;
+                addIngredientTimestamps(type, amount);
+
+                setIngredients(nextIngredients);
+                localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
+
+                await fetchRefrigeratorData();
+
+                addLog(`❄️ ¡Retiro exitoso desde Stellar Testnet!`);
+                alert(`❄️ Ingredientes listos para cocinar.`);
+            } else {
+                alert(`⚠️ Error al retirar de la Nevera: ${res.error}`);
+            }
+        } catch (e: any) {
+            alert(`⚠️ Error: ${e.message}`);
+        }
+    };
+
+    const [isPracticeMode, setIsPracticeMode] = useState<boolean>(true);
+    const [personalBests, setPersonalBests] = useState<Record<string, number>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gp_personal_bests') ?? '{}');
         } catch {
-            console.warn("[GuitarPizza] No wallet for replay on-chain session — skipping.");
+            return {};
         }
-    };
+    });
 
-    const handleNextLevel = () => {
-        // Unlock Level 2
-        const song2 = SONGS.find(s => s.id === 'rare-pizzas');
-        if (song2) {
-            song2.available = true;
-            setSelectedSong(song2);
-        }
-        handleCookAgain(); // uses the new selectedSong in the next init
-    };
 
-    // Load leaderboard on mount
-    useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
+
+
+    const [ovenSlots, setOvenSlots] = useState<Array<{
+
+        id: number;
+
+        isLocked: boolean;
+
+        status: 'idle' | 'baking' | 'completed';
+
+        pizzaType: 'margherita' | 'pepperoni' | 'special' | null;
+
+        startTime: number | null;
+
+        duration: number | null;
+
+        ovenNftId: number | null;
+
+        basePayout: number | null;
+
+    }>>(() => {
+
+        try {
+
+            const saved = localStorage.getItem(`gp_oven_slots_${userAddress || 'offline'}`);
+
+            if (saved) return JSON.parse(saved);
+
+        } catch (e) { console.error("Error loading oven slots", e); }
+
+        return [
+
+            { id: 1, isLocked: false, status: 'idle', pizzaType: null, startTime: null, duration: null, ovenNftId: null, basePayout: null },
+
+            { id: 2, isLocked: false, status: 'idle', pizzaType: null, startTime: null, duration: null, ovenNftId: null, basePayout: null },
+
+            { id: 3, isLocked: true, status: 'idle', pizzaType: null, startTime: null, duration: null, ovenNftId: null, basePayout: null },
+
+            { id: 4, isLocked: true, status: 'idle', pizzaType: null, startTime: null, duration: null, ovenNftId: null, basePayout: null }
+
+        ];
+
+    });
+
+
+
+    const [selectedFuel, setSelectedFuel] = useState<'oak' | 'cherry' | 'mesquite'>('oak');
+
+    const [equippedOvenStyle, setEquippedOvenStyle] = useState<'brick' | 'cyberpunk' | 'vulcan'>('brick');
+
+
+
+    // Persistence effects
 
     useEffect(() => {
-        addLog("[GuitarPizza] Component mounted.");
 
-        // Load game scripts dynamically
-        const loadScript = (src: string) => {
-            return new Promise((resolve, reject) => {
-                if (document.querySelector(`script[src="${src}"]`)) {
-                    addLog(`[GuitarPizza] Script already loaded: ${src}`);
-                    resolve(true);
-                    return;
+        localStorage.setItem('gp_staked_slice', stakedSlice.toString());
+
+    }, [stakedSlice]);
+
+
+
+    useEffect(() => {
+
+        localStorage.setItem('gp_ingredients', JSON.stringify(ingredients));
+
+    }, [ingredients]);
+
+
+
+    useEffect(() => {
+
+        localStorage.setItem(`gp_oven_slots_${userAddress || 'offline'}`, JSON.stringify(ovenSlots));
+
+    }, [ovenSlots, userAddress]);
+
+
+
+    // Load balances from contract when entering the Oven view
+
+    useEffect(() => {
+
+        if ((view === 'oven' || view === 'songpicker') && userAddress) {
+
+            const fetchOnChainData = async () => {
+
+                try {
+
+                    const balance = await StellarContractService.getSliceBalance(userAddress);
+
+                    setSliceBalance(balance);
+
+                    
+
+                    const staked = await StellarContractService.getStakedBalance(userAddress);
+
+                    setStakedSlice(staked);
+
+
+                    const tickets = await StellarContractService.getTournamentTickets(userAddress);
+
+                    setTicketBalance(tickets);
+
+                    // Sync Refrigerator balances
+                    await fetchRefrigeratorData();
+
+
+                    if (view === 'oven') {
+
+                        // Fetch slot states from Soroban PizzaBaking contract
+
+                        const updatedSlots = [...ovenSlots];
+
+                        for (let i = 0; i < updatedSlots.length; i++) {
+
+                            const slot = updatedSlots[i];
+
+                            const onChainSlot = await StellarContractService.getBakingSlot(userAddress, slot.id);
+
+                            if (onChainSlot) {
+
+                                updatedSlots[i] = {
+
+                                    id: slot.id,
+
+                                    isLocked: onChainSlot.locked,
+
+                                    status: onChainSlot.locked 
+                                        ? 'idle' 
+                                        : (onChainSlot.startTime === 0 
+
+                                        ? 'idle' 
+
+                                        : (Date.now() >= onChainSlot.startTime + onChainSlot.duration 
+
+                                            ? 'completed' 
+
+                                            : 'baking')),
+
+                                    pizzaType: onChainSlot.recipeId === 1 
+
+                                        ? 'margherita' 
+
+                                        : (onChainSlot.recipeId === 2 ? 'pepperoni' : (onChainSlot.recipeId === 3 ? 'special' : null)),
+
+                                    startTime: onChainSlot.startTime,
+
+                                    duration: onChainSlot.duration,
+
+                                    ovenNftId: onChainSlot.ovenNftId,
+
+                                    basePayout: onChainSlot.basePayout
+
+                                };
+
+                            }
+
+                        }
+
+                        setOvenSlots(updatedSlots);
+
+                    }
+
+                } catch (e) {
+
+                    console.error("Failed to load on-chain balances/oven data", e);
+
                 }
 
-                addLog(`[GuitarPizza] Loading script: ${src}`);
-                const script = document.createElement('script');
-                script.src = src;
-                script.onload = () => {
-                    addLog(`[GuitarPizza] Script loaded successfully: ${src}`);
-                    resolve(true);
-                };
-                script.onerror = (e) => {
-                    console.error(`[GuitarPizza] Script load error: ${src}`, e);
-                    addLog(`[ERROR] Script load error: ${src}`);
-                    reject(e);
-                };
-                document.body.appendChild(script);
-            });
-        };
+            };
 
-        const initGame = async () => {
-            if (!canvasRef.current) {
-                console.error("[GuitarPizza] Canvas ref is null");
-                setError("Canvas not found");
-                addLog("[ERROR] Canvas ref is null");
-                return;
+            fetchOnChainData();
+
+            const interval = setInterval(fetchOnChainData, 10000); // refresh every 10s
+
+            return () => clearInterval(interval);
+
+        }
+
+    }, [view, userAddress, fetchRefrigeratorData]);
+
+    // Initialize WebSocket Multiplayer Connection
+    useEffect(() => {
+        const addr = userAddress === 'G_DEMO_USER' ? 'G_DEMO_USER_' + Math.floor(Math.random() * 1000) : userAddress;
+        
+        multiplayerService.connect(undefined, {
+            onRoomCreated: (code, wager) => {
+                setRoomCode(code);
+                setPvpState('waiting');
+                setMpQueueStatus(language === 'es' ? 'Esperando al oponente...' : 'Waiting for opponent...');
+            },
+            onMatchFound: async (payload) => {
+                addLog(`[Multiplayer] Match found! ID: ${payload.matchId} | Opponent: ${payload.opponentAddress}`);
+                setMpMatchId(payload.matchId);
+                setRivalAddress(payload.opponentAddress);
+                setIsMultiplayer(true);
+                setPvpState('waiting');
+                setMpQueueStatus(language === 'es' ? '¡Rival encontrado! Firmando apuestas...' : 'Rival found! Locking wagers...');
+                
+                // Simulate or execute on-chain wager lockup
+                if (userAddress !== 'G_DEMO_USER' && isConnectedRef.current) {
+                    const signer = getContractSignerRef.current();
+                    await StellarContractService.createPvpMatch(userAddress, payload.wager, signer);
+                }
+                
+                // Confirm wager locked to socket server
+                multiplayerService.lockWager(payload.matchId);
+            },
+            onStartGame: (matchId) => {
+                addLog(`[Multiplayer] Both wagers locked. Starting game sync!`);
+                setIsPvp(true);
+                setView('lobby');
+                // Pre-populate rival data with the opponent's address for real-time overlay
+                setRivalData({
+                    name: rivalAddress 
+                        ? (rivalAddress.slice(0, 6) + '...' + rivalAddress.slice(-4))
+                        : (language === 'es' ? 'Rival' : 'Opponent'),
+                    score: 0,
+                    combo: 0,
+                    isFever: false,
+                    isMiss: false
+                });
+                handleStartGame();
+            },
+            onRivalNote: (payload) => {
+                setRivalData(prev => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        score: payload.score,
+                        combo: payload.combo,
+                        isFever: payload.isFever,
+                        isMiss: payload.hitType === 'miss'
+                    };
+                });
+            },
+            onMatchResolved: (payload) => {
+                addLog(`[Multiplayer] Game finished! Winner: ${payload.winnerAddress}`);
+                alert(`🏁 Partida finalizada! 
+Chef A: ${payload.playerAScore} | Chef B: ${payload.playerBScore} 
+Ganador: ${payload.winnerAddress}`);
+            },
+            onRivalDisconnected: (reason) => {
+                addLog(`[Multiplayer] Rival disconnected: ${reason}`);
+                alert(`⚠️ Oponente desconectado. Partida suspendida.`);
+                setIsPvp(false);
+                setIsMultiplayer(false);
+                setRivalData(null);
+                setView('campaign');
+            },
+            onError: (err) => {
+                console.error('[Multiplayer WebSocket] Error event:', err);
+                setMpQueueStatus(`Error: ${err}`);
+            }
+        });
+        
+        return () => {
+            multiplayerService.disconnect();
+        };
+    }, [userAddress, language]);
+
+    // Periodically run autoExpireIngredients to check for 7-day degradation
+    useEffect(() => {
+        autoExpireIngredients();
+        const interval = setInterval(() => {
+            autoExpireIngredients();
+        }, 60000); // every minute
+        return () => clearInterval(interval);
+    }, [ingredients, autoExpireIngredients]);
+
+    // Live PVP Real-time Rival Simulator Effect
+    useEffect(() => {
+        if (!isPvp) {
+            setRivalData(null);
+            return;
+        }
+
+        setRivalData({
+            name: language === 'es' ? 'Chef Corleone' : 'Chef Corleone',
+            score: 0,
+            combo: 0,
+            isFever: false,
+            isMiss: false
+        });
+
+        const interval = setInterval(() => {
+            if ((window as any).getGuitarPizzaStats) {
+                try {
+                    const stats = (window as any).getGuitarPizzaStats();
+                    if (stats) {
+                        setPlayerPvpStats({
+                            score: stats.score || 0,
+                            combo: stats.combo || 0
+                        });
+                        
+                        // Sync player's own note hits to opponent via WebSocket
+                        if (isMultiplayer && mpMatchId !== null) {
+                            multiplayerService.syncNote(
+                                mpMatchId,
+                                stats.score || 0,
+                                stats.combo || 0,
+                                stats.lastHitType || 'perfect',
+                                stats.isFever || false
+                            );
+                        }
+                    }
+                } catch (e) {}
             }
 
-            setStatus(t.loadingAssets);
-            addLog("Status: Loading Assets...");
+            // Only simulate bot events if we are not connected to a live multiplayer opponent!
+            if (!isMultiplayer) {
+                setRivalData(prev => {
+                    if (!prev) return null;
+                    const rand = Math.random();
+                    let nextMiss = false;
+                    let nextCombo = prev.combo;
+                    let addScore = 0;
 
-            // Load scripts
+                    if (rand < 0.08) {
+                        nextMiss = true;
+                        nextCombo = 0;
+                    } else {
+                        nextCombo += 1;
+                        addScore = Math.floor(110 + Math.random() * 60);
+                        if (prev.isFever) addScore *= 2;
+                    }
+
+                    let nextFever = prev.isFever;
+                    if (nextCombo >= 10 && !nextFever && Math.random() < 0.4) {
+                        nextFever = true;
+                    } else if (nextFever && Math.random() < 0.15) {
+                        nextFever = false;
+                    }
+
+                    return {
+                        ...prev,
+                        score: prev.score + addScore,
+                        combo: nextCombo,
+                        isFever: nextFever,
+                        isMiss: nextMiss
+                    };
+                });
+            }
+        }, 1000);
+
+        return () => {
+            clearInterval(interval);
+            setPlayerPvpStats(null);
+        };
+    }, [isPvp, isMultiplayer, language]);
+
+    // Clock tick for baking progress & offline local timers
+
+    useEffect(() => {
+
+        const interval = setInterval(() => {
+
+            setOvenSlots(prevSlots => {
+
+                let changed = false;
+
+                const nextSlots = prevSlots.map(slot => {
+
+                    if (slot.status === 'baking' && slot.startTime && slot.duration) {
+
+                        const elapsed = Date.now() - slot.startTime;
+
+                        if (elapsed >= slot.duration) {
+
+                            changed = true;
+
+                            return { ...slot, status: 'completed' as const };
+
+                        }
+
+                    }
+
+                    return slot;
+
+                });
+
+                return changed ? nextSlots : prevSlots;
+
+            });
+
+        }, 1000);
+
+        return () => clearInterval(interval);
+
+    }, []);
+
+
+
+    const getBakeConfig = (recipe: 'margherita' | 'pepperoni' | 'special') => {
+
+        switch (recipe) {
+
+            case 'margherita': return { label: '🍕 Margherita', duration: 10000, cost: { cheese: 2 }, payout: 15 };
+
+            case 'pepperoni': return { label: '🍖 Pepperoni', duration: 30000, cost: { cheese: 2, pepperoni: 2 }, payout: 40 };
+
+            case 'special': return { label: '⭐ Speciale', duration: 60000, cost: { cheese: 2, pepperoni: 2, bacon: 2, onion: 2 }, payout: 100 };
+
+        }
+
+    };
+
+
+
+    const startBaking = async (slotId: number, recipe: 'margherita' | 'pepperoni' | 'special') => {
+
+        const config = getBakeConfig(recipe);
+
+        if (!config) return;
+
+
+
+        // Check ingredients
+
+        const nextIngredients = { ...ingredients };
+
+        for (const [ing, required] of Object.entries(config.cost)) {
+
+            if ((nextIngredients as any)[ing] < required) {
+
+                alert(`⚠️ No tienes suficientes ingredientes para hornear esta pizza. Necesitas ${required} ${ing}.`);
+
+                return;
+
+            }
+
+        }
+
+
+
+        // Deduct local ingredients
+
+        for (const [ing, required] of Object.entries(config.cost)) {
+
+            (nextIngredients as any)[ing] -= required;
+
+        }
+
+        setIngredients(nextIngredients);
+
+
+
+        // Calculate Boost multipliers
+
+        let speedBoost = 1.0;
+
+        let yieldBoost = 1.0;
+
+
+
+        // Fuel bonuses
+
+        if (selectedFuel === 'cherry') { speedBoost *= 1.3; yieldBoost *= 1.1; }
+
+        else if (selectedFuel === 'mesquite') { speedBoost *= 1.8; yieldBoost *= 1.3; }
+
+
+
+        // Equipped Oven style bonuses (read from Collection)
+
+        const equippedIdStr = localStorage.getItem('equippedOvenId');
+
+        if (equippedIdStr) {
+
+            const mult = parseFloat(localStorage.getItem('equippedOvenMultiplier') || '1.5');
+
+            speedBoost *= (1.0 + (mult - 1.0) * 0.5);
+
+            yieldBoost *= mult;
+
+        }
+
+
+
+        const rawDurationSec = Math.ceil((config.duration / speedBoost) / 1000);
+
+        const durationMs = rawDurationSec * 1000;
+
+        const startTime = Date.now();
+
+        const basePayoutRaw = Math.ceil(config.payout * yieldBoost);
+
+
+
+        // Update local state first (Optimistic UI)
+
+        setOvenSlots(prev => prev.map(s => {
+
+            if (s.id === slotId) {
+
+                return {
+
+                    ...s,
+
+                    status: 'baking',
+
+                    pizzaType: recipe,
+
+                    startTime,
+
+                    duration: durationMs,
+
+                    basePayout: basePayoutRaw
+
+                };
+
+            }
+
+            return s;
+
+        }));
+
+
+
+        // Send to Stellar Soroban on-chain contract (PizzaBaking)
+
+        if (userAddress) {
+
             try {
-                if (!window.initGuitarPizza) {
-                    addLog("[GuitarPizza] initGuitarPizza undefined, loading engine...");
-                    setStatus(t.loadingEngine);
 
-                    window.GP_BASE_PATH = import.meta.env.BASE_URL;
-                    const baseUrl = import.meta.env.BASE_URL;
-                    // Append version parameter to bust aggressive browser cache of public assets
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=3`.replace('//', '/');
+                const recipeId = recipe === 'margherita' ? 1 : (recipe === 'pepperoni' ? 2 : 3);
 
-                    addLog(`[GuitarPizza] Loading engine from: ${primaryPath}`);
-                    await loadScript(primaryPath);
+                const signer = getContractSignerRef.current();
+
+                const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : null;
+
+                const result = await StellarContractService.startBake(
+
+                    userAddress,
+
+                    slotId,
+
+                    recipeId,
+
+                    rawDurationSec,
+
+                    basePayoutRaw,
+
+                    ovenNftId,
+
+                    signer
+
+                );
+
+                if (result.success) {
+
+                    addLog(`🔥 On-chain baking started successfully! Hash: ${result.txHash}`);
+
                 } else {
-                    addLog("[GuitarPizza] initGuitarPizza already defined.");
+
+                    console.warn("Soroban bake transaction failed, using local offline mode");
+
                 }
 
             } catch (err) {
-                console.error("[GuitarPizza] Failed to load game scripts:", err);
-                setError("Failed to load game scripts. Check console.");
-                addLog(`[ERROR] Failed to load scripts: ${err}`);
-                return;
+
+                console.error("Soroban startBake exception", err);
+
             }
+
+        }
+
+    };
+
+
+
+    const unlockSlot = async (slotId: number) => {
+
+        const cost = slotId === 3 ? 50 : 100;
+
+        if (sliceBalance < cost) {
+
+            alert(`⚠️ Saldo de SLICE insuficiente. Desbloquear el horno #${slotId} requiere ${cost} SLICE.`);
+
+            return;
+
+        }
+
+
+
+        // Deduct balance and unlock
+
+        setSliceBalance(prev => Math.max(0, prev - cost));
+
+        setOvenSlots(prev => prev.map(s => s.id === slotId ? { ...s, isLocked: false } : s));
+
+
+
+        // Submit Soroban Transaction for speed up / unlock
+
+        if (userAddress) {
+
+            try {
+
+                const signer = getContractSignerRef.current();
+
+                const result = await StellarContractService.speedUpBake(userAddress, slotId, signer);
+
+                if (result.success) {
+
+                    addLog(`🔓 Slot #${slotId} unlocked on-chain! Hash: ${result.txHash}`);
+
+                }
+
+            } catch (err) {
+
+                console.error("Failed to unlock slot on-chain", err);
+
+            }
+
+        }
+
+    };
+
+
+
+    const claimPizza = async (slotId: number) => {
+
+        const slot = ovenSlots.find(s => s.id === slotId);
+
+        if (!slot) return;
+
+        const payout = slot.basePayout || 10;
+
+
+
+        // Add to SLICE balance and reset slot
+
+        setSliceBalance(prev => prev + payout);
+
+        setOvenSlots(prev => prev.map(s => {
+
+            if (s.id === slotId) {
+
+                return { ...s, status: 'idle', pizzaType: null, startTime: null, duration: null, basePayout: null };
+
+            }
+
+            return s;
+
+        }));
+
+
+
+        if (userAddress) {
+
+            try {
+
+                const signer = getContractSignerRef.current();
+
+                const result = await StellarContractService.claimBake(userAddress, slotId, signer);
+
+                if (result.success) {
+
+                    addLog(`🍕 Baking slot claim confirmed on-chain!`);
+
+                }
+
+            } catch (err) {
+
+                console.error("Failed to claim bake on-chain", err);
+
+            }
+
+        }
+
+
+
+        alert(`🍕 ¡Maravilloso! Has reclamado tu pizza y obtenido ${payout} tokens $SLICE.`);
+
+    };
+
+
+
+    const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
+
+    const selectedSongRef = useRef(selectedSong);
+
+    useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
+
+
+
+    const [isVerifying, setIsVerifying] = useState(false);
+
+    const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
+
+    const [txHash, setTxHash] = useState<string | null>(null);
+
+    const [sliceEarned, setSliceEarned] = useState<number>(0);
+
+
+
+    // TX pop-up after game completion
+
+    const [showTxPopup, setShowTxPopup] = useState(false);
+
+    const [popupTxs, setPopupTxs] = useState<TxRecord[]>([]);      // TXs of the current game
+
+    const [popupCountdown, setPopupCountdown] = useState(8);
+
+    const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const popupIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+
+
+    // TX history (persistent across games via localStorage)
+
+    const [txHistory, setTxHistory] = useState<TxRecord[]>(() => {
+
+        try { return JSON.parse(localStorage.getItem('gp_tx_history') ?? '[]'); }
+
+        catch { return []; }
+
+    });
+
+    // Hold the finalScore to pass to onGameComplete when the popup closes
+
+    const pendingFinalScoreRef = useRef<number>(0);
+
+
+
+    // On-chain verified score (shown only after contract confirmation)
+
+    const [onChainScore, setOnChainScore] = useState<number | null>(null);
+
+
+
+    // Leaderboard from zk-leaderboard contract
+
+    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player: string; score: number }>>([]);
+
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+
+    const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+
+    // Status of the leaderboard submission from the last game
+
+    const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
+
+
+
+    // Profile State (Persist to local storage later)
+
+    const [chefName, setChefName] = useState("Chef Anon");
+
+    const [xHandle, setXHandle] = useState("@");
+
+
+
+    // Results Screen State
+
+    const [resultParams, setResultParams] = useState({ bgImage: '' });
+
+
+
+    // ── TX popup helpers ──────────────────────────────────────────────────────
+
+    const closeTxPopup = useCallback(() => {
+
+        if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+
+        if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+
+        setShowTxPopup(false);
+
+        onGameComplete(pendingFinalScoreRef.current);
+
+    }, [onGameComplete]);
+
+
+
+    const openTxPopup = useCallback((txs: TxRecord[], finalScore: number) => {
+
+        pendingFinalScoreRef.current = finalScore;
+
+        setPopupTxs(txs);
+
+        setPopupCountdown(8);
+
+        setShowTxPopup(true);
+
+
+
+        // Countdown every second
+
+        popupIntervalRef.current = setInterval(() => {
+
+            setPopupCountdown(prev => {
+
+                if (prev <= 1) {
+
+                    if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+
+                    return 0;
+
+                }
+
+                return prev - 1;
+
+            });
+
+        }, 1000);
+
+
+
+        // Auto-close after 8 seconds
+
+        popupTimerRef.current = setTimeout(() => {
+
+            closeTxPopup();
+
+        }, 8000);
+
+    }, [closeTxPopup]);
+
+
+
+    // Clear timers on unmount
+
+    useEffect(() => {
+
+        return () => {
+
+            if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+
+            if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+
+        };
+
+    }, []);
+
+
+
+    // ── Leaderboard loader ────────────────────────────────────────────────────
+
+    const loadLeaderboard = useCallback(async () => {
+
+        setLeaderboardLoading(true);
+
+        setLeaderboardError(null);
+
+        try {
+
+            const entries = await StellarContractService.getLeaderboard(userAddress, 1);
+
+            const arr = entries as any[];
+
+            const mapped = arr.slice(0, 10).map((e: any, i: number) => {
+
+                // e.player may be an Address object or already a string
+
+                const playerStr = typeof e.player === 'string'
+
+                    ? e.player
+
+                    : (e.player?.toString?.() ?? String(e.player ?? ''));
+
+                // e.score is u64 (BigInt) or number
+
+                const scoreNum = typeof e.score === 'bigint' ? Number(e.score) : Number(e.score ?? 0);
+
+                return { rank: i + 1, player: playerStr, score: scoreNum };
+
+            });
+
+            setLeaderboard(mapped);
+
+            if (arr.length === 0) {
+
+                console.warn('[Leaderboard] No entries returned — board may be empty or query failed.');
+
+            }
+
+        } catch (err) {
+
+            console.error('[Leaderboard] Failed to load:', err);
+
+            setLeaderboardError('Could not load leaderboard. Check console.');
+
+        } finally {
+
+            setLeaderboardLoading(false);
+
+        }
+
+    }, [userAddress]);
+
+
+
+    // Audio Toggle Handler
+
+    const toggleAudio = () => {
+
+        const newMuteState = !isMuted;
+
+        setIsMuted(newMuteState);
+
+        if (engineRef.current) {
+
+            engineRef.current.setVolume(newMuteState ? 0 : 1);
+
+        }
+
+    };
+
+
+
+    const addLog = (msg: string) => {
+
+        console.log(msg);
+
+    };
+
+
+
+    const handleStartGame = () => {
+
+        // Reset leaderboard submission status for the new game
+
+        setLbSubmitStatus('none');
+
+        setSliceEarned(0);
+
+        if (engineRef.current && engineRef.current.startGame) {
+
+            addLog("[GuitarPizza] Calling engine.startGame()");
+
+            engineRef.current.startGame();
+
+        } else {
+
+            console.warn("[GuitarPizza] Engine not ready yet.");
+
+            addLog("[WARN] Engine not ready yet.");
+
+        }
+
+    };
+
+
+
+    // Called when the player clicks "Cook Again" on the results screen.
+
+    // Hides the results panel, resets UI state, starts a new on-chain session
+
+    // (async, non-blocking), then tells the engine to begin a fresh game.
+
+    const handleCookAgain = async () => {
+
+        const results = document.getElementById('results');
+
+        if (results) results.style.display = 'none';
+
+        setIsVerifying(false);
+
+        setProofStatus('none');
+
+        setOnChainScore(null);
+
+        setLbSubmitStatus('none');
+
+
+
+        // Start the game immediately — don't block on the on-chain call
+
+        if (engineRef.current?.startGame) {
+
+            engineRef.current.startGame();
+
+        }
+
+
+
+        // Open a fresh on-chain session in the background
+
+        const localSessionId = Math.floor(Math.random() * 1000000);
+
+        onChainSessionIdRef.current = localSessionId;
+
+        try {
+
+            const signer = getContractSignerRef.current();
+
+            const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
+
+            onChainSessionIdRef.current = startResult.sessionId;
+
+            addLog(`[GuitarPizza] On-chain session ready (replay): ${startResult.sessionId}`);
+
+        } catch {
+
+            console.warn("[GuitarPizza] No wallet for replay on-chain session — skipping.");
+
+        }
+
+    };
+
+
+
+    const handleNextLevel = () => {
+
+        // Unlock Level 2
+
+        const song2 = SONGS.find(s => s.id === 'rare-pizzas');
+
+        if (song2) {
+
+            song2.available = true;
+
+            setSelectedSong(song2);
+
+        }
+
+        handleCookAgain(); // uses the new selectedSong in the next init
+
+    };
+
+
+
+    // Load leaderboard on mount
+
+    useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
+
+
+
+    useEffect(() => {
+
+        addLog("[GuitarPizza] Component mounted.");
+
+
+
+        // Load game scripts dynamically
+
+        const loadScript = (src: string) => {
+
+            return new Promise((resolve, reject) => {
+
+                if (document.querySelector(`script[src="${src}"]`)) {
+
+                    addLog(`[GuitarPizza] Script already loaded: ${src}`);
+
+                    resolve(true);
+
+                    return;
+
+                }
+
+
+
+                addLog(`[GuitarPizza] Loading script: ${src}`);
+
+                const script = document.createElement('script');
+
+                script.src = src;
+
+                script.onload = () => {
+
+                    addLog(`[GuitarPizza] Script loaded successfully: ${src}`);
+
+                    resolve(true);
+
+                };
+
+                script.onerror = (e) => {
+
+                    console.error(`[GuitarPizza] Script load error: ${src}`, e);
+
+                    addLog(`[ERROR] Script load error: ${src}`);
+
+                    reject(e);
+
+                };
+
+                document.body.appendChild(script);
+
+            });
+
+        };
+
+
+
+        const initGame = async () => {
+
+            if (!canvasRef.current) {
+
+                console.error("[GuitarPizza] Canvas ref is null");
+
+                setError("Canvas not found");
+
+                addLog("[ERROR] Canvas ref is null");
+
+                return;
+
+            }
+
+
+
+            setStatus(t.loadingAssets);
+
+            addLog("Status: Loading Assets...");
+
+
+
+            // Load scripts
+
+            try {
+
+                if (!window.initGuitarPizza) {
+
+                    addLog("[GuitarPizza] initGuitarPizza undefined, loading engine...");
+
+                    setStatus(t.loadingEngine);
+
+
+
+                    window.GP_BASE_PATH = import.meta.env.BASE_URL;
+
+                    const baseUrl = import.meta.env.BASE_URL;
+
+                    // Append version parameter to bust aggressive browser cache of public assets
+
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=3`.replace('//', '/');
+
+
+
+                    addLog(`[GuitarPizza] Loading engine from: ${primaryPath}`);
+
+                    await loadScript(primaryPath);
+
+                } else {
+
+                    addLog("[GuitarPizza] initGuitarPizza already defined.");
+
+                }
+
+
+
+            } catch (err) {
+
+                console.error("[GuitarPizza] Failed to load game scripts:", err);
+
+                setError("Failed to load game scripts. Check console.");
+
+                addLog(`[ERROR] Failed to load scripts: ${err}`);
+
+                return;
+
+            }
+
+
+
 
 
             // Load CSS with correct public path
+
             const publicUrl = import.meta.env.BASE_URL; // e.g. /guitarPizza--AntiGravity/
 
+
+
             if (!document.getElementById('mafia-theme-css')) {
+
                 const link = document.createElement('link');
+
                 link.id = 'mafia-theme-css';
+
                 link.rel = 'stylesheet';
+
                 link.href = `${publicUrl}mafia-theme.css`.replace('//', '/');
+
                 document.head.appendChild(link);
+
             }
+
+
 
             // Initialize the game instance
+
             addLog("[GuitarPizza] Initializing game instance...");
 
+
+
             // Generate a random session ID as candidate (may be replaced by an existing active one)
+
             const localSessionId = Math.floor(Math.random() * 1000000);
+
             onChainSessionIdRef.current = localSessionId; // default; updated after on-chain call
 
-            // Start game session on-chain — AWAIT so the real sessionId is known
-            // before the game starts. This prevents the race condition where submit_score
-            // uses a different sessionId than the one stored on-chain.
-            // score_goal = 1 so submit_score always returns true (human always "wins").
-            setStatus(t.openingSession);
-            try {
-                const signer = getContractSignerRef.current();
-                const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
-                onChainSessionIdRef.current = startResult.sessionId;
-                if (!startResult.success) {
-                    console.warn("[GuitarPizza] On-chain session registration failed:", startResult.error);
-                } else {
-                    addLog(`[GuitarPizza] On-chain session ready: ${startResult.sessionId}`);
+
+
+            if (isPracticeMode) {
+
+                addLog(`[GuitarPizza] Practice Mode: skipping on-chain registration. Local Session ID: ${localSessionId}`);
+
+            } else {
+
+                // Start game session on-chain — AWAIT so the real sessionId is known
+
+                // before the game starts. This prevents the race condition where submit_score
+
+                // uses a different sessionId than the one stored on-chain.
+
+                // score_goal = 1 so submit_score always returns true (human always "wins").
+
+                setStatus(t.openingSession);
+
+                try {
+
+                    const signer = getContractSignerRef.current();
+
+                    const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
+
+                    onChainSessionIdRef.current = startResult.sessionId;
+
+                    if (!startResult.success) {
+
+                        console.warn("[GuitarPizza] On-chain session registration failed:", startResult.error);
+
+                    } else {
+
+                        addLog(`[GuitarPizza] On-chain session ready: ${startResult.sessionId}`);
+
+                    }
+
+                } catch {
+
+                    console.warn("[GuitarPizza] No wallet connected — skipping on-chain session start.");
+
                 }
-            } catch {
-                console.warn("[GuitarPizza] No wallet connected — skipping on-chain session start.");
+
             }
 
+
+
             setStatus(t.startingGame);
+
             addLog("Status: Starting Game...");
 
+
+
             if (window.initGuitarPizza) {
+
                 try {
+
                     // Read the latest selected song from the ref to avoid stale closures
+
                     const latestSelectedSong = selectedSongRef.current;
+
                     const chosenSong = latestSelectedSong.available ? latestSelectedSong : (SONGS.find(s => s.available) ?? latestSelectedSong);
+
                     const baseUrl = `${import.meta.env.BASE_URL}${songPath(chosenSong)}`.replace('//', '/');
+
                     // Append song params as query params so the engine uses the correct segment
+
                     const params = new URLSearchParams();
+
                     if (chosenSong.bpm) params.set('bpm', String(chosenSong.bpm));
+
                     params.set('start', String(chosenSong.start ?? 0));
+
                     params.set('duration', String(chosenSong.duration ?? 80));
+
                     params.set('v', '3');
+
                     const resolvedSongUrl = `${baseUrl}?${params.toString()}`;
+
                     addLog(`[GuitarPizza] Song: ${chosenSong.title} @ ${chosenSong.bpm ?? '?'}BPM | ${chosenSong.start}s–${(chosenSong.start ?? 0) + (chosenSong.duration ?? 80)}s`);
+
                     const result = window.initGuitarPizza(canvasRef.current, userAddress, async (finalScore: number, inputLog: any[] = []) => {
+
                         // Clear any lingering status when game completes, just in case
+
                         setStatus('');
+
                         setOnChainScore(null); // reset until confirmed from contract
+
+
 
                         addLog(`GuitarPizza] Game complete. Score: ${finalScore}`);
 
+
+
                         // Randomly select defeat/result background (50/50 chance as requested)
+
                         // Paths must be prefixed with publicUrl for proper deployment
+
                         const publicUrl = import.meta.env.BASE_URL;
+
                         const defeatImages = [
+
                             `${publicUrl}game/assets/decoracion/DerrotaMiedo.jpg`.replace('//', '/'),
+
                             `${publicUrl}game/assets/decoracion/DerrotaAlCielo.jpg`.replace('//', '/')
+
                         ];
+
                         const randomBg = defeatImages[Math.floor(Math.random() * defeatImages.length)];
+
                         setResultParams({ bgImage: randomBg });
 
+
+
                         // Start ZK Verification
+
                         setIsVerifying(true);
+
                         setProofStatus('generating');
 
+
+
                         try {
+
                             // 1. ZK Circuit Simulation
+
                             const zkResult = SimulatedZKCircuit.verifyTrace(inputLog, {}, finalScore);
 
+
+
                             if (!zkResult.verified) {
+
                                 throw new Error(`ZK Verification Failed: ${zkResult.reason}`);
+
                             }
+
+
 
                             // 2. Build session stats from input log + final score
+
                             // The engine now attaches stats to inputLog.stats (fixed)
+
                             const engineStats = (inputLog as any)?.stats ?? {};
+
                             const hits = engineStats.totalHits ?? 0;
+
                             const perfects = engineStats.perfectHits ?? 0;
+
                             const fever = engineStats.feverSeconds ?? 0;
+
                             const pizzas = engineStats.pizzasCompleted ?? 0;
 
+
+
                             // Use the engine's final score directly — it is the authoritative value
+
                             // the player sees on screen. The ZK stats are kept for the receipt/proof
+
                             // structure but the score field is taken from the engine to avoid
+
                             // any mismatch between the recalculation formula and the actual gameplay.
+
                             const verifiedScore = finalScore;
+
                             addLog(`[GuitarPizza] Engine score: ${finalScore} | ZK-verified score: ${verifiedScore}`);
+
                             addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
 
+
+
                             // Update local balance
+
                             setPizzaBalance(prev => prev + verifiedScore);
 
+
+
                             const sessionStats: GameSessionStats = {
+
                                 levelId: 1,
+
                                 score: verifiedScore,  // ← verified score goes on-chain
+
                                 sessionId: onChainSessionIdRef.current,
+
                                 perfectHits: perfects,
+
                                 totalHits: hits,
+
                                 totalNotes: engineStats.totalNotes ?? hits,
+
                                 trapsAvoided: engineStats.trapsAvoided ?? 0,
+
                                 totalTraps: engineStats.totalTraps ?? 0,
+
                                 feverSeconds: fever,
+
                                 pizzasCompleted: pizzas,
+
                                 comboBonus: engineStats.comboBonus ?? 0,
+
                                 playerAddress: userAddress,
+
                             };
 
+
+
                             // 3. Generate RISC Zero receipt (164 bytes: journal + seal)
+
                             const { receipt } = await ProofGenerator.generateSessionReceipt(sessionStats);
+
                             addLog(`[GuitarPizza] Receipt generated: ${receipt.length} bytes`);
 
-                            // DEMO / NO-WALLET CHECK: Skip blockchain submission when not connected
-                            if (userAddress === 'G_DEMO_USER' || !isConnectedRef.current) {
-                                addLog(userAddress === 'G_DEMO_USER'
-                                    ? "[DEMO MODE] Skipping blockchain submission."
+
+
+                            // DEMO / NO-WALLET / PRACTICE CHECK: Skip blockchain submission when in practice mode or not connected
+
+                            if (isPracticeMode || userAddress === 'G_DEMO_USER' || !isConnectedRef.current) {
+
+                                addLog(isPracticeMode
+
+                                    ? "[PRACTICE MODE] Skipping blockchain submission. Awarding local drops."
+
                                     : "[GuitarPizza] No wallet connected — score verified locally only.");
+
+
+                                // Calculate local ingredients drops based on performance
+
+                                const cheeseReward = Math.min(3, Math.floor(finalScore / 2500) + 1);
+
+                                const pepReward = finalScore > 3000 ? Math.min(2, Math.floor((finalScore - 3000) / 3000) + 1) : 0;
+
+                                const baconReward = finalScore > 5000 ? 1 : 0;
+
+                                const onionReward = finalScore > 4000 ? 1 : 0;
+
+
+                                const newIngredients = { ...ingredients };
+
+                                newIngredients.cheese = (newIngredients.cheese || 0) + cheeseReward;
+
+                                if (pepReward > 0) newIngredients.pepperoni = (newIngredients.pepperoni || 0) + pepReward;
+
+                                if (baconReward > 0) newIngredients.bacon = (newIngredients.bacon || 0) + baconReward;
+
+                                if (onionReward > 0) newIngredients.onion = (newIngredients.onion || 0) + onionReward;
+
+
+                                setIngredients(newIngredients);
+
+                                localStorage.setItem('gp_ingredients', JSON.stringify(newIngredients));
+
+
+                                addLog(`🎁 Rewards dropped: ${cheeseReward} 🧀 Queso${pepReward ? `, ${pepReward} 🍖 Pep` : ''}${baconReward ? `, ${baconReward} 🥓 Bacon` : ''}${onionReward ? `, ${onionReward} 🧅 Onion` : ''}`);
+
+
+                                // Check and update Personal Best to award weekly tournament ticket
+
+                                const songId = selectedSong.id;
+
+                                const currentPB = personalBests[songId] || 0;
+
+                                let ticketEarned = false;
+
+
+                                if (finalScore > currentPB) {
+
+                                    const updatedPBs = { ...personalBests, [songId]: finalScore };
+
+                                    setPersonalBests(updatedPBs);
+
+                                    localStorage.setItem('gp_personal_bests', JSON.stringify(updatedPBs));
+
+                                    
+
+                                    // Award 1 ticket
+
+                                    setTicketBalance(prev => prev + 1);
+
+                                    ticketEarned = true;
+
+                                    addLog("🎟️ NEW RECORD! You earned 1 Weekly Tournament Ticket!");
+
+                                }
+
+
                                 await new Promise(resolve => setTimeout(resolve, 800));
+
                                 addLog(`SUCCESS! Score verified locally.`);
+
                                 setProofStatus('success');
-                                setTimeout(() => { setIsVerifying(false); }, 2000);
+
+                                setOnChainScore(finalScore);
+
+
+                                setTimeout(async () => { 
+
+                                    setIsVerifying(false); 
+
+                                    if (isPvp) {
+                                        const rivalFinalScore = rivalData ? rivalData.score : 0;
+                                        const won = finalScore > rivalFinalScore;
+                                        setIsPvp(false); // Reset PVP state
+                                        
+                                        if (won) {
+                                            if (userAddress !== 'G_DEMO_USER' && isConnectedRef.current) {
+                                                const signer = getContractSignerRef.current();
+                                                addLog(`[PVP] Resolving match GP-XXXX on-chain. Winning address: ${userAddress}...`);
+                                                await StellarContractService.resolvePvpMatch(userAddress, 12345, signer);
+                                            }
+                                            alert(`⚔️ ¡VICTORIA DE LA MASA! 🍕\n\nTu Puntaje: ${finalScore}\nScore del Rival: ${rivalFinalScore}\n\n¡Has ganado el Duelo PVP y reclamado el pozo completo! +${selectedWager * 2} $SLICE (menos 5% de tarifa de tesorería).`);
+                                        } else {
+                                            alert(`⚠️ ¡Derrota en la Cocina! 🪵\n\nTu Puntaje: ${finalScore}\nScore del Rival: ${rivalFinalScore}\n\nEl oponente se lleva el pozo de $SLICE.`);
+                                        }
+                                    } else {
+                                        const recordLabel = ticketEarned ? `🎟️ +1 Ticket de Torneo` : '';
+                                        alert(`🎮 ¡Fin de la Práctica!\n\nPuntaje: ${finalScore}\nIngredientes ganados: +${cheeseReward} Queso${pepReward ? `, +${pepReward} Pepperoni` : ''}\n\n${recordLabel ? `🎉 ¡NUEVO RÉCORD PERSONAL! ${recordLabel}` : ''}`);
+                                    }
+
+                                    onGameComplete(finalScore);
+
+                                }, 2000);
+
+
                                 return;
+
                             }
+
+
 
                             // 4. Submit all contracts in sequence via StellarContractService
+
                             addLog("Receipt ready. Submitting to Stellar contracts...");
+
                             setStatus(t.sealed); // or just generic sending
 
+
+
                             const signer = getContractSignerRef.current();
+
                             const result = await StellarContractService.postGameFlow(
+
                                 userAddress,
+
                                 sessionStats,
+
                                 signer,
+
                             );
 
+
+
                             // Log what happened on-chain
+
                             if (result.scoreSubmitted) addLog('✅ Score verified on guitar-pizza contract');
+
                             if (result.leaderboardRank) addLog(`🏆 Leaderboard rank: #${result.leaderboardRank}`);
+
                             if (result.weeklyCompleted) addLog('🍕 Weekly recipe challenge completed!');
+
                             if (result.achievementsClaimed.length > 0) {
+
                                 const names = ['Perfect Run', 'Trap Master', 'Fever God', 'Iron Chef'];
+
                                 result.achievementsClaimed.forEach(id => addLog(`🏅 Badge earned: ${names[id] ?? id}`));
+
                             }
+
                             if (result.sliceClaimed) {
+
                                 addLog(`💰 +${result.sliceAmount} $SLICE earned!`);
+
                                 setSliceEarned(result.sliceAmount);
+
                             }
+
                             if (result.errors.length > 0) {
+
                                 result.errors.forEach(e => console.warn('[StellarContract]', e));
+
                             }
+
+
 
                             // Save tx hash for Stellar Explorer link
+
                             if (result.txHash) {
+
                                 setTxHash(result.txHash);
+
                                 addLog(`🔗 TX: ${result.txHash}`);
+
                             }
 
+
+
                             // The score submitted is the authoritative on-chain value.
+
                             // We skip getSession() because the sessionId used locally may differ
+
                             // from the one the contract stored (reuse logic in startGame).
+
                             // verifiedScore === finalScore (set above), which is what was submitted.
+
                             const confirmedScore = verifiedScore;
+
                             setOnChainScore(confirmedScore);
+
                             addLog(`✅ On-chain score confirmed: ${confirmedScore}`);
 
+
+
                             // Track leaderboard submission result for UI feedback
+
                             setLbSubmitStatus(result.leaderboardSubmitted ? 'ok' : 'fail');
 
+
+
                             // Refresh leaderboard at 4s, 9s, 18s after game ends —
+
                             // multiple attempts handle eventual consistency on Stellar testnet.
+
                             setTimeout(() => loadLeaderboard(), 4000);
+
                             setTimeout(() => loadLeaderboard(), 9000);
+
                             setTimeout(() => loadLeaderboard(), 18000);
+
+
 
                             addLog(`SUCCESS! Score verified on-chain.`);
 
+
+
                             setStatus(''); // Clear submitting overlay
+
                             setProofStatus('success');
 
+
+
                             setTimeout(() => {
+
                                 setIsVerifying(false); // Close verification overlay
+
+
 
                                 // Build TxRecord list for this game's popup
+
                                 const gameTxs: TxRecord[] = [];
+
                                 if (result.txHash) {
+
                                     gameTxs.push({ hash: result.txHash, type: 'Score Submit', score: confirmedScore, timestamp: Date.now() });
+
                                 }
+
+
 
                                 if (gameTxs.length > 0) {
+
                                     // Persist to history (max 20 entries)
+
                                     setTxHistory(prev => {
+
                                         const updated = [...gameTxs, ...prev].slice(0, 20);
+
                                         localStorage.setItem('gp_tx_history', JSON.stringify(updated));
+
                                         return updated;
+
                                     });
+
                                     openTxPopup(gameTxs, confirmedScore);
+
                                 } else {
+
                                     onGameComplete(confirmedScore);
+
                                 }
+
                             }, 2000);
 
+
+
                         } catch (err: any) {
+
                             console.error("[GuitarPizza] Verification failed:", err);
+
                             setStatus(''); // Clear the submitting overlay on error too!
+
                             let errorMessage = "Verification Failed";
 
+
+
                             // Parse specific error types
+
                             if (err.message) {
+
                                 if (err.message.includes("User declined") || err.message.includes("Rejected")) {
+
                                     errorMessage = "Transaction Rejected by User";
+
                                 } else if (err.message.includes("HostError") || err.message.includes("UnreachableCodeReached")) {
+
                                     errorMessage = "Contract Error: Level Not Configured?";
+
                                 } else if (err.message.includes("tx_bad_seq")) {
+
                                     errorMessage = "Sequence Error: Refresh & Retry";
+
                                 } else {
+
                                     // Clean up long stack traces if present
+
                                     errorMessage = err.message.split('\n')[0];
+
                                 }
+
                             }
 
+
+
                             setStatus(errorMessage);
+
                             setProofStatus('failed');
+
                             addLog(`[ERROR] ${errorMessage}`);
 
+
+
                             // Still show full error in console for debugging, but clean UI
+
                             setTimeout(() => {
+
                                 setIsVerifying(false); // Close verification overlay
+
                                 setStatus(''); // Clear persistent error overlay
+
                             }, 4000);
+
                         }
+
                     }, resolvedSongUrl, t);
 
+
+
                     if (typeof result === 'function') {
+
                         engineRef.current = { cleanup: result, setVolume: () => { } };
+
                     } else {
+
                         engineRef.current = result;
+
                     }
 
+
+
                     setStatus('');
+
                     addLog("[GuitarPizza] Game initialized successfully.");
+
                 } catch (e) {
+
                     console.error("[GuitarPizza] Error during window.initGuitarPizza:", e);
+
                     setError("Game engine failed to start.");
+
                     addLog(`[ERROR] Engine start failed: ${e}`);
+
                 }
+
             } else {
+
                 console.error("[GuitarPizza] window.initGuitarPizza is still undefined after loading scripts.");
+
                 setError("Game engine not found.");
+
                 addLog("[ERROR] window.initGuitarPizza undefined");
+
             }
+
         };
+
+
 
         const timer = setTimeout(initGame, 100); // Small delay to ensure render
 
+
+
         return () => {
+
             clearTimeout(timer);
+
             addLog(`[GuitarPizza] Cleanup called for song: ${selectedSong.id}`);
+
             if (engineRef.current) {
+
                 engineRef.current.cleanup();
+
                 engineRef.current = null;
+
             }
+
         };
+
         // Re-run the entire initialization when the selected song changes!
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, [selectedSong.id]);
 
+
+
     // Run-once cleanup for global CSS and lingering timers on unmount
+
     useEffect(() => {
+
         return () => {
+
             // Clear TX popup timers if component unmounts mid-countdown
+
             if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+
             if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
+
             const link = document.getElementById('mafia-theme-css');
+
             if (link) {
+
                 link.remove();
+
             }
+
         };
+
     }, []);
 
+
+
     const handleBackToLobby = () => {
+
         const results = document.getElementById('results');
+
         if (results) results.style.display = 'none';
 
+
+
         const overlay = document.getElementById('overlay');
+
         if (overlay) overlay.style.display = 'flex';
 
+
+
         setView('lobby');
+
         loadLeaderboard(); // refresh after returning from a game
+
     };
+
+
 
     return (
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
@@ -760,18 +2569,31 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
             {!embed && (
             <div className="flex items-center justify-between p-4 border-b z-20" style={{ background: "#0a0705", borderColor: "rgba(201,162,39,0.2)" }}>
                 <div className="flex items-center gap-4">
+
                     {onBack && (
+
                         <button onClick={onBack} className="settings-btn" title="Exit to Library">
+
                             <ArrowLeft size={24} />
+
                         </button>
+
                     )}
+
                     <h1 className="text-xl font-bold tracking-wider" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-accent)' }}>
+
                         RHYTHM SLICE
+
                     </h1>
+
                 </div>
+
                 <button onClick={() => setShowSettings(true)}>
+
                     <Settings size={24} />
+
                 </button>
+
             </div>
             )}
             {/* Game Container */}
@@ -780,1116 +2602,4333 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
 
 
 
+
+
+
+
                     {/* Status & Errors Overlay */}
+
                     {(status || error) && (
+
                         <div style={{
+
                             position: 'absolute',
+
                             top: '50%',
+
                             left: '50%',
+
                             transform: 'translate(-50%, -50%)',
+
                             zIndex: 2000,
+
                             textAlign: 'center',
+
                             width: '80%',
+
                             maxWidth: '400px',
+
                             pointerEvents: 'none' // Let clicks pass through if needed, though usually blocking is fine
+
                         }}>
+
                             <div style={{
+
                                 background: '#FFF8E7',
+
                                 backdropFilter: 'blur(10px)',
+
                                 padding: '1.5rem',
+
                                 borderRadius: '16px',
+
                                 border: '3px dashed #8B0000',
+
                                 boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(139,0,0,0.2)',
+
                                 display: 'flex',
+
                                 flexDirection: 'column',
+
                                 alignItems: 'center',
+
                                 gap: '10px'
+
                             }}>
+
                                 {status && (
+
                                     <h2 style={{
+
                                         fontFamily: 'var(--font-display)',
+
                                         color: '#8B0000',
+
                                         fontSize: '1.4rem',
+
                                         textTransform: 'uppercase',
+
                                         letterSpacing: '0.1em',
+
                                         margin: 0
+
                                     }}>
+
                                         {status}
+
                                     </h2>
+
                                 )}
+
                                 {error && (
+
                                     <p style={{
+
                                         color: '#E74C3C',
+
                                         fontSize: '0.9rem',
+
                                         margin: 0,
+
                                         fontWeight: 'bold'
+
                                     }}>
+
                                         {error}
+
                                     </p>
+
                                 )}
+
                             </div>
+
                         </div>
+
                     )}
+
+
 
                     {/* Settings Overlay */}
+
                     {showSettings && (
+
                         <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+
                             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
                                 <div className="modal-header">
+
                                     <div className="back-btn-circle" onClick={() => setShowSettings(false)}>
+
                                         <ArrowLeft size={20} />
+
                                     </div>
+
                                     <h2 className="modal-title">{t.setup}</h2>
+
                                     <div style={{ width: 40 }}></div>
+
                                 </div>
+
+
 
                                 <div style={{ flex: 1, overflowY: 'auto' }}>
+
                                     <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
+
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+
                                             <Globe size={20} color="#8B0000" />
+
                                             <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.language}</span>
+
                                         </div>
+
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
+
                                             <button
+
                                                 onClick={() => setLanguage('es')}
+
                                                 style={{
+
                                                     padding: '0.5rem 1rem',
+
                                                     borderRadius: '8px',
+
                                                     border: '1px solid #D0B488',
+
                                                     background: language === 'es' ? 'var(--color-accent)' : '#F9F5EB',
+
                                                     color: language === 'es' ? '#fff' : '#333',
+
                                                     fontWeight: 'bold',
+
                                                     cursor: 'pointer'
+
                                                 }}
+
                                             >ES</button>
+
                                             <button
+
                                                 onClick={() => setLanguage('en')}
+
                                                 style={{
+
                                                     padding: '0.5rem 1rem',
+
                                                     borderRadius: '8px',
+
                                                     border: '1px solid #D0B488',
+
                                                     background: language === 'en' ? 'var(--color-accent)' : '#F9F5EB',
+
                                                     color: language === 'en' ? '#fff' : '#333',
+
                                                     fontWeight: 'bold',
+
                                                     cursor: 'pointer'
+
                                                 }}
+
                                             >EN</button>
+
                                         </div>
+
                                     </div>
 
+
+
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
+
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.chefName}</label>
+
                                         <input
+
                                             type="text"
+
                                             value={chefName}
+
                                             onChange={(e) => setChefName(e.target.value)}
+
                                             style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
+
                                         />
+
                                     </div>
 
+
+
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
+
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.xHandle}</label>
+
                                         <input
+
                                             type="text"
+
                                             value={xHandle}
+
                                             onChange={(e) => setXHandle(e.target.value)}
+
                                             style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
+
                                         />
+
                                     </div>
 
+
+
                                     <div style={{ marginBottom: '1.5rem', width: '100%' }}>
+
                                         <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.wallet}</label>
+
                                         <div style={{ padding: '0.8rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: '0.9rem', wordBreak: 'break-all', color: '#27ae60' }}>
+
                                             {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : "Not Connected"}
+
                                         </div>
+
                                     </div>
+
+
 
                                     <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
+
                                         <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.volume}</span>
+
                                         <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 50, height: 50, padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}>
+
                                             {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} color="#FFF" />}
+
                                         </button>
+
                                     </div>
+
+
 
                                     {/* ── MY TXs HISTORY ───────────────────────────────── */}
+
                                     <div style={{ marginBottom: '1rem', width: '100%' }}>
+
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+
                                             <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8B0000' }}>⛓ {t.myTxs}</span>
+
                                             <span style={{ fontSize: '0.75rem', color: '#999' }}>({txHistory.length})</span>
+
                                         </div>
 
+
+
                                         {txHistory.length === 0 ? (
+
                                             <div style={{ textAlign: 'center', color: '#8B0000', fontSize: '0.85rem', padding: '1rem', background: '#F9F5EB', borderRadius: '8px', border: '1px dashed #D0B488' }}>
+
                                                 {t.noTxs}
+
                                             </div>
+
                                         ) : (
+
                                             <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #E0D4B8' }}>
+
                                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+
                                                     <thead>
+
                                                         <tr style={{ background: '#E0D4B8', color: '#8B0000', textAlign: 'left' }}>
+
                                                             <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>Type</th>
+
                                                             <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold', textAlign: 'right' }}>Score</th>
+
                                                             <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold' }}>Date</th>
+
                                                             <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>TX</th>
+
                                                         </tr>
+
                                                     </thead>
+
                                                     <tbody>
+
                                                         {txHistory.map((tx, i) => {
+
                                                             const shortHash = `${tx.hash.slice(0, 6)}…${tx.hash.slice(-6)}`;
+
                                                             const d = new Date(tx.timestamp);
+
                                                             const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
                                                             return (
+
                                                                 <tr key={i} style={{ borderTop: '1px solid #E0D4B8', background: i % 2 === 0 ? '#FFF8E7' : '#F9F5EB' }}>
+
                                                                     <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
+
                                                                         {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}
+
                                                                     </td>
+
                                                                     <td style={{ padding: '0.4rem 0.4rem', color: '#8B0000', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
                                                                         {tx.score.toLocaleString()}
+
                                                                     </td>
+
                                                                     <td style={{ padding: '0.4rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
+
                                                                         {dateStr}
+
                                                                     </td>
+
                                                                     <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap' }}>
+
                                                                         <a
+
                                                                             href={`${EXPLORER_BASE}/${tx.hash}`}
+
                                                                             target="_blank"
+
                                                                             rel="noopener noreferrer"
+
                                                                             style={{ color: '#2980b9', textDecoration: 'none', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+
                                                                             title={tx.hash}
+
                                                                         >
+
                                                                             {shortHash} 🔗
+
                                                                         </a>
+
                                                                     </td>
+
                                                                 </tr>
+
                                                             );
+
                                                         })}
+
                                                     </tbody>
+
                                                 </table>
+
                                             </div>
+
                                         )}
+
                                     </div>
+
+
 
                                 </div>
 
+
+
                                 <button className="primary-btn" onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: '1rem', padding: '1rem', fontSize: '1rem' }}>{t.backToCooking}</button>
+
                             </div>
+
                         </div>
+
                     )}
 
+
+
                     {/* MAIN LOBBY OVERLAY */}
+
                     <div id="overlay" style={{ display: 'flex', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }}>
 
 
+
+
+
                         <div className="bg-particles">
+
                             {/* Floating UP particles */}
+
                             <div className="particle p1">🍅</div>
+
                             <div className="particle p2">🧀</div>
+
                             <div className="particle p3">🌶️</div>
+
                             <div className="particle p4">🍄</div>
+
                             <div className="particle p5">🎸</div>
+
                         </div>
+
+
 
                         {/* RAIN DOWN mini pizzas */}
+
                         <div className="pizza-rain">
+
                             <div className="falling-pizza fp1">🍕</div>
+
                             <div className="falling-pizza fp2">🍕</div>
+
                             <div className="falling-pizza fp3">🍕</div>
+
                             <div className="falling-pizza fp4">🍕</div>
+
                             <div className="falling-pizza fp5">🍕</div>
+
                         </div>
+
+
 
                         {/* PERSISTENT LOBBY BACKGROUND */}
+
                         <div className="lobby-content" style={{
+
                             transition: 'all 0.3s ease',
+
                             filter: view !== 'lobby' ? 'blur(8px) brightness(0.6)' : 'none',
+
                             pointerEvents: view !== 'lobby' ? 'none' : 'auto',
+
                             transform: view !== 'lobby' ? 'scale(0.95)' : 'scale(1)',
+
                             width: '100%',
+
                             height: '100%',
+
                             display: 'flex',
+
                             flexDirection: 'column',
+
                             alignItems: 'center',
+
                             justifyContent: 'center',
+
                             position: 'relative',
+
                             zIndex: 1
+
                         }}>
 
+
+
                             <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.2rem' }}>
+
                                 <h1 className="main-logo">RHYTHM<br />SLICE</h1>
+
                                 <p className="subtitle" style={{ marginBottom: '0' }}>PIZZA KITCHEN</p>
+
                             </div>
+
+
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.5rem', width: '80%', maxWidth: '300px' }}>
+
                                 <button id="startBtn"
-                                    onClick={handleStartGame}
+
+                                    onClick={() => setView('campaign')}
+
                                     disabled={!engineRef.current}
+
                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1rem', padding: '0.75rem' }}
+
                                 >
+
                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
+
                                 </button>
 
+
+
                                 {/* Vibrant Disco Music Selector Between Buttons */}
+
                                 <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+
                                     <button
+
                                         onClick={() => setView('songpicker')}
+
                                         title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
+
                                         style={{
+
                                             display: 'flex',
+
                                             alignItems: 'center',
+
                                             justifyContent: 'center',
+
                                             gap: '0.8rem',
+
                                             background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(178, 34, 34, 0.9))', // Dark Red to Crimson
+
                                             border: '2px solid rgba(218, 165, 32, 0.8)', // Goldenrod
+
                                             borderRadius: '30px',
+
                                             padding: '0.4rem 1.2rem 0.4rem 0.4rem',
+
                                             cursor: 'pointer',
+
                                             transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+
                                             opacity: 1,
+
                                             boxShadow: '0 0 10px rgba(178, 34, 34, 0.6), inset 0 0 8px rgba(218, 165, 32, 0.3)',
+
                                             width: '100%',
+
                                             position: 'relative',
+
                                             overflow: 'hidden'
+
                                         }}
+
                                         onMouseEnter={(e) => {
+
                                             e.currentTarget.style.transform = 'scale(1.03)';
+
                                             e.currentTarget.style.borderColor = '#FFD700'; // Gold
+
                                             e.currentTarget.style.boxShadow = '0 0 20px rgba(218, 165, 32, 0.8), inset 0 0 12px rgba(255, 215, 0, 0.5)';
+
                                             e.currentTarget.style.background = 'linear-gradient(135deg, rgba(178, 34, 34, 1), rgba(205, 92, 92, 0.95))';
+
                                         }}
+
                                         onMouseLeave={(e) => {
+
                                             e.currentTarget.style.transform = 'scale(1)';
+
                                             e.currentTarget.style.borderColor = 'rgba(218, 165, 32, 0.8)';
+
                                             e.currentTarget.style.boxShadow = '0 0 10px rgba(178, 34, 34, 0.6), inset 0 0 8px rgba(218, 165, 32, 0.3)';
+
                                             e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(178, 34, 34, 0.9))';
+
                                         }}
+
                                     >
+
                                         <div style={{
+
                                             animation: 'vinyl-spin 2s linear infinite',
+
                                             filter: 'drop-shadow(0 0 8px rgba(218,165,32,0.6))',
+
                                             display: 'flex',
+
                                             flexShrink: 0
+
                                         }}>
+
                                             <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+
                                                 <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
+
                                                 {[38, 33, 28, 23].map(r => (
+
                                                     <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
+
                                                 ))}
+
                                                 <circle cx="50" cy="50" r="21" fill="#4A0E0E" />
+
                                                 <circle cx="50" cy="50" r="20" fill="#DAA520" />
+
                                                 <circle cx="50" cy="50" r="20" fill="none" stroke="#FFF8DC" strokeWidth="1" />
+
                                                 <circle cx="50" cy="50" r="4.5" fill="#FFF8DC" />
+
                                                 <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(218,165,32,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
+
                                             </svg>
+
                                         </div>
+
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2 }}>
+
                                             <span style={{ fontSize: '0.85rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textShadow: '0 0 5px rgba(255,248,220,0.5)' }}>
+
                                                 {selectedSong.title}
+
                                             </span>
+
                                             <span style={{ fontSize: '0.55rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 'bold' }}>
+
                                                 {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
+
                                             </span>
+
                                         </div>
+
                                     </button>
+
                                 </div>
 
+
+
+                                <button
+
+                                    className="secondary-btn"
+
+                                    style={{
+
+                                        width: '100%',
+
+                                        marginBottom: '0.6rem',
+
+                                        background: '#2D0808',
+                                        opacity: 1,
+                                        backdropFilter: 'none',
+
+                                        border: '2px solid var(--ph-gold)',
+
+                                        boxShadow: '0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 10px rgba(255, 69, 0, 0.2)',
+
+                                        color: '#FFF8DC',
+
+                                        display: 'flex',
+
+                                        alignItems: 'center',
+
+                                        justifyContent: 'center',
+
+                                        gap: '0.8rem',
+
+                                        height: '52px',
+
+                                        borderRadius: '10px',
+
+                                        cursor: 'pointer',
+
+                                        transition: 'all 0.2s',
+
+                                        animation: 'pulse 2s infinite'
+
+                                    }}
+
+                                    onClick={() => setView('oven')}
+
+                                    onMouseEnter={(e) => {
+
+                                        e.currentTarget.style.transform = 'scale(1.02)';
+
+                                        e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 69, 0, 0.7), inset 0 0 15px rgba(255, 69, 0, 0.3)';
+
+                                    }}
+
+                                    onMouseLeave={(e) => {
+
+                                        e.currentTarget.style.transform = 'scale(1)';
+
+                                        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 10px rgba(255, 69, 0, 0.2)';
+
+                                    }}
+
+                                >
+
+                                    <span style={{ fontSize: '1.4rem' }}>🔥</span>
+
+                                    <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', fontWeight: 'bold', color: 'var(--ph-gold)' }}>
+
+                                        {language === 'es' ? '🔥 HORNO TIMED-BAKE & NFT' : '🔥 TIMED-BAKE OVEN & NFT'}
+
+                                    </span>
+
+                                </button>
+
+
+
                                 <div className="grid grid-cols-2 gap-2 w-full">
+
                                     <button
+
                                         className="secondary-btn lobby-nav-btn"
+
                                         style={{ position: 'relative', overflow: 'hidden' }}
+
                                         onClick={() => setView('store')}
+
                                     >
+
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+
                                             <span className="btn-icon">🛒</span>
+
                                             <span className="btn-text">{t.market}</span>
+
                                         </div>
+
                                     </button>
+
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => { loadLeaderboard(); setView('leaderboard'); }}>
+
                                         <span className="btn-icon">🏆</span>
+
                                         <span className="btn-text">{t.ranking}</span>
+
                                     </button>
+
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => setShowSettings(true)}>
+
                                         <span className="btn-icon">⚙️</span>
+
                                         <span className="btn-text">{t.setup}</span>
+
                                     </button>
+
                                     <button className="secondary-btn lobby-nav-btn" onClick={() => setView('howto')}>
+
                                         <span className="btn-icon">📜</span>
+
                                         <span className="btn-text">{t.rules}</span>
+
                                     </button>
+
                                 </div>
+
                             </div>
+
                         </div>
+
+
+
 
 
                         {/* MODALS OVERLAY */}
 
+
+
                         {/* ── SONG PICKER (MAFIA EDITION) ─────────────────────────────── */}
+
                         {(view === 'songpicker' || closingView === 'songpicker') && (
+
                             <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
+
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+
                                     background: '#FFF8E7',
+
                                     border: '6px solid #8B0000',
+
                                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
+
                                     color: '#333',
+
                                     borderRadius: '16px',
+
                                     paddingTop: '1.5rem',
+
                                     paddingBottom: '2rem'
+
                                 }}>
+
                                     <div className="modal-header" style={{
+
                                         borderBottom: '3px dashed #8B0000',
+
                                         paddingBottom: '1.2rem',
+
                                         marginBottom: '0.5rem'
+
                                     }}>
+
                                         <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
+
                                             background: '#8B0000',
+
                                             color: 'white',
+
                                             border: '2px solid #5C0000',
+
                                             flexShrink: 0
+
                                         }}>
+
                                             <ArrowLeft size={20} />
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 5px', minWidth: 0 }}>
-                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.4rem' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
-                                            <div style={{ fontSize: '0.75rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
+
                                         </div>
 
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 5px', minWidth: 0 }}>
+
+                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.4rem' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
+
+                                            <div style={{ fontSize: '0.75rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
+
+                                        </div>
+
+
+
                                     </div>
+
+
 
                                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingRight: '0.5rem', marginTop: '1rem' }}>
+
                                         {SONGS.map((song) => {
+
                                             const isSelected = selectedSong.id === song.id;
+
                                             const mins = Math.floor(song.duration / 60);
+
                                             const secs = Math.floor(song.duration % 60);
+
                                             return (
+
                                                 <button
+
                                                     key={song.id}
+
                                                     disabled={!song.available}
+
                                                     onClick={() => setSelectedSong(song)}
+
                                                     style={{
+
                                                         display: 'flex',
+
                                                         alignItems: 'flex-start',
+
                                                         gap: '0.5rem', // reduced gap to give text more space
+
                                                         padding: '0.7rem 0.8rem', // reduced padding from 1rem
+
                                                         borderRadius: '10px',
+
                                                         border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
+
                                                         background: isSelected ? 'rgba(39, 174, 96, 0.1)' : '#fff',
+
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
+
                                                         opacity: song.available ? 1 : 0.6,
+
                                                         textAlign: 'left',
+
                                                         color: '#333',
+
                                                         width: '100%',
+
                                                         transition: 'all 0.2s ease',
+
                                                         boxShadow: isSelected ? '0 4px 12px rgba(39, 174, 96, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)'
+
                                                     }}
+
                                                     onMouseEnter={(e) => {
+
                                                         if (!isSelected && song.available) {
+
                                                             e.currentTarget.style.background = '#F9F5EB';
+
                                                             e.currentTarget.style.transform = 'translateY(-2px)';
+
                                                             e.currentTarget.style.borderColor = '#D0B488';
+
                                                         }
+
                                                     }}
+
                                                     onMouseLeave={(e) => {
+
                                                         if (!isSelected && song.available) {
+
                                                             e.currentTarget.style.background = '#fff';
+
                                                             e.currentTarget.style.transform = 'translateY(0)';
+
                                                             e.currentTarget.style.borderColor = '#E0D4B8';
+
                                                         }
+
                                                     }}
+
                                                 >
+
                                                     {/* Track number or Pizza Slice */}
+
                                                     <div style={{ width: '40px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '0.2rem' }}>
+
                                                         {isSelected ? (
+
                                                             <div style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
+
                                                         ) : (
+
                                                             <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: song.available ? '#8B0000' : '#aaa', fontWeight: 'bold' }}>
+
                                                                 {song.available ? `#${song.index}` : '🔒'}
+
                                                             </span>
+
                                                         )}
+
                                                     </div>
+
+
 
                                                     {/* Info */}
+
                                                     <div style={{ flex: 1, minWidth: 0, paddingRight: '0.4rem', paddingTop: '0.2rem' }}>
+
                                                         <div style={{
+
                                                             fontWeight: '900',
+
                                                             fontSize: isSelected ? '0.95rem' : '0.85rem', // Smaller fonts
+
                                                             color: isSelected ? '#27AE60' : '#8B0000',
+
                                                             textTransform: 'uppercase',
+
                                                             lineHeight: '1.15',
+
                                                             letterSpacing: '0.02em',
+
                                                             transition: 'all 0.2s ease'
+
                                                         }}>
+
                                                             {song.title}
+
                                                         </div>
+
                                                         <div style={{
+
                                                             fontSize: '0.7rem',
+
                                                             color: isSelected ? '#14532D' : '#666',
+
                                                             marginTop: '3px',
+
                                                             fontWeight: '600',
+
                                                             lineHeight: '1.15'
+
                                                         }}>
+
                                                             {song.artist}
+
                                                         </div>
+
                                                     </div>
+
+
 
                                                     {/* Right side stats */}
+
                                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: '8px', flexShrink: 0, paddingTop: '0.2rem' }}>
+
                                                         <div style={{
+
                                                             fontSize: '0.7rem',
+
                                                             fontWeight: '900',
+
                                                             background: isSelected ? '#27AE60' : '#EAE3D1',
+
                                                             color: isSelected ? 'white' : '#666',
+
                                                             padding: '2px 6px',
+
                                                             border: isSelected ? '1px solid #1E8449' : '1px solid #D1C5AD',
+
                                                             borderRadius: '6px',
+
                                                             letterSpacing: '0.05em',
+
                                                             boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.3)' : 'none'
+
                                                         }}>
+
                                                             {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
+
                                                         </div>
+
                                                         <div style={{
+
                                                             fontSize: '0.9rem',
+
                                                             fontFamily: 'var(--font-mono)',
+
                                                             color: isSelected ? '#1E8449' : '#333',
+
                                                             fontWeight: 'bold'
+
                                                         }}>
+
                                                             {mins}:{secs.toString().padStart(2, '0')}
+
                                                         </div>
+
                                                     </div>
+
                                                 </button>
+
                                             );
-                                        })}
-                                    </div>
 
-                                    <button
-                                        style={{
-                                            width: '100%',
-                                            marginTop: '1.5rem',
-                                            padding: '1rem',
-                                            fontSize: '1.1rem',
-                                            background: '#8B0000',
-                                            color: 'white',
-                                            border: '2px solid #5C0000',
-                                            borderRadius: '8px',
-                                            fontWeight: 'bold',
-                                            boxShadow: '0 4px 0 #5C0000',
-                                            opacity: engineRef.current ? 1 : 0.5,
-                                            cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.1em',
-                                            transition: 'transform 0.1s, box-shadow 0.1s'
-                                        }}
-                                        disabled={!engineRef.current}
-                                        onMouseDown={(e) => {
-                                            if (engineRef.current) {
-                                                e.currentTarget.style.transform = 'translateY(4px)';
-                                                e.currentTarget.style.boxShadow = '0 0 0 #5C0000';
-                                            }
-                                        }}
-                                        onMouseUp={(e) => {
-                                            if (engineRef.current) {
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = '0 4px 0 #5C0000';
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (engineRef.current) {
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                e.currentTarget.style.boxShadow = '0 4px 0 #5C0000';
-                                            }
-                                        }}
-                                        onClick={() => {
-                                            if (engineRef.current) {
-                                                setTimeout(() => {
-                                                    closeModalWithAnimation('lobby');
-                                                    handleStartGame();
-                                                }, 150);
-                                            }
-                                        }}
-                                    >
-                                        {engineRef.current ? `🔥 ${language === 'es' ? 'JUGAR AHORA' : 'PLAY NOW'}` : `🔥 ${t.heatingUp}`}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {(view === 'store' || closingView === 'store') && (
-                            <div className={`modal-backdrop ${closingView === 'store' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
-                                            <ArrowLeft size={20} />
-                                        </div>
-                                        <h2 className="modal-title">{t.market}</h2>
-                                        <div style={{ width: 40 }}></div>
-                                    </div>
-
-                                    <div style={{ padding: '0 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                        <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
-                                            {t.marketSub}
-                                        </p>
-                                        <div style={{ background: 'rgba(212,175,55,0.15)', padding: '0.4rem 0.8rem', borderRadius: '12px', border: '1px solid var(--ph-gold)', fontWeight: 'bold', color: 'var(--ph-gold)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1.1rem' }}>
-                                            <span>🍕</span> {pizzaBalance.toLocaleString()}
-                                        </div>
-                                    </div>
-
-                                    <div className="store-grid" style={{ padding: '0 0.5rem', maxHeight: '50vh', overflowY: 'auto' }}>
-                                        {[
-                                            { id: 'spicy_pepperoni', icon: '🌶️', name: 'Spicy Pepperoni', price: 500 },
-                                            { id: 'oven_mitts', icon: '🛡️', name: 'Oven Mitts', price: 1200 },
-                                            { id: 'secret_sauce', icon: '🧂', name: 'Secret Sauce', price: 5000 },
-                                            { id: 'golden_cutter', icon: '🔪', name: 'Golden Cutter', price: 10000 },
-                                        ].map(item => {
-                                            const isOwned = inventory.includes(item.id);
-                                            const canAfford = pizzaBalance >= item.price;
-
-                                            // Handle Purchase logic
-                                            const handleBuy = () => {
-                                                if (isOwned || !canAfford) return;
-                                                setPizzaBalance(prev => prev - item.price);
-                                                setInventory(prev => [...prev, item.id]);
-                                            };
-
-                                            return (
-                                                <div key={item.id} className="store-item" style={{
-                                                    background: isOwned ? 'rgba(39, 174, 96, 0.1)' : '#F9F5EB',
-                                                    padding: '0.8rem',
-                                                    borderRadius: '12px',
-                                                    border: isOwned ? '1px solid #27ae60' : '1px solid #D0B488',
-                                                    textAlign: 'center',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    justifyContent: 'space-between',
-                                                    gap: '0.5rem',
-                                                    opacity: (!isOwned && !canAfford) ? 0.7 : 1
-                                                }}>
-                                                    <div>
-                                                        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{item.icon}</div>
-                                                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isOwned ? '#27ae60' : '#333' }}>{item.name}</div>
-                                                    </div>
-
-                                                    <button
-                                                        onClick={handleBuy}
-                                                        disabled={isOwned || !canAfford}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '0.5rem',
-                                                            borderRadius: '8px',
-                                                            border: 'none',
-                                                            fontWeight: 'bold',
-                                                            cursor: (isOwned || !canAfford) ? 'not-allowed' : 'pointer',
-                                                            background: isOwned ? '#27ae60' : (canAfford ? 'var(--ph-gold)' : '#ccc'),
-                                                            color: isOwned ? 'white' : (canAfford ? 'black' : '#666'),
-                                                            fontSize: '0.85rem'
-                                                        }}
-                                                    >
-                                                        {isOwned ? (language === 'es' ? 'COMPRADO' : 'OWNED') : `${item.price} 🍕`}
-                                                    </button>
-                                                </div>
-                                            );
                                         })}
 
-                                        <div className="store-item" style={{ background: '#F9F5EB', padding: '0.8rem', borderRadius: '12px', border: '1px dashed #D0B488', textAlign: 'center', opacity: 0.6, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
-                                            <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: 'bold' }}>Mystery Pack</div>
-                                            <div style={{ color: '#999', fontSize: '0.8rem', marginTop: '0.5rem' }}>???</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {(view === 'leaderboard' || closingView === 'leaderboard') && (
-                            <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
-                                            <ArrowLeft size={20} />
-                                        </div>
-                                        <h2 className="modal-title">🏆 {t.ranking}</h2>
-                                        <button
-                                            onClick={loadLeaderboard}
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', width: 40, color: '#666' }}
-                                            title={t.refresh}
-                                        >↺</button>
                                     </div>
 
-                                    {/* Leaderboard submission badge from last game */}
-                                    {lbSubmitStatus !== 'none' && (
+
+
+                                    {/* Ticket Sync and Actions HUD */}
+                                    {userAddress && userAddress !== 'G_DEMO_USER' && (
                                         <div style={{
-                                            textAlign: 'center',
-                                            padding: '0.4rem 0.8rem',
-                                            marginBottom: '0.5rem',
+                                            background: '#F9F5EB',
+                                            border: '1px dashed #D0B488',
                                             borderRadius: '8px',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 'bold',
-                                            background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
-                                            color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
-                                            border: `1px solid ${lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c'}`,
+                                            padding: '0.8rem',
+                                            marginTop: '1rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '8px',
+                                            width: '100%',
                                         }}>
-                                            {lbSubmitStatus === 'ok' ? '✅ Your score was submitted to the board!' : '⚠️ Leaderboard submission failed — see console'}
-                                        </div>
-                                    )}
-
-                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
-                                        {leaderboardLoading ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-                                                <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
-                                                Loading on-chain scores...
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#8B0000' }}>
+                                                    🎟️ {language === 'es' ? 'MIS TICKETS DE TORNEO:' : 'MY TOURNAMENT TICKETS:'} <span style={{ fontSize: '1.1rem', color: '#27AE60' }}>{ticketBalance}</span>
+                                                </span>
                                             </div>
-                                        ) : leaderboardError ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
-                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
-                                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
-                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={loadLeaderboard}>Try Again</button>
-                                            </div>
-                                        ) : leaderboard.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
-                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
+                                            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                                                 <button
-                                                    className="primary-btn"
-                                                    style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
-                                                    onClick={() => { setView('lobby'); handleStartGame(); }}
-                                                >🔥 FIRE UP OVEN</button>
-                                            </div>
-                                        ) : (
-                                            <div style={{ width: '100%' }}>
-                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
-                                                    ⛓ Scores verified on Stellar Testnet · {leaderboard.length} entr{leaderboard.length === 1 ? 'y' : 'ies'}
-                                                </div>
-                                                {leaderboard.map((entry, i) => {
-                                                    const medals = ['🥇', '🥈', '🥉'];
-                                                    const medal = medals[i] ?? `${i + 1}.`;
-                                                    const shortAddr = entry.player.length >= 10
-                                                        ? `${entry.player.slice(0, 6)}…${entry.player.slice(-4)}`
-                                                        : entry.player;
-                                                    const isMe = entry.player === userAddress;
-                                                    return (
-                                                        <div key={i} style={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '0.75rem',
-                                                            padding: '0.75rem 0.5rem',
-                                                            borderBottom: '1px solid #E0D4B8',
-                                                            background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
-                                                            borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
-                                                        }}>
-                                                            <span style={{ fontSize: '1.3rem', minWidth: '2rem', textAlign: 'center' }}>{medal}</span>
-                                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontSize: '0.85rem', fontWeight: isMe ? 'bold' : 'normal', fontFamily: 'monospace', color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                    {shortAddr}{isMe ? ' (you)' : ''}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#27ae60', whiteSpace: 'nowrap' }}>
-                                                                {entry.score.toLocaleString()} pts
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {leaderboard.length > 0 && (
-                                        <button
-                                            className="primary-btn"
-                                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
-                                            onClick={() => { setView('lobby'); handleStartGame(); }}
-                                        >🔥 {t.challenge}</button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'story' && (
-                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
-                                            <ArrowLeft size={20} />
-                                        </div>
-                                        <h2 className="modal-title">{t.legend}</h2>
-                                        <div style={{ width: 40 }}></div>
-                                    </div>
-                                    <div style={{ padding: '0 1rem', textAlign: 'center' }}>
-                                        <p style={{ lineHeight: '1.6', marginBottom: '1rem' }}>
-                                            {t.storyIntro}
-                                        </p>
-                                        <p style={{ lineHeight: '1.6' }}>
-                                            {t.storyBody}
-                                        </p>
-                                        <h3 style={{ fontSize: '2rem', color: '#8B0000', marginTop: '1rem', fontFamily: 'var(--font-title)' }}>{t.don}</h3>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {view === 'howto' && (
-                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                                    <div className="modal-header">
-                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
-                                            <ArrowLeft size={20} />
-                                        </div>
-                                        <h2 className="modal-title">{t.rules}</h2>
-                                        <div style={{ width: 40 }}></div>
-                                    </div>
-
-                                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
-                                        <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
-                                            <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '0.5rem' }}>{t.controlsDesc}</p>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
-                                                <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
-                                                <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
-                                                <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
-                                                <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
-                                            </div>
-                                        </section>
-
-                                        <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontSize: '1.5rem' }}>🎯</div>
-                                                    <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.precision}</p>
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.precisionDesc}</p>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontSize: '1.5rem' }}>🔄</div>
-                                                    <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.combo}</p>
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.comboDesc}</p>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontSize: '1.5rem' }}>📦</div>
-                                                    <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.orders}</p>
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.ordersDesc}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </section>
-
-                                        <section>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
-                                            <p style={{ fontSize: '0.9rem', color: '#666' }}>{t.rewardsDesc}</p>
-                                        </section>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-
-                    <div id="results" style={{
-                        display: 'none',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        zIndex: 20,
-                        // Elegant Glassmorphism: allows the game background to be seen blurred
-                        background: 'rgba(20, 5, 5, 0.4)',
-                        backdropFilter: 'blur(12px)',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}>
-                        {/* Popup Card (Receipt Theme V3) */}
-                        <div style={{
-                            width: '88%',
-                            maxWidth: '340px',
-                            minHeight: '480px',
-                            background: 'transparent',
-                            /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
-                            backgroundImage: `
-                                radial-gradient(circle at 10px 0, transparent 9px, #FDFDFD 10px),
-                                linear-gradient(#FDFDFD, #FDFDFD),
-                                radial-gradient(circle at 10px 100%, transparent 9px, #FDFDFD 10px)
-                            `,
-                            backgroundSize: '20px 20px, 100% calc(100% - 38px), 20px 20px',
-                            backgroundPosition: 'top left, center, bottom left',
-                            backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'flex-start',
-                            padding: '1.5rem 1.5rem',
-                            color: '#111',
-                            position: 'relative',
-                            /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
-                            filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.5))'
-                        }}>
-                            {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '15px 0', flex: 1 }}>
-
-                                {/* Header Section */}
-                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '1.2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '2rem', color: '#8B0000', margin: '0 0 0.5rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                                        LA FAMIGLIA
-                                    </h2>
-                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.95rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                                        {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
-                                    </div>
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '1rem' }}></div>
-                                </div>
-
-                                {/* Score Content */}
-                                <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
-
-                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.25rem', marginBottom: '0.8rem', color: '#111' }}>
-                                        <span>{t.score.toUpperCase()}</span>
-                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>0</span>
-                                    </div>
-
-                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.8rem', color: '#444' }}>
-                                        <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
-                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>0</span>
-                                    </div>
-
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '1rem 0' }}></div>
-
-                                    {/* Huge Grade Stamp */}
-                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '1rem 0 1rem 0' }}>
-                                        <div className="grade" id="resGrade" style={{
-                                            fontSize: '5rem',
-                                            fontFamily: "'Bangers', cursive",
-                                            fontWeight: 'bold',
-                                            color: '#cc0000',
-                                            opacity: 0.85,
-                                            transform: 'rotate(-5deg)',
-                                            border: '5px solid #cc0000',
-                                            borderRadius: '12px',
-                                            padding: '0 1.5rem',
-                                            lineHeight: 1.1,
-                                            boxShadow: 'inset 0 0 0 3px #FDFDFD, inset 0 0 0 5px #cc0000', // Double border effect
-                                        }}>S</div>
-                                    </div>
-
-                                    {/* On-chain verified score */}
-                                    {onChainScore !== null && (
-                                        <div style={{ width: '100%', marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-                                            <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '4px 0', width: '100%', letterSpacing: '1px' }}>
-                                                *** {language === 'es' ? 'COPIA VERIFICADA' : 'VERIFIED COPY'} ***
-                                            </div>
-                                            <div>
-                                                {t.scoreVerified.toUpperCase()}: <strong>{onChainScore.toLocaleString()} PTS</strong>
+                                                    onClick={async () => {
+                                                        const signer = getContractSignerRef.current();
+                                                        setStatus(language === 'es' ? 'Reclamando Staking...' : 'Claiming Staking...');
+                                                        const res = await StellarContractService.claimStakingTickets(userAddress, signer);
+                                                        setStatus('');
+                                                        if (res.success) {
+                                                            alert(language === 'es' ? '¡Tickets de Staking reclamados con éxito! 🎉' : 'Staking tickets successfully claimed! 🎉');
+                                                            const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                            setTicketBalance(tickets);
+                                                        } else {
+                                                            alert(`Error: ${res.error}`);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        fontSize: '0.75rem',
+                                                        background: '#27AE60',
+                                                        color: 'white',
+                                                        border: '1px solid #1E8449',
+                                                        borderRadius: '6px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    🎁 {language === 'es' ? 'Reclamar Staking' : 'Claim Staking'}
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        const signer = getContractSignerRef.current();
+                                                        setStatus(language === 'es' ? 'Comprando Ticket...' : 'Buying Ticket...');
+                                                        const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
+                                                        setStatus('');
+                                                        if (res.success) {
+                                                            alert(language === 'es' ? '¡Ticket comprado con éxito! 🎟️' : 'Ticket bought successfully! 🎟️');
+                                                            const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                            setTicketBalance(tickets);
+                                                            const sliceBal = await StellarContractService.getSliceBalance(userAddress);
+                                                            setSliceBalance(sliceBal);
+                                                        } else {
+                                                            alert(`Error: ${res.error}`);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        fontSize: '0.75rem',
+                                                        background: '#D4AF37',
+                                                        color: 'white',
+                                                        border: '1px solid #AA8010',
+                                                        borderRadius: '6px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    🛒 {language === 'es' ? 'Comprar (10 $SLICE)' : 'Buy (10 $SLICE)'}
+                                                </button>
                                             </div>
                                         </div>
                                     )}
-                                </div>
 
-                                {/* Verification Status or Actions */}
-                                {isVerifying ? (
-                                    <div style={{
-                                        width: '100%',
-                                        marginTop: '2rem',
-                                        textAlign: 'center',
-                                        fontFamily: "'Special Elite', monospace"
-                                    }}>
-                                        {proofStatus === 'generating' ? (
-                                            <>
-                                                <p style={{ color: '#333', fontSize: '1.2rem', marginBottom: '0.5rem', animation: 'pulse 1.5s infinite' }}>
-                                                    {language === 'es' ? 'IMPRIMIENDO TICKET...' : 'PRINTING RECEIPT...'}
-                                                </p>
-                                                <div style={{ fontSize: '0.85rem', color: '#888' }}>{t.securing}</div>
-                                            </>
-                                        ) : proofStatus === 'success' ? (
-                                            <div style={{ color: '#111', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px', borderTop: '2px dotted #111', borderBottom: '2px dotted #111', padding: '10px 0' }}>
-                                                {language === 'es' ? 'TRANSACCIÓN APROBADA' : 'TX APPROVED'}
-                                            </div>
-                                        ) : (
-                                            <div style={{ color: '#cc0000', fontWeight: 'bold', borderTop: '2px dashed #cc0000', borderBottom: '2px dashed #cc0000', padding: '10px 0' }}>
-                                                {language === 'es' ? 'PAGO RECHAZADO' : 'PAYMENT DECLINED'}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginTop: 'auto' }}>
+                                    {/* Action Buttons */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1.2rem', width: '100%' }}>
                                         <button
-                                            id="restartBtn"
-                                            className="primary-btn"
-                                            onClick={handleCookAgain}
-                                            style={{ width: '100%', padding: '1.2rem', fontSize: '1.2rem', boxShadow: 'none' }}
+                                            disabled={!engineRef.current}
+                                            onClick={() => {
+                                                if (engineRef.current) {
+                                                    setIsPracticeMode(true);
+                                                    setTimeout(() => {
+                                                        closeModalWithAnimation('lobby');
+                                                        handleStartGame();
+                                                    }, 150);
+                                                }
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.9rem',
+                                                fontSize: '1rem',
+                                                background: 'linear-gradient(135deg, #2D3748, #4A5568)',
+                                                color: 'white',
+                                                border: '2px solid #1A202C',
+                                                borderRadius: '8px',
+                                                fontWeight: 'bold',
+                                                cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em',
+                                            }}
                                         >
-                                            🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
+                                            ⚔️ {language === 'es' ? 'PRÁCTICA LIBRE (GRATIS)' : 'FREE PRACTICE (FREE)'}
                                         </button>
 
-                                        {onChainScore !== null && onChainScore >= 4000 ? (
-                                            <button
-                                                id="nextLevelBtn"
-                                                className="primary-btn"
-                                                onClick={handleNextLevel}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '1.2rem',
-                                                    fontSize: '1.2rem',
-                                                    background: '#E67E22',
-                                                    borderColor: '#D35400',
-                                                    boxShadow: 'none',
-                                                    textTransform: 'uppercase'
-                                                }}
-                                            >
-                                                🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
-                                            </button>
-                                        ) : (
-                                            <button
-                                                id="nextLevelBtn"
-                                                style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
-                                                disabled
-                                                title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
-                                            >
-                                                🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
-                                            </button>
-                                        )}
-
                                         <button
-                                            id="backToLobbyBtn"
-                                            onClick={handleBackToLobby}
+                                            disabled={!engineRef.current}
+                                            onClick={() => {
+                                                if (engineRef.current) {
+                                                    if (userAddress && userAddress !== 'G_DEMO_USER' && ticketBalance < 1) {
+                                                        alert(language === 'es' ? '⚠️ Necesitas al menos 1 Ticket para jugar en modo competitivo.' : '⚠️ You need at least 1 Ticket to play competitively.');
+                                                        return;
+                                                    }
+                                                    setIsPracticeMode(false);
+                                                    setTimeout(() => {
+                                                        closeModalWithAnimation('lobby');
+                                                        handleStartGame();
+                                                    }, 150);
+                                                }
+                                            }}
                                             style={{
                                                 width: '100%',
                                                 padding: '1rem',
                                                 fontSize: '1.1rem',
-                                                fontFamily: "'Special Elite', monospace",
-                                                background: 'transparent',
-                                                border: '2px dashed #8B0000',
-                                                borderRadius: '12px',
-                                                color: '#8B0000',
+                                                background: 'linear-gradient(135deg, #8B0000, #B30000)',
+                                                color: 'white',
+                                                border: '2px solid #5C0000',
+                                                borderRadius: '8px',
                                                 fontWeight: 'bold',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s ease'
+                                                cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.08em',
+                                                boxShadow: '0 4px 10px rgba(139, 0, 0, 0.4)',
                                             }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                         >
-                                            {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
+                                            🔥 {engineRef.current ? (language === 'es' ? 'TORNEO COMPETITIVO' : 'COMPETITIVE TOURNAMENT') : `🔥 ${t.heatingUp}`}
                                         </button>
                                     </div>
-                                )}
+
+                                </div>
+
                             </div>
-                        </div>
+
+                        )}
+
+
+
+                        {(view === 'store' || closingView === 'store') && (
+
+                            <div className={`modal-backdrop ${closingView === 'store' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
+                                    <div className="modal-header">
+
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
+
+                                            <ArrowLeft size={20} />
+
+                                        </div>
+
+                                        <h2 className="modal-title">{t.market}</h2>
+
+                                        <div style={{ width: 40 }}></div>
+
+                                    </div>
+
+
+
+                                    <div style={{ padding: '0 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+
+                                        <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
+
+                                            {t.marketSub}
+
+                                        </p>
+
+                                        <div style={{ background: 'rgba(212,175,55,0.15)', padding: '0.4rem 0.8rem', borderRadius: '12px', border: '1px solid var(--ph-gold)', fontWeight: 'bold', color: 'var(--ph-gold)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '1.1rem' }}>
+
+                                            <span>🍕</span> {pizzaBalance.toLocaleString()}
+
+                                        </div>
+
+                                    </div>
+
+
+
+                                    <div className="store-grid" style={{ padding: '0 0.5rem', maxHeight: '50vh', overflowY: 'auto' }}>
+
+                                        {[
+
+                                            { id: 'spicy_pepperoni', icon: '🌶️', name: 'Spicy Pepperoni', price: 500 },
+
+                                            { id: 'oven_mitts', icon: '🛡️', name: 'Oven Mitts', price: 1200 },
+
+                                            { id: 'secret_sauce', icon: '🧂', name: 'Secret Sauce', price: 5000 },
+
+                                            { id: 'golden_cutter', icon: '🔪', name: 'Golden Cutter', price: 10000 },
+
+                                        ].map(item => {
+
+                                            const isOwned = inventory.includes(item.id);
+
+                                            const canAfford = pizzaBalance >= item.price;
+
+
+
+                                            // Handle Purchase logic
+
+                                            const handleBuy = () => {
+
+                                                if (isOwned || !canAfford) return;
+
+                                                setPizzaBalance(prev => prev - item.price);
+
+                                                setInventory(prev => [...prev, item.id]);
+
+                                            };
+
+
+
+                                            return (
+
+                                                <div key={item.id} className="store-item" style={{
+
+                                                    background: isOwned ? 'rgba(39, 174, 96, 0.1)' : '#F9F5EB',
+
+                                                    padding: '0.8rem',
+
+                                                    borderRadius: '12px',
+
+                                                    border: isOwned ? '1px solid #27ae60' : '1px solid #D0B488',
+
+                                                    textAlign: 'center',
+
+                                                    display: 'flex',
+
+                                                    flexDirection: 'column',
+
+                                                    justifyContent: 'space-between',
+
+                                                    gap: '0.5rem',
+
+                                                    opacity: (!isOwned && !canAfford) ? 0.7 : 1
+
+                                                }}>
+
+                                                    <div>
+
+                                                        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{item.icon}</div>
+
+                                                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isOwned ? '#27ae60' : '#333' }}>{item.name}</div>
+
+                                                    </div>
+
+
+
+                                                    <button
+
+                                                        onClick={handleBuy}
+
+                                                        disabled={isOwned || !canAfford}
+
+                                                        style={{
+
+                                                            width: '100%',
+
+                                                            padding: '0.5rem',
+
+                                                            borderRadius: '8px',
+
+                                                            border: 'none',
+
+                                                            fontWeight: 'bold',
+
+                                                            cursor: (isOwned || !canAfford) ? 'not-allowed' : 'pointer',
+
+                                                            background: isOwned ? '#27ae60' : (canAfford ? 'var(--ph-gold)' : '#ccc'),
+
+                                                            color: isOwned ? 'white' : (canAfford ? 'black' : '#666'),
+
+                                                            fontSize: '0.85rem'
+
+                                                        }}
+
+                                                    >
+
+                                                        {isOwned ? (language === 'es' ? 'COMPRADO' : 'OWNED') : `${item.price} 🍕`}
+
+                                                    </button>
+
+                                                </div>
+
+                                            );
+
+                                        })}
+
+
+
+                                        <div className="store-item" style={{ background: '#F9F5EB', padding: '0.8rem', borderRadius: '12px', border: '1px dashed #D0B488', textAlign: 'center', opacity: 0.6, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+
+                                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
+
+                                            <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: 'bold' }}>Mystery Pack</div>
+
+                                            <div style={{ color: '#999', fontSize: '0.8rem', marginTop: '0.5rem' }}>???</div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        {/* ── TIMED OVEN DASHBOARD & STAKING MODAL ─────────────────────────── */}
+
+                        {(view === 'oven' || closingView === 'oven') && (
+
+                            <div className={`modal-backdrop ${closingView === 'oven' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+
+                                    background: 'rgba(20, 5, 5, 0.98)',
+
+                                    border: '4px solid #8B0000',
+
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), inset 0 0 30px rgba(139, 0, 0, 0.15)',
+
+                                    color: '#FFF8E7',
+
+                                    borderRadius: '16px',
+
+                                    padding: '1.2rem',
+
+                                    width: '95%',
+
+                                    maxWidth: '900px',
+
+                                    maxHeight: '90vh',
+
+                                    overflowY: 'auto',
+
+                                    display: 'flex',
+
+                                    flexDirection: 'column',
+
+                                    gap: '1rem',
+
+                                    position: 'relative'
+
+                                }}>
+
+                                    {/* Modal Header */}
+
+                                    <div style={{
+
+                                        display: 'flex',
+
+                                        justifyContent: 'space-between',
+
+                                        alignItems: 'center',
+
+                                        borderBottom: '3px dashed rgba(139, 0, 0, 0.6)',
+
+                                        paddingBottom: '0.8rem'
+
+                                    }}>
+
+                                        <button 
+
+                                            onClick={() => closeModalWithAnimation('lobby')} 
+
+                                            style={{
+
+                                                background: '#8B0000',
+
+                                                color: 'white',
+
+                                                border: '2px solid #5C0000',
+
+                                                borderRadius: '50%',
+
+                                                width: '40px',
+
+                                                height: '40px',
+
+                                                display: 'flex',
+
+                                                alignItems: 'center',
+
+                                                justifyContent: 'center',
+
+                                                cursor: 'pointer',
+
+                                                transition: 'all 0.2s'
+
+                                            }}
+
+                                            onMouseEnter={(e) => e.currentTarget.style.background = '#C0392B'}
+
+                                            onMouseLeave={(e) => e.currentTarget.style.background = '#8B0000'}
+
+                                        >
+
+                                            <ArrowLeft size={18} />
+
+                                        </button>
+
+                                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontFamily: 'var(--font-display)', color: 'var(--ph-gold)', textShadow: '2px 2px 4px rgba(0,0,0,0.6)' }}>
+
+                                            🇮🇹 {language === 'es' ? 'EL HORNO DE LA FAMIGLIA' : 'THE FAMIGLIA OVEN'}
+
+                                        </h2>
+
+                                        <div style={{ width: '40px' }} />
+
+                                    </div>
+
+
+
+                                    {/* Sub-tab Navigation */}
+
+                                    <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(0,0,0,0.5)', padding: '0.2rem', borderRadius: '8px' }}>
+
+                                        <button 
+
+                                            onClick={() => setOvenTab('baking')}
+
+                                            style={{
+
+                                                flex: 1,
+
+                                                padding: '0.5rem',
+
+                                                background: ovenTab === 'baking' ? 'linear-gradient(135deg, #1A0D0D, #8B0000)' : 'transparent',
+
+                                                border: 'none',
+
+                                                borderRadius: '6px',
+
+                                                color: ovenTab === 'baking' ? 'var(--ph-gold)' : '#aaa',
+
+                                                fontWeight: 'bold',
+
+                                                fontSize: '0.75rem',
+
+                                                cursor: 'pointer',
+
+                                                transition: 'all 0.2s'
+
+                                            }}
+
+                                        >
+
+                                            🔥 {language === 'es' ? 'HORNEAR' : 'BAKE PIZZA'}
+
+                                        </button>
+
+                                        <button 
+
+                                            onClick={() => setOvenTab('classic')}
+
+                                            style={{
+
+                                                flex: 1,
+
+                                                padding: '0.5rem',
+
+                                                background: ovenTab === 'classic' ? 'linear-gradient(135deg, #1A0D0D, #8B0000)' : 'transparent',
+
+                                                border: 'none',
+
+                                                borderRadius: '6px',
+
+                                                color: ovenTab === 'classic' ? 'var(--ph-gold)' : '#aaa',
+
+                                                fontWeight: 'bold',
+
+                                                fontSize: '0.75rem',
+
+                                                cursor: 'pointer',
+
+                                                transition: 'all 0.2s'
+
+                                            }}
+
+                                        >
+
+                                            🏦 {language === 'es' ? 'STAKING VAULT' : 'STAKING VAULT'}
+
+                                        </button>
+
+                                        <button 
+
+                                            onClick={() => setOvenTab('collection')}
+
+                                            style={{
+
+                                                flex: 1,
+
+                                                padding: '0.5rem',
+
+                                                background: ovenTab === 'collection' ? 'linear-gradient(135deg, #1A0D0D, #8B0000)' : 'transparent',
+
+                                                border: 'none',
+
+                                                borderRadius: '6px',
+
+                                                color: ovenTab === 'collection' ? 'var(--ph-gold)' : '#aaa',
+
+                                                fontWeight: 'bold',
+
+                                                fontSize: '0.75rem',
+
+                                                cursor: 'pointer',
+
+                                                transition: 'all 0.2s'
+
+                                            }}
+
+                                        >
+
+                                            👑 {language === 'es' ? 'COLECCIÓN' : 'COLLECTION'}
+
+                                        </button>
+
+                                        <button 
+
+                                            onClick={() => setOvenTab('refrigerator')}
+
+                                            style={{
+
+                                                flex: 1,
+
+                                                padding: '0.5rem',
+
+                                                background: ovenTab === 'refrigerator' ? 'linear-gradient(135deg, #1A0D0D, #8B0000)' : 'transparent',
+
+                                                border: 'none',
+
+                                                borderRadius: '6px',
+
+                                                color: ovenTab === 'refrigerator' ? 'var(--ph-gold)' : '#aaa',
+
+                                                fontWeight: 'bold',
+
+                                                fontSize: '0.75rem',
+
+                                                cursor: 'pointer',
+
+                                                transition: 'all 0.2s'
+
+                                            }}
+
+                                        >
+
+                                            ❄️ {language === 'es' ? 'NEVERA' : 'VAULT'}
+
+                                        </button>
+
+                                    </div>
+
+
+
+                                    {/* Tab Content Areas */}
+
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '350px' }}>
+
+                                        {/* CSS Keyframe Animations */}
+
+                                        <style>{`
+
+                                            @keyframes firePulse {
+
+                                                0% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 15px rgba(255, 69, 0, 0.3); border-color: #ff4500; }
+
+                                                50% { box-shadow: 0 0 30px rgba(255, 140, 0, 0.8), inset 0 0 25px rgba(255, 140, 0, 0.5); border-color: #ff8c00; }
+
+                                                100% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 15px rgba(255, 69, 0, 0.3); border-color: #ff4500; }
+
+                                            }
+
+                                            @keyframes cyberpunkPulse {
+
+                                                0% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 15px rgba(0, 255, 255, 0.3); border-color: #00ffff; }
+
+                                                50% { box-shadow: 0 0 30px rgba(255, 0, 128, 0.8), inset 0 0 25px rgba(255, 0, 128, 0.5); border-color: #ff0080; }
+
+                                                100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.4), inset 0 0 15px rgba(0, 255, 255, 0.3); border-color: #00ffff; }
+
+                                            }
+
+                                            @keyframes vulcanPulse {
+
+                                                0% { box-shadow: 0 0 15px rgba(218, 165, 32, 0.4), inset 0 0 15px rgba(218, 165, 32, 0.3); border-color: #daa520; }
+
+                                                50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.9), inset 0 0 25px rgba(255, 215, 0, 0.6); border-color: #ffd700; }
+
+                                                100% { box-shadow: 0 0 15px rgba(218, 165, 32, 0.4), inset 0 0 15px rgba(218, 165, 32, 0.3); border-color: #daa520; }
+
+                                            }
+
+                                            @keyframes flameFlicker {
+
+                                                0% { transform: scale(1) rotate(-1deg); filter: brightness(1); }
+
+                                                20% { transform: scale(1.05) rotate(2deg); filter: brightness(1.25); }
+
+                                                40% { transform: scale(0.95) rotate(-2deg); filter: brightness(0.9); }
+
+                                                60% { transform: scale(1.02) rotate(1deg); filter: brightness(1.15); }
+
+                                                80% { transform: scale(0.98) rotate(-1deg); filter: brightness(0.95); }
+
+                                                100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+
+                                            }
+
+                                            @keyframes lockShake {
+
+                                                0% { transform: translateX(0); }
+
+                                                20% { transform: translateX(-4px) rotate(-3deg); }
+
+                                                40% { transform: translateX(4px) rotate(3deg); }
+
+                                                60% { transform: translateX(-4px) rotate(-3deg); }
+
+                                                80% { transform: translateX(4px) rotate(3deg); }
+
+                                                100% { transform: translateX(0); }
+
+                                            }
+
+                                            .lock-container:hover .lock-shake {
+
+                                                animation: lockShake 0.4s ease-in-out;
+
+                                            }
+
+                                        `}</style>
+
+
+
+                                        {/* TAB 0: TIMED BAKING */}
+
+                                        {ovenTab === 'baking' && (
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+
+                                                {/* Selectors and Stats Bar */}
+
+                                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+
+                                                    {/* Fuel Selector */}
+
+                                                    <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+
+                                                        <span style={{ fontSize: '0.65rem', color: '#ffb703', fontWeight: 'bold' }}>🪵 LEÑA / WOOD FUEL:</span>
+
+                                                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+
+                                                            {[
+
+                                                                { id: 'oak', label: '🌳 Roble', desc: 'Base (1x)', cost: 'Gratis' },
+
+                                                                { id: 'cherry', label: '🍒 Cerezo', desc: '1.3x Vel, +10% Yield', cost: '0.5 SLICE' },
+
+                                                                { id: 'mesquite', label: '🌶️ Mezquite', desc: '1.8x Vel, +30% Yield', cost: '1.2 SLICE' }
+
+                                                            ].map(fuel => (
+
+                                                                <button
+
+                                                                    key={fuel.id}
+
+                                                                    onClick={() => setSelectedFuel(fuel.id as any)}
+
+                                                                    style={{
+
+                                                                        flex: 1,
+
+                                                                        padding: '0.3rem',
+
+                                                                        background: selectedFuel === fuel.id ? 'linear-gradient(135deg, #FF4500, #8B0000)' : 'rgba(0,0,0,0.5)',
+
+                                                                        border: selectedFuel === fuel.id ? '1px solid #FFD700' : '1px solid rgba(255,255,255,0.1)',
+
+                                                                        borderRadius: '4px',
+
+                                                                        color: selectedFuel === fuel.id ? '#FFF' : '#ccc',
+
+                                                                        cursor: 'pointer',
+
+                                                                        fontSize: '0.6rem',
+
+                                                                        fontWeight: 'bold',
+
+                                                                        transition: 'all 0.2s',
+
+                                                                        textAlign: 'center'
+
+                                                                    }}
+
+                                                                >
+
+                                                                    <div style={{ fontSize: '0.65rem' }}>{fuel.label}</div>
+
+                                                                    <div style={{ fontSize: '0.45rem', opacity: 0.8 }}>{fuel.desc}</div>
+
+                                                                </button>
+
+                                                            ))}
+
+                                                        </div>
+
+                                                    </div>
+
+
+
+                                                    {/* Oven NFT Visual Selector */}
+
+                                                    <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+
+                                                        <span style={{ fontSize: '0.65rem', color: '#ffb703', fontWeight: 'bold' }}>🧱 HORNO NFT / OVEN STYLE:</span>
+
+                                                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+
+                                                            {[
+
+                                                                { id: 'brick', label: '🧱 Original', desc: 'Base (1x)' },
+
+                                                                { id: 'cyberpunk', label: '🎛️ Neón', desc: 'Boost' },
+
+                                                                { id: 'vulcan', label: '🌋 Vulcan', desc: 'Máximo' }
+
+                                                            ].map(style => (
+
+                                                                <button
+
+                                                                    key={style.id}
+
+                                                                    onClick={() => setEquippedOvenStyle(style.id as any)}
+
+                                                                    style={{
+
+                                                                        flex: 1,
+
+                                                                        padding: '0.3rem',
+
+                                                                        background: equippedOvenStyle === style.id ? 'linear-gradient(135deg, #2980b9, #2c3e50)' : 'rgba(0,0,0,0.5)',
+
+                                                                        border: equippedOvenStyle === style.id ? '1px solid #3498db' : '1px solid rgba(255,255,255,0.1)',
+
+                                                                        borderRadius: '4px',
+
+                                                                        color: equippedOvenStyle === style.id ? '#FFF' : '#ccc',
+
+                                                                        cursor: 'pointer',
+
+                                                                        fontSize: '0.6rem',
+
+                                                                        fontWeight: 'bold',
+
+                                                                        transition: 'all 0.2s',
+
+                                                                        textAlign: 'center'
+
+                                                                    }}
+
+                                                                >
+
+                                                                    <div style={{ fontSize: '0.65rem' }}>{style.label}</div>
+
+                                                                    <div style={{ fontSize: '0.45rem', opacity: 0.8 }}>{style.desc}</div>
+
+                                                                </button>
+
+                                                            ))}
+
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+
+
+
+                                                {/* Resources & Wallet Stats Bar */}
+
+                                                <div style={{
+
+                                                    display: 'flex',
+
+                                                    justifyContent: 'space-between',
+
+                                                    alignItems: 'center',
+
+                                                    background: 'rgba(0,0,0,0.4)',
+
+                                                    border: '1px dashed rgba(139, 0, 0, 0.4)',
+
+                                                    borderRadius: '8px',
+
+                                                    padding: '0.5rem 0.8rem',
+
+                                                    fontSize: '0.7rem'
+
+                                                }}>
+
+                                                    <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+
+                                                        <span style={{ color: '#FFD700', fontWeight: 'bold' }}>💵 MI BALANCE:</span>
+
+                                                        <span style={{ background: 'rgba(218,165,32,0.15)', padding: '2px 8px', borderRadius: '10px', color: '#ffb703', fontWeight: 'bold' }}>
+
+                                                            {sliceBalance} $SLICE
+
+                                                        </span>
+
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+
+                                                        <span style={{ color: '#aaa' }}>🎒 MIS INGREDIENTES:</span>
+
+                                                        <span style={{ color: ingredients.cheese >= 2 ? '#2ecc71' : '#e74c3c' }}>🧀 QUESO: {ingredients.cheese}</span>
+
+                                                        <span style={{ color: ingredients.pepperoni >= 2 ? '#2ecc71' : '#e74c3c' }}>🍖 PEPERONI: {ingredients.pepperoni}</span>
+
+                                                        <span style={{ color: ingredients.bacon >= 2 ? '#2ecc71' : '#e74c3c' }}>🥓 TOCINO: {ingredients.bacon}</span>
+
+                                                        <span style={{ color: ingredients.onion >= 2 ? '#2ecc71' : '#e74c3c' }}>🧅 CEBOLLA: {ingredients.onion}</span>
+
+                                                    </div>
+
+                                                </div>
+
+
+
+                                                {/* 4 Oven Slots Grid */}
+
+                                                <div style={{
+
+                                                    display: 'grid',
+
+                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+
+                                                    gap: '0.8rem'
+
+                                                }}>
+
+                                                    {ovenSlots.map(slot => {
+
+                                                        const config = slot.pizzaType ? getBakeConfig(slot.pizzaType) : null;
+
+                                                        const isBakingActive = slot.status === 'baking';
+
+                                                        const isCompleted = slot.status === 'completed';
+
+                                                        let progressPct = 0;
+
+                                                        let secondsLeft = 0;
+
+                                                        if (isBakingActive && slot.startTime && slot.duration) {
+
+                                                            const elapsed = Date.now() - slot.startTime;
+
+                                                            progressPct = Math.min(100, (elapsed / slot.duration) * 100);
+
+                                                            secondsLeft = Math.max(0, Math.ceil((slot.duration - elapsed) / 1000));
+
+                                                        }
+
+
+
+                                                        // Choose custom neon border and burning pulses based on equipped oven style
+
+                                                        let pulseAnimation = 'none';
+
+                                                        let borderStyle = {};
+
+                                                        if (isBakingActive) {
+
+                                                            if (equippedOvenStyle === 'vulcan') {
+
+                                                                pulseAnimation = 'vulcanPulse 1.8s infinite';
+
+                                                                borderStyle = { animation: pulseAnimation, border: '2px solid #daa520' };
+
+                                                            } else if (equippedOvenStyle === 'cyberpunk') {
+
+                                                                pulseAnimation = 'cyberpunkPulse 1.5s infinite';
+
+                                                                borderStyle = { animation: pulseAnimation, border: '2px solid #ff0080' };
+
+                                                            } else {
+
+                                                                pulseAnimation = 'firePulse 2s infinite';
+
+                                                                borderStyle = { animation: pulseAnimation, border: '2px solid #ff4500' };
+
+                                                            }
+
+                                                        } else {
+
+                                                            borderStyle = { border: '1px solid rgba(255, 255, 255, 0.1)' };
+
+                                                        }
+
+
+
+                                                        return (
+
+                                                            <div
+
+                                                                key={slot.id}
+
+                                                                className={slot.isLocked ? "lock-container" : ""}
+
+                                                                style={{
+
+                                                                    background: slot.isLocked ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.02)',
+
+                                                                    borderRadius: '10px',
+
+                                                                    padding: '0.6rem',
+
+                                                                    display: 'flex',
+
+                                                                    flexDirection: 'column',
+
+                                                                    alignItems: 'center',
+
+                                                                    justifyContent: 'space-between',
+
+                                                                    minHeight: '170px',
+
+                                                                    position: 'relative',
+
+                                                                    overflow: 'hidden',
+
+                                                                    transition: 'all 0.3s',
+
+                                                                    ...borderStyle
+
+                                                                }}
+
+                                                            >
+
+                                                                {/* SLOT NUMBER AND STATE BADGE */}
+
+                                                                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+
+                                                                    <span style={{ fontSize: '0.6rem', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '10px', color: '#FFF8DC', fontWeight: 'bold' }}>
+
+                                                                        SLOT {slot.id}
+
+                                                                    </span>
+
+                                                                    {slot.isLocked && (
+
+                                                                        <span style={{ fontSize: '0.55rem', background: '#C0392B', padding: '1px 4px', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>LOCKED</span>
+
+                                                                    )}
+
+                                                                    {isBakingActive && (
+
+                                                                        <span style={{ fontSize: '0.55rem', background: 'linear-gradient(90deg, #ff4500, #d84b16)', padding: '1px 5px', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>BAKING</span>
+
+                                                                    )}
+
+                                                                    {isCompleted && (
+
+                                                                        <span style={{ fontSize: '0.55rem', background: '#39ff14', padding: '1px 5px', borderRadius: '4px', color: 'black', fontWeight: 'bold' }}>READY!</span>
+
+                                                                    )}
+
+                                                                </div>
+
+
+
+                                                                {slot.isLocked ? (
+
+                                                                    /* LOCKED OVERLAY */
+
+                                                                    <div className="lock-shake" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: 1, justifyContent: 'center', width: '100%' }}>
+
+                                                                        <div style={{ fontSize: '1.8rem', animation: 'bounce 2s infinite alternate' }}>🔒</div>
+
+                                                                        <span style={{ fontSize: '0.55rem', color: '#aaa', textAlign: 'center' }}>Requiere Horno de Acero o Mayor</span>
+
+                                                                        <button
+
+                                                                            onClick={() => unlockSlot(slot.id)}
+
+                                                                            style={{
+
+                                                                                width: '90%',
+
+                                                                                padding: '0.25rem',
+
+                                                                                background: 'linear-gradient(135deg, #DAA520, #8B0000)',
+
+                                                                                border: '1px solid #FFD700',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: 'white',
+
+                                                                                fontWeight: 'bold',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                boxShadow: '0 0 5px rgba(218,165,32,0.4)',
+
+                                                                                transition: 'all 0.2s'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            {slot.id === 3 ? 'Desbloquear (50 SLICE)' : 'Desbloquear (100 SLICE)'}
+
+                                                                        </button>
+
+                                                                    </div>
+
+                                                                ) : slot.status === 'idle' ? (
+
+                                                                    /* IDLE SELECT RECIPE MODE */
+
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', width: '100%', flex: 1, justifyContent: 'center' }}>
+
+                                                                        <span style={{ fontSize: '0.55rem', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2px' }}>Recetas Disponibles:</span>
+
+                                                                        
+
+                                                                        {/* Recipe Margherita */}
+
+                                                                        <button
+
+                                                                            onClick={() => startBaking(slot.id, 'margherita')}
+
+                                                                            style={{
+
+                                                                                display: 'flex',
+
+                                                                                justifyContent: 'space-between',
+
+                                                                                alignItems: 'center',
+
+                                                                                padding: '0.2rem 0.4rem',
+
+                                                                                background: 'rgba(255,255,255,0.03)',
+
+                                                                                border: '1px solid rgba(255,255,255,0.08)',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: 'white',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                width: '100%'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            <span>🍕 Margherita (10s)</span>
+
+                                                                            <span style={{ color: ingredients.cheese >= 2 ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>🧀 {ingredients.cheese}/2</span>
+
+                                                                        </button>
+
+
+
+                                                                        {/* Recipe Pepperoni */}
+
+                                                                        <button
+
+                                                                            onClick={() => startBaking(slot.id, 'pepperoni')}
+
+                                                                            style={{
+
+                                                                                display: 'flex',
+
+                                                                                justifyContent: 'space-between',
+
+                                                                                alignItems: 'center',
+
+                                                                                padding: '0.2rem 0.4rem',
+
+                                                                                background: 'rgba(255,255,255,0.03)',
+
+                                                                                border: '1px solid rgba(255,255,255,0.08)',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: 'white',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                width: '100%'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            <span>🍖 Pepperoni (30s)</span>
+
+                                                                            <span style={{ color: (ingredients.cheese >= 2 && ingredients.pepperoni >= 2) ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>🍖 {ingredients.pepperoni}/2</span>
+
+                                                                        </button>
+
+
+
+                                                                        {/* Recipe Special */}
+
+                                                                        <button
+
+                                                                            onClick={() => startBaking(slot.id, 'special')}
+
+                                                                            style={{
+
+                                                                                display: 'flex',
+
+                                                                                justifyContent: 'space-between',
+
+                                                                                alignItems: 'center',
+
+                                                                                padding: '0.2rem 0.4rem',
+
+                                                                                background: 'rgba(255,255,255,0.03)',
+
+                                                                                border: '1px solid rgba(255,255,255,0.08)',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: 'white',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                width: '100%'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            <span>⭐ Speciale (60s)</span>
+
+                                                                            <span style={{ color: (ingredients.cheese >= 2 && ingredients.pepperoni >= 2 && ingredients.bacon >= 2 && ingredients.onion >= 2) ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>Todo 2+</span>
+
+                                                                        </button>
+
+                                                                    </div>
+
+                                                                ) : isBakingActive ? (
+
+                                                                    /* ACTIVE BAKING BURNING ANIMATION MODE */
+
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '0.4rem', flex: 1, justifyContent: 'center' }}>
+
+                                                                        <div style={{ position: 'relative', width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+
+                                                                            <div style={{ fontSize: '2.2rem', animation: 'spin 8s linear infinite' }}>🍕</div>
+
+                                                                            <div style={{ fontSize: '1.2rem', position: 'absolute', animation: 'flameFlicker 0.4s infinite alternate', bottom: '-4px' }}>🔥</div>
+
+                                                                        </div>
+
+                                                                        <span style={{ fontSize: '0.65rem', color: '#ffb703', fontWeight: 'bold' }}>{config?.label}</span>
+
+                                                                        <span style={{ fontSize: '0.55rem', color: '#ccc', fontFamily: 'monospace' }}>Restan: {secondsLeft} segs</span>
+
+                                                                        
+
+                                                                        {/* Progress Bar Container */}
+
+                                                                        <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden' }}>
+
+                                                                            <div style={{
+
+                                                                                width: `${progressPct}%`,
+
+                                                                                height: '100%',
+
+                                                                                background: 'linear-gradient(90deg, #ff4500, #ff8c00, #ffd700)',
+
+                                                                                transition: 'width 1s linear',
+
+                                                                                boxShadow: '0 0 5px #ff4500'
+
+                                                                            }} />
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                ) : (
+
+                                                                    /* COMPLETED READY FOR HARVEST MODE */
+
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', flex: 1, justifyContent: 'center', width: '100%' }}>
+
+                                                                        <div style={{ fontSize: '2.5rem' }}>🛎️</div>
+
+                                                                        <span style={{ fontSize: '0.65rem', color: '#39ff14', fontWeight: 'bold', textAlign: 'center' }}>{config?.label} BAKED!</span>
+
+                                                                        <button
+
+                                                                            onClick={() => claimPizza(slot.id)}
+
+                                                                            style={{
+
+                                                                                width: '90%',
+
+                                                                                padding: '0.35rem 0.5rem',
+
+                                                                                background: 'linear-gradient(135deg, #39ff14, #1b8a05)',
+
+                                                                                border: 'none',
+
+                                                                                borderRadius: '6px',
+
+                                                                                color: 'black',
+
+                                                                                fontWeight: 'bold',
+
+                                                                                fontSize: '0.65rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                boxShadow: '0 0 10px rgba(57, 255, 20, 0.4)',
+
+                                                                                transition: 'all 0.2s',
+
+                                                                                textAlign: 'center'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            CLAIM / COBRAR
+
+                                                                        </button>
+
+                                                                    </div>
+
+                                                                )}
+
+                                                            </div>
+
+                                                        );
+
+                                                    })}
+
+                                                </div>
+
+                                            </div>
+
+                                        )}
+
+
+
+                                        {/* TAB 1: CONGELAMIENTO CLÁSICO */}
+
+                                        {ovenTab === 'classic' && (
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+
+                                                <div style={{
+
+                                                    background: 'rgba(255, 255, 255, 0.02)',
+
+                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+
+                                                    borderRadius: '8px',
+
+                                                    padding: '0.6rem 0.8rem'
+
+                                                }}>
+
+                                                    <h3 style={{ margin: '0 0 0.4rem 0', color: 'var(--ph-gold)', fontSize: '0.9rem' }}>Estado del Staking</h3>
+
+                                                    <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.75rem', color: '#ccc', lineHeight: '1.3' }}>
+
+                                                        Al congelar tu $SLICE en el Horno Clásico obtienes multiplicadores de puntuación e ingredientes con protección total del principal (cero Impermanent Loss).
+
+                                                    </p>
+
+                                                    
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+
+                                                        <span style={{ fontSize: '0.8rem' }}>SLICE Congelado:</span>
+
+                                                        <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>{stakedSlice} $SLICE</span>
+
+                                                    </div>
+
+
+
+                                                    {/* Tier display */}
+
+                                                    <div style={{
+
+                                                        background: 'rgba(0, 0, 0, 0.4)',
+
+                                                        borderRadius: '6px',
+
+                                                        padding: '0.4rem 0.6rem',
+
+                                                        display: 'flex',
+
+                                                        justifyContent: 'space-between',
+
+                                                        alignItems: 'center',
+
+                                                        fontSize: '0.7rem',
+
+                                                        borderLeft: '4px solid #8B0000'
+
+                                                    }}>
+
+                                                        <span>Rango de la Masa:</span>
+
+                                                        <span style={{ fontWeight: 'bold', color: stakedSlice >= 5000 ? '#DAA520' : stakedSlice >= 2000 ? '#9B59B6' : stakedSlice >= 500 ? '#3498DB' : stakedSlice >= 100 ? '#2ECC71' : '#aaa' }}>
+
+                                                            {stakedSlice >= 5000 ? '👑 DON DE LA MASA' : stakedSlice >= 2000 ? '🕴️ CAPOREGIME' : stakedSlice >= 500 ? '🔫 SOLDATO' : stakedSlice >= 100 ? '🥖 PICCOLINO' : '❌ ASOCIADO'}
+
+                                                        </span>
+
+                                                        <span>Multiplicador:</span>
+
+                                                        <span style={{ fontWeight: 'bold', color: 'var(--ph-gold)' }}>
+
+                                                            {stakedSlice >= 5000 ? '4.0x (+60% Score)' : stakedSlice >= 2000 ? '2.5x (+35% Score)' : stakedSlice >= 500 ? '1.5x (+15% Score)' : stakedSlice >= 100 ? '1.0x (+5% Score)' : '1.0x (Base)'}
+
+                                                        </span>
+
+                                                    </div>
+
+                                                </div>
+
+
+
+                                                {/* Action Panel */}
+
+                                                <div style={{
+
+                                                    background: 'rgba(255, 255, 255, 0.02)',
+
+                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+
+                                                    borderRadius: '8px',
+
+                                                    padding: '0.6rem 0.8rem',
+
+                                                    display: 'flex',
+
+                                                    flexDirection: 'column',
+
+                                                    gap: '0.5rem'
+
+                                                }}>
+
+                                                    <h3 style={{ margin: '0 0 0.2rem 0', color: 'var(--ph-gold)', fontSize: '0.85rem' }}>🎛️ Acciones de Bóveda</h3>
+
+                                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+
+                                                        <button 
+
+                                                            onClick={async () => {
+
+                                                                const amtStr = prompt(language === 'es' ? '¿Cuánto $SLICE deseas congelar en el Horno Clásico?' : 'How much $SLICE do you wish to stake?');
+
+                                                                if (!amtStr) return;
+
+                                                                const amt = parseFloat(amtStr);
+
+                                                                if (isNaN(amt) || amt <= 0) return;
+
+                                                                
+
+                                                                if (userAddress) {
+
+                                                                    try {
+
+                                                                        const signer = getContractSignerRef.current();
+
+                                                                        const result = await StellarContractService.stakeSlice(userAddress, amt, signer);
+
+                                                                        if (result.success) {
+
+                                                                            setStakedSlice(prev => prev + amt);
+
+                                                                            alert("Staked successfully on-chain!");
+
+                                                                        }
+
+                                                                    } catch (err) {
+
+                                                                        console.error("Stake on-chain failed", err);
+
+                                                                    }
+
+                                                                } else {
+
+                                                                    // Fallback
+
+                                                                    setStakedSlice(prev => prev + amt);
+
+                                                                }
+
+                                                            }}
+
+                                                            style={{
+
+                                                                flex: 1,
+
+                                                                padding: '0.5rem',
+
+                                                                background: '#27ae60',
+
+                                                                color: 'white',
+
+                                                                border: 'none',
+
+                                                                borderRadius: '6px',
+
+                                                                fontWeight: 'bold',
+
+                                                                fontSize: '0.75rem',
+
+                                                                cursor: 'pointer'
+
+                                                            }}
+
+                                                        >
+
+                                                            🥩 CONGELAR ($SLICE)
+
+                                                        </button>
+
+                                                        <button 
+
+                                                            onClick={async () => {
+
+                                                                const amtStr = prompt(language === 'es' ? '¿Cuánto $SLICE deseas retirar del Horno Clásico?' : 'How much $SLICE do you wish to unstake?');
+
+                                                                if (!amtStr) return;
+
+                                                                const amt = parseFloat(amtStr);
+
+                                                                if (isNaN(amt) || amt <= 0 || amt > stakedSlice) return;
+
+
+
+                                                                if (userAddress) {
+
+                                                                    try {
+
+                                                                        const signer = getContractSignerRef.current();
+
+                                                                        const result = await StellarContractService.unstakeSlice(userAddress, amt, signer);
+
+                                                                        if (result.success) {
+
+                                                                            setStakedSlice(prev => Math.max(0, prev - amt));
+
+                                                                            alert("Unstaked successfully on-chain!");
+
+                                                                        }
+
+                                                                    } catch (err) {
+
+                                                                        console.error("Unstake on-chain failed", err);
+
+                                                                    }
+
+                                                                } else {
+
+                                                                    // Fallback
+
+                                                                    setStakedSlice(prev => Math.max(0, prev - amt));
+
+                                                                }
+
+                                                            }}
+
+                                                            style={{
+
+                                                                flex: 1,
+
+                                                                padding: '0.5rem',
+
+                                                                background: '#c0392b',
+
+                                                                color: 'white',
+
+                                                                border: 'none',
+
+                                                                borderRadius: '6px',
+
+                                                                fontWeight: 'bold',
+
+                                                                fontSize: '0.75rem',
+
+                                                                cursor: 'pointer'
+
+                                                            }}
+
+                                                        >
+
+                                                            🔓 RETIRAR ($SLICE)
+
+                                                        </button>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                        )}
+
+
+
+                                        {/* TAB 2: NFT OVEN COLLECTION CAROUSEL (EMBEDDED) */}
+
+                                        {ovenTab === 'collection' && (
+
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+
+                                                <CollectionTab 
+
+                                                    language={language}
+
+                                                    userAddress={userAddress}
+
+                                                    onBack={() => setOvenTab('baking')}
+
+                                                    isEmbedded={true}
+
+                                                />
+
+                                            </div>
+
+                                        )}
+
+
+
+                                        {/* TAB 4: REFRIGERATOR VAULT (NEVERA) */}
+
+                                        {ovenTab === 'refrigerator' && (
+
+                                            <div style={{ 
+                                                flex: 1, 
+                                                display: 'flex', 
+                                                flexDirection: 'column', 
+                                                background: 'linear-gradient(135deg, #110808, #2a0f0f)', 
+                                                padding: '1.2rem', 
+                                                borderRadius: '12px', 
+                                                border: '1px solid rgba(217, 180, 136, 0.2)',
+                                                color: '#f5efe6',
+                                                overflowY: 'auto'
+                                            }}>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.8rem' }}>
+                                                    <div style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 0 8px #00f0ff)' }}>❄️</div>
+                                                    <div>
+                                                        <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--ph-gold)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                            {language === 'es' ? 'Nevera de la Famiglia' : 'Nevera Vault'}
+                                                        </h3>
+                                                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#ccc' }}>
+                                                            {language === 'es' 
+                                                                ? 'sink deflacionario de preservación de ingredientes crudos' 
+                                                                : 'Deflationary preservation sink for raw ingredients'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ 
+                                                    background: 'rgba(0,0,0,0.4)', 
+                                                    padding: '0.8rem', 
+                                                    borderRadius: '8px', 
+                                                    fontSize: '0.75rem', 
+                                                    color: '#ddd', 
+                                                    lineHeight: '1.4', 
+                                                    borderLeft: '4px solid var(--ph-gold)',
+                                                    marginBottom: '1rem' 
+                                                }}>
+                                                    ⚠️ <strong>{language === 'es' ? 'REGLA DE CONSERVACIÓN:' : 'PRESERVATION RULE:'}</strong> {language === 'es' 
+                                                        ? 'Los ingredientes crudos se pudren y desaparecen tras 7 días. Congélalos on-chain para preservarlos de por vida. Cada depósito cobra una tarifa fija de ' 
+                                                        : 'Raw ingredients spoil after 7 days unless frozen on-chain. Each deposit requires a flat fee of '}
+                                                    <strong style={{ color: 'var(--ph-gold)' }}>0.5 $SLICE</strong> {language === 'es' ? '(50% se quema, 50% va a la tesorería de PizzaDAO).' : '(50% is burned, 50% to PizzaDAO Treasury).'}
+                                                </div>
+
+                                                <div className="nevera-grid">
+                                                    {(['cheese', 'pepperoni', 'bacon', 'onion'] as const).map(type => {
+                                                        const freshCount = (ingredients as any)[type] || 0;
+                                                        const frozenCount = (frozenIngredients as any)[type] || 0;
+                                                        
+                                                        // Calculate time left for the oldest item
+                                                        const ts = loadTimestamps();
+                                                        let oldestTimeLeftStr = language === 'es' ? 'Sin ingredientes' : 'No items';
+                                                        if (ts[type] && ts[type].length > 0) {
+                                                            const oldest = Math.min(...ts[type]);
+                                                            const elapsed = Date.now() - oldest;
+                                                            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+                                                            const remaining = sevenDaysMs - elapsed;
+                                                            if (remaining <= 0) {
+                                                                oldestTimeLeftStr = language === 'es' ? 'Expirado' : 'Expired';
+                                                            } else {
+                                                                const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+                                                                const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                                                                oldestTimeLeftStr = language === 'es' 
+                                                                    ? `Viejo expira en: ${days}d ${hours}h` 
+                                                                    : `Oldest expires: ${days}d ${hours}h`;
+                                                            }
+                                                        }
+
+                                                        const emoji = type === 'cheese' ? '🧀' : type === 'pepperoni' ? '🍖' : type === 'bacon' ? '🥓' : '🧅';
+                                                        const label = type === 'cheese' ? 'Queso' : type === 'pepperoni' ? 'Pepperoni' : type === 'bacon' ? 'Bacon' : 'Onion';
+
+                                                        return (
+                                                            <div key={type} style={{ 
+                                                                background: 'rgba(0,0,0,0.3)', 
+                                                                padding: '0.8rem', 
+                                                                borderRadius: '10px', 
+                                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: '0.5rem'
+                                                            }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{emoji} {label}</span>
+                                                                    <span style={{ fontSize: '0.65rem', color: 'var(--ph-gold)', background: 'rgba(217, 180, 136, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                        {oldestTimeLeftStr}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', margin: '0.2rem 0' }}>
+                                                                    <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '0.3rem', borderRadius: '6px', textAlign: 'center' }}>
+                                                                        <div style={{ color: '#aaa', fontSize: '0.65rem' }}>{language === 'es' ? 'FRESCOS' : 'FRESH'}</div>
+                                                                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#2ecc71' }}>{freshCount}</div>
+                                                                    </div>
+                                                                    <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '0.3rem', borderRadius: '6px', textAlign: 'center', border: '1px solid rgba(0,240,255,0.2)' }}>
+                                                                        <div style={{ color: '#aaa', fontSize: '0.65rem' }}>{language === 'es' ? 'CONGELADOS' : 'FROZEN'}</div>
+                                                                        <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#00f0ff', textShadow: '0 0 4px rgba(0,240,255,0.4)' }}>{frozenCount}</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.3rem' }}>
+                                                                    <button 
+                                                                        onClick={() => depositToRefrigerator(type, 1)}
+                                                                        disabled={freshCount < 1}
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            padding: '0.4rem',
+                                                                            background: 'linear-gradient(135deg, #1b3d54, #0f2535)',
+                                                                            color: '#00f0ff',
+                                                                            border: '1px solid rgba(0,240,255,0.3)',
+                                                                            borderRadius: '6px',
+                                                                            fontSize: '0.7rem',
+                                                                            fontWeight: 'bold',
+                                                                            cursor: freshCount < 1 ? 'not-allowed' : 'pointer',
+                                                                            opacity: freshCount < 1 ? 0.5 : 1
+                                                                        }}
+                                                                    >
+                                                                        ❄️ {language === 'es' ? 'Congelar 1' : 'Freeze 1'}
+                                                                    </button>
+
+                                                                    <button 
+                                                                        onClick={() => withdrawFromRefrigerator(type, 1)}
+                                                                        disabled={frozenCount < 1}
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            padding: '0.4rem',
+                                                                            background: 'linear-gradient(135deg, #4d2323, #2f1313)',
+                                                                            color: '#ff6b6b',
+                                                                            border: '1px solid rgba(255,107,107,0.3)',
+                                                                            borderRadius: '6px',
+                                                                            fontSize: '0.7rem',
+                                                                            fontWeight: 'bold',
+                                                                            cursor: frozenCount < 1 ? 'not-allowed' : 'pointer',
+                                                                            opacity: frozenCount < 1 ? 0.5 : 1
+                                                                        }}
+                                                                    >
+                                                                        🔥 {language === 'es' ? 'Retirar 1' : 'Withdraw 1'}
+                                                                    </button>
+                                                                </div>
+
+                                                                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                                    <button 
+                                                                        onClick={() => depositToRefrigerator(type, freshCount)}
+                                                                        disabled={freshCount < 1}
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            padding: '0.2rem',
+                                                                            background: 'rgba(0,240,255,0.1)',
+                                                                            color: '#00f0ff',
+                                                                            border: 'none',
+                                                                            borderRadius: '4px',
+                                                                            fontSize: '0.65rem',
+                                                                            cursor: freshCount < 1 ? 'not-allowed' : 'pointer',
+                                                                            opacity: freshCount < 1 ? 0.4 : 0.8
+                                                                        }}
+                                                                    >
+                                                                        {language === 'es' ? 'Congelar Todo' : 'Freeze All'}
+                                                                    </button>
+
+                                                                    <button 
+                                                                        onClick={() => withdrawFromRefrigerator(type, frozenCount)}
+                                                                        disabled={frozenCount < 1}
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            padding: '0.2rem',
+                                                                            background: 'rgba(255,107,107,0.1)',
+                                                                            color: '#ff6b6b',
+                                                                            border: 'none',
+                                                                            borderRadius: '4px',
+                                                                            fontSize: '0.65rem',
+                                                                            cursor: frozenCount < 1 ? 'not-allowed' : 'pointer',
+                                                                            opacity: frozenCount < 1 ? 0.4 : 0.8
+                                                                        }}
+                                                                    >
+                                                                        {language === 'es' ? 'Retirar Todo' : 'Withdraw All'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                <div style={{ marginTop: 'auto', textAlign: 'center', fontSize: '0.7rem', color: '#888' }}>
+                                                    🔒 Stellar Testnet Address: {userAddress || 'Offline Demo Mode'}
+                                                </div>
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        {(view === 'leaderboard' || closingView === 'leaderboard') && (
+
+                            <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
+                                    <div className="modal-header">
+
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
+
+                                            <ArrowLeft size={20} />
+
+                                        </div>
+
+                                        <h2 className="modal-title">🏆 {t.ranking}</h2>
+
+                                        <button
+
+                                            onClick={loadLeaderboard}
+
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', width: 40, color: '#666' }}
+
+                                            title={t.refresh}
+
+                                        >↺</button>
+
+                                    </div>
+
+
+
+                                    {/* Leaderboard submission badge from last game */}
+
+                                    {lbSubmitStatus !== 'none' && (
+
+                                        <div style={{
+
+                                            textAlign: 'center',
+
+                                            padding: '0.4rem 0.8rem',
+
+                                            marginBottom: '0.5rem',
+
+                                            borderRadius: '8px',
+
+                                            fontSize: '0.8rem',
+
+                                            fontWeight: 'bold',
+
+                                            background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
+
+                                            color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
+
+                                            border: `1px solid ${lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c'}`,
+
+                                        }}>
+
+                                            {lbSubmitStatus === 'ok' ? '✅ Your score was submitted to the board!' : '⚠️ Leaderboard submission failed — see console'}
+
+                                        </div>
+
+                                    )}
+
+
+
+                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
+
+                                        {leaderboardLoading ? (
+
+                                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+
+                                                <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
+
+                                                Loading on-chain scores...
+
+                                            </div>
+
+                                        ) : leaderboardError ? (
+
+                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+
+                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
+
+                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
+
+                                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
+
+                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={loadLeaderboard}>Try Again</button>
+
+                                            </div>
+
+                                        ) : leaderboard.length === 0 ? (
+
+                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+
+                                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
+
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
+
+                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
+
+                                                <button
+
+                                                    className="primary-btn"
+
+                                                    style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
+
+                                                    onClick={() => { setView('lobby'); handleStartGame(); }}
+
+                                                >🔥 FIRE UP OVEN</button>
+
+                                            </div>
+
+                                        ) : (
+
+                                            <div style={{ width: '100%' }}>
+
+                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
+
+                                                    ⛓ Scores verified on Stellar Testnet · {leaderboard.length} entr{leaderboard.length === 1 ? 'y' : 'ies'}
+
+                                                </div>
+
+                                                {leaderboard.map((entry, i) => {
+
+                                                    const medals = ['🥇', '🥈', '🥉'];
+
+                                                    const medal = medals[i] ?? `${i + 1}.`;
+
+                                                    const shortAddr = entry.player.length >= 10
+
+                                                        ? `${entry.player.slice(0, 6)}…${entry.player.slice(-4)}`
+
+                                                        : entry.player;
+
+                                                    const isMe = entry.player === userAddress;
+
+                                                    return (
+
+                                                        <div key={i} style={{
+
+                                                            display: 'flex',
+
+                                                            alignItems: 'center',
+
+                                                            gap: '0.75rem',
+
+                                                            padding: '0.75rem 0.5rem',
+
+                                                            borderBottom: '1px solid #E0D4B8',
+
+                                                            background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
+
+                                                            borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
+
+                                                        }}>
+
+                                                            <span style={{ fontSize: '1.3rem', minWidth: '2rem', textAlign: 'center' }}>{medal}</span>
+
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+
+                                                                <div style={{ fontSize: '0.85rem', fontWeight: isMe ? 'bold' : 'normal', fontFamily: 'monospace', color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+
+                                                                    {shortAddr}{isMe ? ' (you)' : ''}
+
+                                                                </div>
+
+                                                            </div>
+
+                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#27ae60', whiteSpace: 'nowrap' }}>
+
+                                                                {entry.score.toLocaleString()} pts
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    );
+
+                                                })}
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+
+
+                                    {leaderboard.length > 0 && (
+
+                                        <button
+
+                                            className="primary-btn"
+
+                                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
+
+                                            onClick={() => { setView('lobby'); handleStartGame(); }}
+
+                                        >🔥 {t.challenge}</button>
+
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        {view === 'story' && (
+
+                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
+                                    <div className="modal-header">
+
+                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+
+                                            <ArrowLeft size={20} />
+
+                                        </div>
+
+                                        <h2 className="modal-title">{t.legend}</h2>
+
+                                        <div style={{ width: 40 }}></div>
+
+                                    </div>
+
+                                    <div style={{ padding: '0 1rem', textAlign: 'center' }}>
+
+                                        <p style={{ lineHeight: '1.6', marginBottom: '1rem' }}>
+
+                                            {t.storyIntro}
+
+                                        </p>
+
+                                        <p style={{ lineHeight: '1.6' }}>
+
+                                            {t.storyBody}
+
+                                        </p>
+
+                                        <h3 style={{ fontSize: '2rem', color: '#8B0000', marginTop: '1rem', fontFamily: 'var(--font-title)' }}>{t.don}</h3>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        {view === 'campaign' && (
+
+                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                                    maxWidth: '450px',
+                                    background: 'linear-gradient(135deg, #1A0D0D, #3A0000)',
+                                    color: '#f5efe6',
+                                    border: '1px solid rgba(217,180,136,0.3)',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.8)'
+                                }}>
+
+                                    <div className="modal-header">
+
+                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+
+                                            <ArrowLeft size={20} />
+
+                                        </div>
+
+                                        <h2 className="modal-title" style={{ color: 'var(--ph-gold)' }}>
+                                            {language === 'es' ? 'CAMPAÑAS DE LA MASA' : 'MASA CAMPAIGNS'}
+                                        </h2>
+
+                                        <div style={{ width: 40 }}></div>
+
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem 0.5rem' }}>
+                                        
+                                        {/* OPTION 1: STORY MODE */}
+                                        <div 
+                                            onClick={() => { setView('lobby'); handleStartGame(); }}
+                                            style={{
+                                                background: 'rgba(0,0,0,0.5)',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                borderRadius: '12px',
+                                                padding: '1.2rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                borderWidth: '1px'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--ph-gold)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                                        >
+                                            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📖</div>
+                                            <h4 style={{ margin: '0 0 0.3rem 0', color: 'var(--ph-gold)', fontSize: '1.1rem', textTransform: 'uppercase' }}>
+                                                {language === 'es' ? 'Modo Historia (Solitario)' : 'Story Mode (Solo)'}
+                                            </h4>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>
+                                                {language === 'es' 
+                                                    ? 'Enfréntate a las 5 Familias de la Cosa Nostra. Hornea pizzas clásicas perfectas, amasa con ritmo y obtén drops de ingredientes frescos.' 
+                                                    : 'Face the 5 Cosa Nostra Families. Bake classic perfect pizzas, rhythm-knead, and secure fresh ingredient drops.'}
+                                            </p>
+                                        </div>
+
+                                        {/* OPTION 2: PVP DUELS */}
+                                        <div 
+                                            onClick={() => setView('pvplobby')}
+                                            style={{
+                                                background: 'rgba(0,0,0,0.5)',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                borderRadius: '12px',
+                                                padding: '1.2rem',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                borderWidth: '1px'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#00f0ff'}
+                                            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                <span style={{ fontSize: '2.5rem' }}>⚔️</span>
+                                                <span style={{ 
+                                                    background: 'rgba(0,240,255,0.1)', 
+                                                    color: '#00f0ff', 
+                                                    fontSize: '0.65rem', 
+                                                    padding: '2px 8px', 
+                                                    borderRadius: '10px', 
+                                                    fontWeight: 'bold',
+                                                    border: '1px solid rgba(0,240,255,0.3)'
+                                                }}>LIVE REAL-TIME</span>
+                                            </div>
+                                            <h4 style={{ margin: '0 0 0.3rem 0', color: '#00f0ff', fontSize: '1.1rem', textTransform: 'uppercase' }}>
+                                                {language === 'es' ? 'Duelos PVP en Vivo' : 'Live PVP Duels'}
+                                            </h4>
+                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>
+                                                {language === 'es' 
+                                                    ? '¡Reta a otros chefs en tiempo real! Bloquea una apuesta de $SLICE en el Escrow seguro de Soroban y demuestra quién es el verdadero Don de la Masa.' 
+                                                    : 'Challenge other chefs in real-time! Lock a $SLICE wager in the Soroban Escrow and prove who is the real Don of the Dough.'}
+                                            </p>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        {view === 'pvplobby' && (
+
+                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                                    maxWidth: '450px',
+                                    background: 'linear-gradient(135deg, #110808, #2a0f0f)',
+                                    color: '#f5efe6',
+                                    border: '1px solid rgba(0, 240, 255, 0.2)',
+                                    boxShadow: '0 8px 32px rgba(0,240,255,0.1)'
+                                }}>
+
+                                    <div className="modal-header">
+
+                                        <div className="back-btn-circle" onClick={() => setView('campaign')}>
+
+                                            <ArrowLeft size={20} />
+
+                                        </div>
+
+                                        <h2 className="modal-title" style={{ color: '#00f0ff', textShadow: '0 0 8px rgba(0,240,255,0.4)' }}>
+                                            {language === 'es' ? 'SINDICATO DE DELIVERY' : 'DELIVERY SYNDICATE'}
+                                        </h2>
+
+                                        <div style={{ width: 40 }}></div>
+
+                                    </div>
+
+                                    {pvpState === 'menu' && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem 0.5rem' }}>
+                                            
+                                            {/* WAGER SELECTION */}
+                                            <div style={{ background: 'rgba(0,0,0,0.4)', padding: '0.8rem', borderRadius: '10px', textAlign: 'center' }}>
+                                                <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                                                    {language === 'es' ? 'SELECCIONA TU APUESTA' : 'SELECT YOUR WAGER'}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                    {[5, 10, 25].map(amount => (
+                                                        <button
+                                                            key={amount}
+                                                            onClick={() => setSelectedWager(amount)}
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '0.5rem',
+                                                                background: selectedWager === amount ? 'linear-gradient(135deg, #005f73, #0a9396)' : 'rgba(0,0,0,0.5)',
+                                                                color: selectedWager === amount ? '#00f0ff' : '#aaa',
+                                                                border: selectedWager === amount ? '1px solid #00f0ff' : '1px solid rgba(255,255,255,0.05)',
+                                                                borderRadius: '6px',
+                                                                fontWeight: 'bold',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            {amount} $SLICE
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* ACTION 1: CREATE PRIVATE ROOM */}
+                                            <button 
+                                                onClick={async () => {
+                                                    addLog(`[PVP] Creating private lobby room with wager ${selectedWager}...`);
+                                                    multiplayerService.createRoom(userAddress, selectedWager);
+                                                }}
+                                                className="primary-btn" 
+                                                style={{ 
+                                                    padding: '0.8rem', 
+                                                    background: 'linear-gradient(135deg, #1b3d54, #0f2535)',
+                                                    border: '1px solid #00f0ff',
+                                                    color: '#00f0ff'
+                                                }}
+                                            >
+                                                ⚔️ {language === 'es' ? 'CREAR SALA PRIVADA' : 'CREATE PRIVATE ROOM'}
+                                            </button>
+
+                                            {/* LA FAMIGLIA / FRIENDS DASHBOARD */}
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.5)',
+                                                border: '1px solid rgba(0,240,255,0.15)',
+                                                borderRadius: '12px',
+                                                padding: '1rem',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.8rem'
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                                                    paddingBottom: '0.5rem'
+                                                }}>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>
+                                                        🍕 {language === 'es' ? 'LA FAMIGLIA (AMIGOS)' : 'LA FAMIGLIA (FRIENDS)'}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            const addr = prompt(language === 'es' ? 'Ingresa la Dirección Wallet Stellar de tu amigo:' : 'Enter your friend\'s Stellar Wallet Address:');
+                                                            if (!addr || addr.length < 50) {
+                                                                if (addr) alert(language === 'es' ? 'Dirección inválida' : 'Invalid address');
+                                                                return;
+                                                            }
+                                                            const nickname = prompt(language === 'es' ? 'Ingresa un apodo para tu amigo:' : 'Enter a nickname for your friend:') || 'Chef';
+                                                            useFriendsStore.getState().addFriend(addr.trim(), nickname.trim());
+                                                        }}
+                                                        style={{
+                                                            background: 'rgba(0,240,255,0.1)',
+                                                            border: '1px solid #00f0ff',
+                                                            borderRadius: '6px',
+                                                            color: '#00f0ff',
+                                                            fontSize: '0.65rem',
+                                                            padding: '0.2rem 0.5rem',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        + {language === 'es' ? 'AGREGAR' : 'ADD'}
+                                                    </button>
+                                                </div>
+
+                                                {/* Local Hook to store.friends state wrapper */}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
+                                                    {(() => {
+                                                        if (!friends || friends.length === 0) {
+                                                            return (
+                                                                <div style={{ fontSize: '0.72rem', color: '#666', textAlign: 'center', padding: '0.5rem 0' }}>
+                                                                    {language === 'es' ? 'Aún sin amigos agregados.' : 'No kitchen partners added yet.'}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return friends.map((f: any) => (
+                                                            <div key={f.address} style={{
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                background: 'rgba(255,255,255,0.03)',
+                                                                padding: '0.4rem 0.6rem',
+                                                                borderRadius: '8px',
+                                                                border: '1px solid rgba(255,255,255,0.05)'
+                                                            }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>🧑‍🍳 {f.alias}</span>
+                                                                    <span style={{ fontSize: '0.6rem', color: '#888' }}>{f.address.slice(0, 6)}...{f.address.slice(-6)}</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            addLog(`[PVP] Instantly challenging friend ${f.alias} to wager room`);
+                                                                            multiplayerService.createRoom(userAddress, selectedWager);
+                                                                            setTimeout(() => {
+                                                                                const code = localStorage.getItem('gp_active_room_code') || 'LOBBY';
+                                                                                alert(language === 'es' 
+                                                                                    ? `¡Sala creada! Dile a ${f.alias} que use el código de sala en su dispositivo para unirse y batallar.`
+                                                                                    : `Lobby created! Tell ${f.alias} to enter the lobby code on their device to battle.`
+                                                                                );
+                                                                            }, 800);
+                                                                        }}
+                                                                        title="Create a room and challenge this chef!"
+                                                                        style={{
+                                                                            background: 'linear-gradient(135deg, #8B0000, #ff8c00)',
+                                                                            border: 'none',
+                                                                            borderRadius: '6px',
+                                                                            color: 'white',
+                                                                            fontSize: '0.65rem',
+                                                                            padding: '0.3rem 0.5rem',
+                                                                            cursor: 'pointer',
+                                                                            fontWeight: 'bold'
+                                                                        }}
+                                                                    >
+                                                                        ⚔️ {language === 'es' ? 'RETAR' : 'CHALLENGE'}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ));
+                                                    })()}
+                                                </div>
+                                            </div>
+
+                                            {/* ACTION 2: JOIN PRIVATE ROOM */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(0,0,0,0.3)', padding: '0.8rem', borderRadius: '10px' }}>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="ROOM CODE (e.g. GP-5431)"
+                                                    value={joinCode}
+                                                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                                                    style={{
+                                                        padding: '0.5rem',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid rgba(255,255,255,0.1)',
+                                                        background: 'rgba(0,0,0,0.5)',
+                                                        color: 'white',
+                                                        textAlign: 'center',
+                                                        fontSize: '0.9rem'
+                                                    }}
+                                                />
+                                                <button 
+                                                    onClick={async () => {
+                                                        addLog(`[PVP] Joining private lobby Room ${joinCode}...`);
+                                                        multiplayerService.joinRoom(userAddress, joinCode);
+                                                    }}
+                                                    className="primary-btn"
+                                                    disabled={joinCode.length < 5}
+                                                    style={{ padding: '0.5rem', fontSize: '0.8rem', opacity: joinCode.length >= 5 ? 1 : 0.5 }}
+                                                >
+                                                    {language === 'es' ? 'UNIRSE A SALA' : 'JOIN ROOM'}
+                                                </button>
+                                            </div>
+
+                                            {/* ACTION 3: PUBLIC MATCHMAKING QUEUE */}
+                                            <button 
+                                                onClick={async () => {
+                                                    addLog(`[PVP] Entering real public queue with wager ${selectedWager}...`);
+                                                    setRoomCode('MATCHMAKING');
+                                                    setPvpState('waiting');
+                                                    setMpQueueStatus(language === 'es' ? 'Buscando chef en la red...' : 'Searching for chef on-line...');
+                                                    multiplayerService.joinQueue(userAddress, selectedWager);
+                                                }}
+                                                className="primary-btn"
+                                                style={{ padding: '0.8rem' }}
+                                            >
+                                                ⚡ {language === 'es' ? 'EMPAREJAMIENTO RÁPIDO' : 'QUICK MATCHMAKING'}
+                                            </button>
+
+                                        </div>
+                                    )}
+
+                                    {pvpState === 'waiting' && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2rem', padding: '2rem 1rem', textAlign: 'center' }}>
+                                            
+                                            <Loader2 className="animate-spin" size={48} style={{ color: '#00f0ff' }} />
+                                            
+                                            <div>
+                                                <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '1.1rem', color: '#00f0ff' }}>
+                                                    {roomCode === 'MATCHMAKING' 
+                                                        ? (language === 'es' ? 'Buscando Chef rival...' : 'Finding rival Chef...')
+                                                        : (language === 'es' ? 'Sala creada con éxito' : 'Lobby created successfully')}
+                                                </h4>
+                                                {roomCode !== 'MATCHMAKING' && (
+                                                    <div style={{ 
+                                                        fontSize: '1.8rem', 
+                                                        fontWeight: 'bold', 
+                                                        color: 'var(--ph-gold)', 
+                                                        background: 'rgba(0,0,0,0.5)', 
+                                                        padding: '0.5rem 1.5rem', 
+                                                        borderRadius: '8px',
+                                                        border: '1px dashed var(--ph-gold)',
+                                                        letterSpacing: '2px',
+                                                        margin: '0.6rem 0'
+                                                    }}>
+                                                        {roomCode}
+                                                    </div>
+                                                )}
+                                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#aaa', lineHeight: '1.4' }}>
+                                                    {roomCode === 'MATCHMAKING'
+                                                        ? (language === 'es' ? 'Buscando un oponente con la misma apuesta en Stellar Testnet.' : 'Looking for a matching wager on Stellar Testnet.')
+                                                        : (language === 'es' ? 'Comparte este código con tu oponente para iniciar la partida en vivo.' : 'Share this code with your opponent to start the live game.')}
+                                                </p>
+                                                {mpQueueStatus && (
+                                                    <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', color: '#00f0ff', fontWeight: 'bold', textShadow: '0 0 5px rgba(0,240,255,0.4)' }}>
+                                                        📡 {mpQueueStatus}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }}>
+                                                {/* QUICK MATCH RESOLUTION DEMO BOOTSTRAP */}
+                                                <button 
+                                                    onClick={() => {
+                                                        setIsPvp(true);
+                                                        setView('lobby');
+                                                        handleStartGame(); // Starts game with PVP enabled!
+                                                    }}
+                                                    className="primary-btn"
+                                                    style={{ flex: 1, padding: '0.6rem', fontSize: '0.8rem', background: '#27ae60' }}
+                                                >
+                                                    🚀 {language === 'es' ? 'Simular Rival' : 'Simulate Rival'}
+                                                </button>
+
+                                                <button 
+                                                    onClick={() => {
+                                                        setPvpState('menu');
+                                                    }}
+                                                    style={{ 
+                                                        flex: 1,
+                                                        padding: '0.6rem', 
+                                                        fontSize: '0.8rem', 
+                                                        background: 'rgba(255,255,255,0.05)', 
+                                                        color: '#ff6b6b',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {language === 'es' ? 'Cancelar' : 'Cancel'}
+                                                </button>
+                                            </div>
+
+                                        </div>
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        {view === 'howto' && (
+
+                            <div className="modal-backdrop" onClick={() => setView('lobby')}>
+
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+
+                                    <div className="modal-header">
+
+                                        <div className="back-btn-circle" onClick={() => setView('lobby')}>
+
+                                            <ArrowLeft size={20} />
+
+                                        </div>
+
+                                        <h2 className="modal-title">{t.rules}</h2>
+
+                                        <div style={{ width: 40 }}></div>
+
+                                    </div>
+
+
+
+                                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+
+                                        <section style={{ marginBottom: '1.5rem' }}>
+
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
+
+                                            <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '0.5rem' }}>{t.controlsDesc}</p>
+
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
+
+                                                <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
+
+                                                <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
+
+                                                <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
+
+                                                <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
+
+                                            </div>
+
+                                        </section>
+
+
+
+                                        <section style={{ marginBottom: '1.5rem' }}>
+
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+
+                                                    <div style={{ fontSize: '1.5rem' }}>🎯</div>
+
+                                                    <div>
+
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.precision}</p>
+
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.precisionDesc}</p>
+
+                                                    </div>
+
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+
+                                                    <div style={{ fontSize: '1.5rem' }}>🔄</div>
+
+                                                    <div>
+
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.combo}</p>
+
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.comboDesc}</p>
+
+                                                    </div>
+
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+
+                                                    <div style={{ fontSize: '1.5rem' }}>📦</div>
+
+                                                    <div>
+
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.orders}</p>
+
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.ordersDesc}</p>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                        </section>
+
+
+
+                                        <section>
+
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
+
+                                            <p style={{ fontSize: '0.9rem', color: '#666' }}>{t.rewardsDesc}</p>
+
+                                        </section>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+
+
+                        
+
+
+
                     </div>
 
-                    {/* TX Sealed Pop-up — appears after on-chain submission, auto-closes in 8s */}
-                    {showTxPopup && (
+
+
+                    <div id="results" style={{
+
+                        display: 'none',
+
+                        position: 'absolute',
+
+                        top: 0,
+
+                        left: 0,
+
+                        width: '100%',
+
+                        height: '100%',
+
+                        zIndex: 20,
+
+                        // Elegant Glassmorphism: allows the game background to be seen blurred
+
+                        background: 'rgba(20, 5, 5, 0.4)',
+
+                        backdropFilter: 'blur(12px)',
+
+                        flexDirection: 'column',
+
+                        alignItems: 'center',
+
+                        justifyContent: 'center',
+
+                    }}>
+
+                        {/* Popup Card (Receipt Theme V3) */}
+
                         <div style={{
-                            position: 'absolute', top: 0, left: 0,
-                            width: '100%', height: '100%',
-                            zIndex: 30,
-                            background: 'rgba(0,0,0,0.75)',
-                            backdropFilter: 'blur(6px)',
+
+                            width: '88%',
+
+                            maxWidth: '340px',
+
+                            minHeight: '480px',
+
+                            background: 'transparent',
+
+                            /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
+
+                            backgroundImage: `
+
+                                radial-gradient(circle at 10px 0, transparent 9px, #FDFDFD 10px),
+
+                                linear-gradient(#FDFDFD, #FDFDFD),
+
+                                radial-gradient(circle at 10px 100%, transparent 9px, #FDFDFD 10px)
+
+                            `,
+
+                            backgroundSize: '20px 20px, 100% calc(100% - 38px), 20px 20px',
+
+                            backgroundPosition: 'top left, center, bottom left',
+
+                            backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
+
                             display: 'flex',
+
+                            flexDirection: 'column',
+
                             alignItems: 'center',
-                            justifyContent: 'center',
+
+                            justifyContent: 'flex-start',
+
+                            padding: '1.5rem 1.5rem',
+
+                            color: '#111',
+
+                            position: 'relative',
+
+                            /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
+
+                            filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.5))'
+
                         }}>
-                            <div style={{
-                                background: '#FFF8E7',
-                                border: '3px solid #27ae60',
-                                borderRadius: '16px',
-                                padding: '1.5rem',
-                                width: '88%',
-                                maxWidth: '360px',
-                                boxShadow: '0 10px 40px rgba(39,174,96,0.3)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '1rem',
-                            }}>
-                                {/* Header */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
-                                            ⛓ {language === 'es' ? 'SELLADO EN STELLAR' : 'SEALED ON STELLAR'}
-                                        </div>
-                                        <div style={{ color: '#555', fontSize: '0.75rem', marginTop: '2px', fontWeight: 'bold' }}>
-                                            {language === 'es' ? 'Puntaje verificado en cadena' : 'Score verified on-chain'}
-                                        </div>
+
+                            {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
+
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '15px 0', flex: 1 }}>
+
+
+
+                                {/* Header Section */}
+
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '1.2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '2rem', color: '#8B0000', margin: '0 0 0.5rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+
+                                        LA FAMIGLIA
+
+                                    </h2>
+
+                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.95rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
+
+                                        {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
+
                                     </div>
-                                    <button
-                                        onClick={closeTxPopup}
-                                        style={{ background: '#F9F5EB', border: '1px solid #D0B488', borderRadius: '50%', width: 28, height: 28, color: '#8B0000', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                    >✕</button>
+
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '1rem' }}></div>
+
                                 </div>
 
-                                {/* TX rows */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {popupTxs.map((tx, i) => {
-                                        const shortHash = `${tx.hash.slice(0, 8)}…${tx.hash.slice(-6)}`;
-                                        return (
-                                            <div key={i} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                background: 'rgba(39,174,96,0.08)',
-                                                border: '1px solid rgba(39,174,96,0.3)',
-                                                borderRadius: '8px',
-                                                padding: '0.5rem 0.75rem',
-                                                gap: '0.5rem',
-                                            }}>
-                                                <div>
-                                                    <div style={{ color: '#27ae60', fontSize: '0.78rem', fontWeight: 'bold' }}>✅ {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}</div>
-                                                    <div style={{ color: '#888', fontSize: '0.7rem', fontFamily: 'monospace' }}>{shortHash}</div>
-                                                </div>
-                                                <a
-                                                    href={`${EXPLORER_BASE}/${tx.hash}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{ color: '#27ae60', fontSize: '1.2rem', textDecoration: 'none', flexShrink: 0 }}
-                                                    title="View on Stellar Explorer"
-                                                >🔗</a>
+
+
+                                {/* Score Content */}
+
+                                <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
+
+
+
+                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.25rem', marginBottom: '0.8rem', color: '#111' }}>
+
+                                        <span>{t.score.toUpperCase()}</span>
+
+                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>0</span>
+
+                                    </div>
+
+
+
+                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.8rem', color: '#444' }}>
+
+                                        <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
+
+                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>0</span>
+
+                                    </div>
+
+
+
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '1rem 0' }}></div>
+
+
+
+                                    {/* Huge Grade Stamp */}
+
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '1rem 0 1rem 0' }}>
+
+                                        <div className="grade" id="resGrade" style={{
+
+                                            fontSize: '5rem',
+
+                                            fontFamily: "'Bangers', cursive",
+
+                                            fontWeight: 'bold',
+
+                                            color: '#cc0000',
+
+                                            opacity: 0.85,
+
+                                            transform: 'rotate(-5deg)',
+
+                                            border: '5px solid #cc0000',
+
+                                            borderRadius: '12px',
+
+                                            padding: '0 1.5rem',
+
+                                            lineHeight: 1.1,
+
+                                            boxShadow: 'inset 0 0 0 3px #FDFDFD, inset 0 0 0 5px #cc0000', // Double border effect
+
+                                        }}>S</div>
+
+                                    </div>
+
+
+
+                                    {/* On-chain verified score */}
+
+                                    {onChainScore !== null && (
+
+                                        <div style={{ width: '100%', marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+
+                                            <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '4px 0', width: '100%', letterSpacing: '1px' }}>
+
+                                                *** {language === 'es' ? 'COPIA VERIFICADA' : 'VERIFIED COPY'} ***
+
                                             </div>
-                                        );
-                                    })}
+
+                                            <div>
+
+                                                {t.scoreVerified.toUpperCase()}: <strong>{onChainScore.toLocaleString()} PTS</strong>
+
+                                            </div>
+
+                                        </div>
+
+                                    )}
+
                                 </div>
 
-                                {/* SLICE reward banner */}
-                                {sliceEarned > 0 && (
+
+
+                                {/* Verification Status or Actions */}
+
+                                {isVerifying ? (
+
                                     <div style={{
-                                        background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))',
-                                        border: '1px solid rgba(212,175,55,0.6)',
-                                        borderRadius: '10px',
-                                        padding: '0.75rem 1rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.75rem',
+
+                                        width: '100%',
+
+                                        marginTop: '2rem',
+
+                                        textAlign: 'center',
+
+                                        fontFamily: "'Special Elite', monospace"
+
                                     }}>
-                                        <span style={{ fontSize: '1.6rem' }}>🍕</span>
-                                        <div>
-                                            <div style={{ color: '#d4af37', fontWeight: 'bold', fontSize: '1rem', letterSpacing: '0.05em' }}>
-                                                +{sliceEarned} $SLICE {language === 'es' ? 'ganados' : 'earned'}
+
+                                        {proofStatus === 'generating' ? (
+
+                                            <>
+
+                                                <p style={{ color: '#333', fontSize: '1.2rem', marginBottom: '0.5rem', animation: 'pulse 1.5s infinite' }}>
+
+                                                    {language === 'es' ? 'IMPRIMIENDO TICKET...' : 'PRINTING RECEIPT...'}
+
+                                                </p>
+
+                                                <div style={{ fontSize: '0.85rem', color: '#888' }}>{t.securing}</div>
+
+                                            </>
+
+                                        ) : proofStatus === 'success' ? (
+
+                                            <div style={{ color: '#111', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px', borderTop: '2px dotted #111', borderBottom: '2px dotted #111', padding: '10px 0' }}>
+
+                                                {language === 'es' ? 'TRANSACCIÓN APROBADA' : 'TX APPROVED'}
+
                                             </div>
-                                            <div style={{ color: '#a08828', fontSize: '0.72rem', marginTop: '2px' }}>
-                                                {language === 'es' ? 'Acreditados en tu wallet' : 'Minted to your wallet on-chain'}
+
+                                        ) : (
+
+                                            <div style={{ color: '#cc0000', fontWeight: 'bold', borderTop: '2px dashed #cc0000', borderBottom: '2px dashed #cc0000', padding: '10px 0' }}>
+
+                                                {language === 'es' ? 'PAGO RECHAZADO' : 'PAYMENT DECLINED'}
+
                                             </div>
-                                        </div>
+
+                                        )}
+
                                     </div>
+
+                                ) : (
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginTop: 'auto' }}>
+
+                                        <button
+
+                                            id="restartBtn"
+
+                                            className="primary-btn"
+
+                                            onClick={handleCookAgain}
+
+                                            style={{ width: '100%', padding: '1.2rem', fontSize: '1.2rem', boxShadow: 'none' }}
+
+                                        >
+
+                                            🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
+
+                                        </button>
+
+
+
+                                        {onChainScore !== null && onChainScore >= 4000 ? (
+
+                                            <button
+
+                                                id="nextLevelBtn"
+
+                                                className="primary-btn"
+
+                                                onClick={handleNextLevel}
+
+                                                style={{
+
+                                                    width: '100%',
+
+                                                    padding: '1.2rem',
+
+                                                    fontSize: '1.2rem',
+
+                                                    background: '#E67E22',
+
+                                                    borderColor: '#D35400',
+
+                                                    boxShadow: 'none',
+
+                                                    textTransform: 'uppercase'
+
+                                                }}
+
+                                            >
+
+                                                🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
+
+                                            </button>
+
+                                        ) : (
+
+                                            <button
+
+                                                id="nextLevelBtn"
+
+                                                style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
+
+                                                disabled
+
+                                                title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
+
+                                            >
+
+                                                🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
+
+                                            </button>
+
+                                        )}
+
+
+
+                                        <button
+
+                                            id="backToLobbyBtn"
+
+                                            onClick={handleBackToLobby}
+
+                                            style={{
+
+                                                width: '100%',
+
+                                                padding: '1rem',
+
+                                                fontSize: '1.1rem',
+
+                                                fontFamily: "'Special Elite', monospace",
+
+                                                background: 'transparent',
+
+                                                border: '2px dashed #8B0000',
+
+                                                borderRadius: '12px',
+
+                                                color: '#8B0000',
+
+                                                fontWeight: 'bold',
+
+                                                cursor: 'pointer',
+
+                                                transition: 'all 0.2s ease'
+
+                                            }}
+
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
+
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+
+                                        >
+
+                                            {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
+
+                                        </button>
+
+                                    </div>
+
                                 )}
 
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    {/* TX Sealed Pop-up — appears after on-chain submission, auto-closes in 8s */}
+
+                    {showTxPopup && (
+
+                        <div style={{
+
+                            position: 'absolute', top: 0, left: 0,
+
+                            width: '100%', height: '100%',
+
+                            zIndex: 30,
+
+                            background: 'rgba(0,0,0,0.75)',
+
+                            backdropFilter: 'blur(6px)',
+
+                            display: 'flex',
+
+                            alignItems: 'center',
+
+                            justifyContent: 'center',
+
+                        }}>
+
+                            <div style={{
+
+                                background: '#FFF8E7',
+
+                                border: '3px solid #27ae60',
+
+                                borderRadius: '16px',
+
+                                padding: '1.5rem',
+
+                                width: '88%',
+
+                                maxWidth: '360px',
+
+                                boxShadow: '0 10px 40px rgba(39,174,96,0.3)',
+
+                                display: 'flex',
+
+                                flexDirection: 'column',
+
+                                gap: '1rem',
+
+                            }}>
+
+                                {/* Header */}
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+                                    <div>
+
+                                        <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
+
+                                            ⛓ {language === 'es' ? 'SELLADO EN STELLAR' : 'SEALED ON STELLAR'}
+
+                                        </div>
+
+                                        <div style={{ color: '#555', fontSize: '0.75rem', marginTop: '2px', fontWeight: 'bold' }}>
+
+                                            {language === 'es' ? 'Puntaje verificado en cadena' : 'Score verified on-chain'}
+
+                                        </div>
+
+                                    </div>
+
+                                    <button
+
+                                        onClick={closeTxPopup}
+
+                                        style={{ background: '#F9F5EB', border: '1px solid #D0B488', borderRadius: '50%', width: 28, height: 28, color: '#8B0000', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+
+                                    >✕</button>
+
+                                </div>
+
+
+
+                                {/* TX rows */}
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+
+                                    {popupTxs.map((tx, i) => {
+
+                                        const shortHash = `${tx.hash.slice(0, 8)}…${tx.hash.slice(-6)}`;
+
+                                        return (
+
+                                            <div key={i} style={{
+
+                                                display: 'flex',
+
+                                                alignItems: 'center',
+
+                                                justifyContent: 'space-between',
+
+                                                background: 'rgba(39,174,96,0.08)',
+
+                                                border: '1px solid rgba(39,174,96,0.3)',
+
+                                                borderRadius: '8px',
+
+                                                padding: '0.5rem 0.75rem',
+
+                                                gap: '0.5rem',
+
+                                            }}>
+
+                                                <div>
+
+                                                    <div style={{ color: '#27ae60', fontSize: '0.78rem', fontWeight: 'bold' }}>✅ {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}</div>
+
+                                                    <div style={{ color: '#888', fontSize: '0.7rem', fontFamily: 'monospace' }}>{shortHash}</div>
+
+                                                </div>
+
+                                                <a
+
+                                                    href={`${EXPLORER_BASE}/${tx.hash}`}
+
+                                                    target="_blank"
+
+                                                    rel="noopener noreferrer"
+
+                                                    style={{ color: '#27ae60', fontSize: '1.2rem', textDecoration: 'none', flexShrink: 0 }}
+
+                                                    title="View on Stellar Explorer"
+
+                                                >🔗</a>
+
+                                            </div>
+
+                                        );
+
+                                    })}
+
+                                </div>
+
+
+
+                                {/* SLICE reward banner */}
+
+                                {sliceEarned > 0 && (
+
+                                    <div style={{
+
+                                        background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))',
+
+                                        border: '1px solid rgba(212,175,55,0.6)',
+
+                                        borderRadius: '10px',
+
+                                        padding: '0.75rem 1rem',
+
+                                        display: 'flex',
+
+                                        alignItems: 'center',
+
+                                        gap: '0.75rem',
+
+                                    }}>
+
+                                        <span style={{ fontSize: '1.6rem' }}>🍕</span>
+
+                                        <div>
+
+                                            <div style={{ color: '#d4af37', fontWeight: 'bold', fontSize: '1rem', letterSpacing: '0.05em' }}>
+
+                                                +{sliceEarned} $SLICE {language === 'es' ? 'ganados' : 'earned'}
+
+                                            </div>
+
+                                            <div style={{ color: '#a08828', fontSize: '0.72rem', marginTop: '2px' }}>
+
+                                                {language === 'es' ? 'Acreditados en tu wallet' : 'Minted to your wallet on-chain'}
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                )}
+
+
+
                                 {/* Actions */}
+
                                 <button
+
                                     onClick={closeTxPopup}
+
                                     className="primary-btn"
+
                                     style={{ width: '100%', padding: '0.8rem', fontSize: '1rem' }}
+
                                 >
+
                                     🍕 {language === 'es' ? 'REPETIR' : 'COOK AGAIN'}
+
                                 </button>
 
+
+
                                 {/* Countdown */}
+
                                 <div style={{ textAlign: 'center', color: '#555', fontSize: '0.72rem' }}>
+
                                     {language === 'es' ? 'Cierre automático en' : 'Auto-closing in'} {popupCountdown}s
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    )}
+
+
+
+                    {isPvp && rivalData && (
+
+                        <div style={{
+                            position: 'absolute',
+                            top: '1rem',
+                            left: '5%',
+                            right: '5%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.6rem',
+                            zIndex: 10,
+                            pointerEvents: 'none'
+                        }}>
+
+                            {/* TENSION / TUG-OF-WAR BAR */}
+                            <div style={{
+                                width: '100%',
+                                background: 'rgba(0,0,0,0.6)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '20px',
+                                height: '24px',
+                                display: 'flex',
+                                overflow: 'hidden',
+                                position: 'relative'
+                            }}>
+                                <div style={{
+                                    flex: (engineRef.current ? Math.max(10, 100 * (1.0 - (rivalData.score / (Math.max(1, (playerPvpStats?.score || 0) + rivalData.score))))) : 50),
+                                    background: 'linear-gradient(90deg, #8B0000, #ff8c00)',
+                                    transition: 'all 0.5s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    paddingLeft: '10px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 'bold',
+                                    color: 'white'
+                                }}>
+                                    {language === 'es' ? 'TÚ' : 'YOU'}: {playerPvpStats?.score || 0}
+                                </div>
+                                <div style={{
+                                    flex: (engineRef.current ? Math.max(10, 100 * (rivalData.score / (Math.max(1, (playerPvpStats?.score || 0) + rivalData.score)))) : 50),
+                                    background: 'linear-gradient(90deg, #005f73, #00f0ff)',
+                                    transition: 'all 0.5s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-end',
+                                    paddingRight: '10px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 'bold',
+                                    color: 'white'
+                                }}>
+                                    {rivalData.name}: {rivalData.score}
+                                </div>
+
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold',
+                                    color: 'white',
+                                    textShadow: '0 0 4px black'
+                                }}>
+                                    ⚡ {language === 'es' ? 'TENSIÓN' : 'TENSION'} ⚡
                                 </div>
                             </div>
+
+                            {/* RIVAL REACTIVE AVATAR WIDGET */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '40px',
+                                right: '10px',
+                                background: rivalData.isFever 
+                                    ? 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(0,0,0,0.6))'
+                                    : 'rgba(0,0,0,0.7)',
+                                border: rivalData.isFever ? '2px solid #00f0ff' : '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '12px',
+                                padding: '0.6rem',
+                                width: '110px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.2rem',
+                                transition: 'all 0.3s ease',
+                                boxShadow: rivalData.isFever ? '0 0 15px rgba(0,240,255,0.3)' : 'none'
+                            }}>
+                                <div style={{ fontSize: '1.8rem', position: 'relative' }}>
+                                    {rivalData.isMiss ? '🪵 😵' : (rivalData.isFever ? '🔥 😎' : '👨‍🍳 🍳')}
+                                    {rivalData.isMiss && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '-5px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            fontSize: '1rem'
+                                        }}>
+                                            🍅
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>{rivalData.name}</div>
+                                <div style={{ fontSize: '0.6rem', color: '#ccc' }}>
+                                    Combo: <span style={{ color: rivalData.combo > 0 ? '#2ecc71' : '#ff7675', fontWeight: 'bold' }}>{rivalData.combo}</span>
+                                </div>
+                                {rivalData.isFever && (
+                                    <div style={{ fontSize: '0.55rem', color: '#00f0ff', fontWeight: 'bold', textTransform: 'uppercase', animation: 'pulse 1s infinite' }}>
+                                        🔥 FIEBRE !!
+                                    </div>
+                                )}
+                            </div>
+
                         </div>
+
                     )}
 
                     <canvas ref={canvasRef} id="gameCanvas" style={{ width: '100%', height: '100%' }} />
+
                 </div>
+
             </div>
+
         </div>
+
     );
+
 };
+

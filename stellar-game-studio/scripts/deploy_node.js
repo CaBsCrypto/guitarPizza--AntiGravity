@@ -1,0 +1,149 @@
+import { Keypair } from '@stellar/stellar-sdk';
+import { execSync } from 'child_process';
+import fs from 'fs';
+
+console.log("🚀 Running pure Node.js Soroban Deployment Script...\n");
+
+const NETWORK = 'testnet';
+const RPC_URL = 'https://soroban-testnet.stellar.org';
+const NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
+
+// Helper to fund accounts
+async function ensureTestnetFunded(address) {
+  console.log(`Checking account status for ${address}...`);
+  try {
+    const res = await fetch(`https://horizon-testnet.stellar.org/accounts/${address}`);
+    if (res.status === 200) {
+      console.log(`✅ Account ${address} already exists on testnet.`);
+      return;
+    }
+  } catch (err) {}
+
+  console.log(`💰 Funding ${address} via Friendbot...`);
+  const fundRes = await fetch(`https://friendbot.stellar.org?addr=${address}`);
+  if (!fundRes.ok) {
+    throw new Error(`Friendbot funding failed (${fundRes.status}) for ${address}`);
+  }
+  console.log(`✅ Funding request sent for ${address}. Waiting 5 seconds...`);
+  await new Promise((r) => setTimeout(r, 5000));
+}
+
+// Parse existing .env file
+function readEnvFile() {
+  if (!fs.existsSync('.env')) return {};
+  const text = fs.readFileSync('.env', 'utf8');
+  const lines = text.split(/\r?\n/);
+  const out = {};
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    const value = line.slice(eq + 1).trim();
+    out[key] = value;
+  }
+  return out;
+}
+
+// Generate or load identities
+const existingEnv = readEnvFile();
+
+console.log('📝 Setting up admin identity...');
+const adminKeypair = Keypair.random();
+const adminAddress = adminKeypair.publicKey();
+const adminSecret = adminKeypair.secret();
+console.log(`Admin Address: ${adminAddress}`);
+await ensureTestnetFunded(adminAddress);
+
+const playerKeypairs = {};
+const playerSecrets = {};
+const playerAddresses = {};
+
+for (const identity of ['player1', 'player2']) {
+  console.log(`📝 Setting up ${identity}...`);
+  const envSecretKey = `VITE_DEV_${identity.toUpperCase()}_SECRET`;
+  let keypair;
+  if (existingEnv[envSecretKey] && existingEnv[envSecretKey] !== 'NOT_AVAILABLE') {
+    console.log(`✅ Using existing secret for ${identity} from .env`);
+    keypair = Keypair.fromSecret(existingEnv[envSecretKey]);
+  } else {
+    console.log(`🎲 Generating a random secret for ${identity}...`);
+    keypair = Keypair.random();
+  }
+  playerKeypairs[identity] = keypair;
+  playerSecrets[identity] = keypair.secret();
+  playerAddresses[identity] = keypair.publicKey();
+  console.log(`${identity} Address: ${playerAddresses[identity]}`);
+  await ensureTestnetFunded(playerAddresses[identity]);
+}
+
+// Deploy mock-game-hub
+console.log('\nDeploying mock-game-hub contract...');
+const mockHubPath = 'target/wasm32v1-none/release/mock_game_hub.wasm';
+console.log(`Running deploy command for mock-game-hub...`);
+const deployMockCommand = `stellar contract deploy --wasm ${mockHubPath} --source-account ${adminSecret} --network ${NETWORK}`;
+console.log(`> ${deployMockCommand}`);
+const mockHubId = execSync(deployMockCommand).toString().trim();
+console.log(`✅ mock-game-hub deployed: ${mockHubId}\n`);
+
+// Deploy guitar-pizza
+console.log('Deploying guitar-pizza contract...');
+const guitarPizzaPath = 'target/wasm32v1-none/release/guitar_pizza.wasm';
+const deployGuitarPizzaCmd = `stellar contract deploy --wasm ${guitarPizzaPath} --source-account ${adminSecret} --network ${NETWORK} -- --admin ${adminAddress} --game-hub ${mockHubId}`;
+console.log(`> ${deployGuitarPizzaCmd}`);
+const guitarPizzaId = execSync(deployGuitarPizzaCmd).toString().trim();
+console.log(`✅ guitar-pizza deployed: ${guitarPizzaId}\n`);
+
+// Deploy zk-leaderboard
+console.log('Deploying zk-leaderboard contract...');
+const zkLeaderboardPath = 'target/wasm32v1-none/release/zk_leaderboard.wasm';
+const deployZkCmd = `stellar contract deploy --wasm ${zkLeaderboardPath} --source-account ${adminSecret} --network ${NETWORK} -- --admin ${adminAddress} --game-hub ${mockHubId}`;
+console.log(`> ${deployZkCmd}`);
+const zkLeaderboardId = execSync(deployZkCmd).toString().trim();
+console.log(`✅ zk-leaderboard deployed: ${zkLeaderboardId}\n`);
+
+// Write to deployment.json
+const deploymentInfo = {
+  mockGameHubId: mockHubId,
+  contracts: {
+    "mock-game-hub": mockHubId,
+    "guitar-pizza": guitarPizzaId,
+    "zk-leaderboard": zkLeaderboardId
+  },
+  network: NETWORK,
+  rpcUrl: RPC_URL,
+  networkPassphrase: NETWORK_PASSPHRASE,
+  wallets: {
+    admin: adminAddress,
+    player1: playerAddresses.player1,
+    player2: playerAddresses.player2
+  },
+  deployedAt: new Date().toISOString()
+};
+
+fs.writeFileSync('deployment.json', JSON.stringify(deploymentInfo, null, 2) + '\n');
+console.log("✅ Wrote deployment details to deployment.json");
+
+// Write to .env
+const envContent = `# Auto-generated by Node deploy script
+VITE_SOROBAN_RPC_URL=${RPC_URL}
+VITE_NETWORK_PASSPHRASE=${NETWORK_PASSPHRASE}
+VITE_MOCK_GAME_HUB_CONTRACT_ID=${mockHubId}
+VITE_GUITAR_PIZZA_CONTRACT_ID=${guitarPizzaId}
+VITE_ZK_LEADERBOARD_CONTRACT_ID=${zkLeaderboardId}
+
+# Dev wallet addresses for testing
+VITE_DEV_ADMIN_ADDRESS=${adminAddress}
+VITE_DEV_PLAYER1_ADDRESS=${playerAddresses.player1}
+VITE_DEV_PLAYER2_ADDRESS=${playerAddresses.player2}
+
+# Dev wallet secret keys (WARNING: Never commit this file!)
+VITE_DEV_PLAYER1_SECRET=${playerSecrets.player1}
+VITE_DEV_PLAYER2_SECRET=${playerSecrets.player2}
+`;
+
+fs.writeFileSync('.env', envContent + '\n');
+console.log("✅ Wrote environment secrets to .env");
+
+console.log("\n🎉 Deployment completed successfully! All contracts live on testnet.");

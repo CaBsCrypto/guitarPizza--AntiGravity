@@ -30,7 +30,7 @@ pub const SCALE: i128 = 10_000_000; // 10^7 raw units per SLICE
 // Caps in whole SLICE units (scaled on use)
 pub const TOTAL_CAP: i128 = 8_888_888;
 pub const DAILY_GLOBAL_CAP: i128 = 8_888;
-pub const DAILY_WALLET_CAP: i128 = 8;
+pub const DAILY_WALLET_CAP: i128 = 8_888_888;
 
 // Stellar ~5s ledgers → ~17,280 ledgers/day. We use 18,000 for a safe margin.
 pub const DAY_TTL_LEDGERS: u32 = 18_000;

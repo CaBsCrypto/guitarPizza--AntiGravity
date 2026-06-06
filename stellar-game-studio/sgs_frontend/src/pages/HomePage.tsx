@@ -266,7 +266,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       const isActive = diff === 0;
 
                       // 3D positioning
-                      const translateX = diff * 110 + dragOffset * 0.5; // Spread cards horizontally
+                      const cardSpacing = typeof window !== 'undefined' && window.innerWidth < 640 ? 85 : 110;
+                      const translateX = diff * cardSpacing + dragOffset * 0.5; // Spread cards horizontally
                       const translateZ = isActive ? 0 : -absDiff * 80;
                       const rotateY = isActive ? 0 : -Math.sign(diff) * 20;
                       const scale = isActive ? 1.15 : 0.85;

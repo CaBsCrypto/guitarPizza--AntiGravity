@@ -28,8 +28,21 @@ export default defineConfig(({ mode }) => ({
     }
   },
   build: {
+    target: 'esnext',
     commonjsOptions: {
       transformMixedEsModules: true
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('noirc') || id.includes('acvm')) {
+              return 'zk-engine';
+            }
+            return 'vendor';
+          }
+        }
+      }
     }
   },
   server: {

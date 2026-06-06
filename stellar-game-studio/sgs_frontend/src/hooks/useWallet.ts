@@ -6,6 +6,30 @@ import type { ContractSigner } from '../types/signer';
 import { StellarWalletsKit } from '@creit-tech/stellar-wallets-kit/sdk';
 import { defaultModules } from '@creit-tech/stellar-wallets-kit/modules/utils';
 import { Networks } from '@creit-tech/stellar-wallets-kit/types';
+import { passkeyService } from '../services/PasskeyService';
+import { Keypair, TransactionBuilder, hash } from '@stellar/stellar-sdk';
+import { Buffer } from 'buffer';
+import type { WalletError } from '@stellar/stellar-sdk/contract';
+
+const WALLET_ID = 'stellar-wallets-kit';
+let kitInitialized = false;
+
+function ensureKitInitialized(passphrase?: string) {
+  if (typeof window === 'undefined') return;
+
+  if (!kitInitialized) {
+    StellarWalletsKit.init({
+      modules: defaultModules(),
+      network: resolveNetwork(passphrase),
+    });
+    kitInitialized = true;
+    return;
+  }
+
+  if (passphrase) {
+    StellarWalletsKit.setNetwork(resolveNetwork(passphrase));
+  }
+}
 
 // Helper to ensure kit is initialized if needed (though usually initialized by WalletConnect)
 function resolveNetwork(passphrase?: string): Networks {
@@ -31,6 +55,36 @@ export function useWallet() {
     setError,
     disconnect: storeDisconnect,
   } = useWalletStore();
+
+  /**
+   * Connect real wallet (e.g. Freighter, Lobstr, xBull)
+   */
+  const connect = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      setError('Wallet connection is only available in the browser.');
+      return;
+    }
+
+    try {
+      setConnecting(true);
+      setError(null);
+
+      ensureKitInitialized(NETWORK_PASSPHRASE);
+      const { address } = await StellarWalletsKit.authModal();
+      if (typeof address !== 'string' || !address) {
+        throw new Error('No wallet address returned');
+      }
+
+      setWallet(address, WALLET_ID, 'wallet');
+      setNetwork(NETWORK, NETWORK_PASSPHRASE);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to connect wallet';
+      setError(message);
+      throw err;
+    } finally {
+      setConnecting(false);
+    }
+  }, [setWallet, setConnecting, setError, setNetwork]);
 
   /**
    * Connect as a dev player (for testing)
@@ -102,6 +156,54 @@ export function useWallet() {
   }, [walletType, storeDisconnect]);
 
   /**
+   * Register a new Stellar Passkey Smart Account
+   */
+  const registerPasskey = useCallback(
+    async (username: string, existingSecretKey?: string) => {
+      try {
+        setConnecting(true);
+        setError(null);
+        const account = await passkeyService.register(username, existingSecretKey);
+        setWallet(account.publicKey, 'passkey-wallet', 'passkey');
+        setNetwork(NETWORK, NETWORK_PASSPHRASE);
+        return account;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to register Passkey';
+        setError(errorMessage);
+        console.error('Passkey registration error:', err);
+        throw err;
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [setWallet, setConnecting, setNetwork, setError]
+  );
+
+  /**
+   * Login with an existing Stellar Passkey Smart Account
+   */
+  const loginPasskey = useCallback(
+    async () => {
+      try {
+        setConnecting(true);
+        setError(null);
+        const account = await passkeyService.login();
+        setWallet(account.publicKey, 'passkey-wallet', 'passkey');
+        setNetwork(NETWORK, NETWORK_PASSPHRASE);
+        return account;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to login with Passkey';
+        setError(errorMessage);
+        console.error('Passkey login error:', err);
+        throw err;
+      } finally {
+        setConnecting(false);
+      }
+    },
+    [setWallet, setConnecting, setNetwork, setError]
+  );
+
+  /**
    * Get a signer for contract interactions
    * Returns functions that the Stellar SDK TS bindings can use for signing
    */
@@ -113,6 +215,65 @@ export function useWallet() {
     if (walletType === 'dev') {
       // Dev wallet uses the dev wallet service's signer
       return devWalletService.getSigner();
+    } else if (walletType === 'passkey') {
+      // Passkey smart account signing
+      const toWalletError = (message: string): WalletError => ({ message, code: -1 });
+      return {
+        signTransaction: async (txXdr: string, opts?: any) => {
+          try {
+            const currentPassphrase = opts?.networkPassphrase || networkPassphrase || NETWORK_PASSPHRASE;
+            const secretKey = passkeyService.getSecretKey(publicKey);
+            if (!secretKey) {
+              throw new Error('Passkey credential not found on this device');
+            }
+            const keypair = Keypair.fromSecret(secretKey);
+            const transaction = TransactionBuilder.fromXDR(txXdr, currentPassphrase);
+            transaction.sign(keypair);
+            const signedTxXdr = transaction.toXDR();
+
+            return {
+              signedTxXdr,
+              signerAddress: publicKey,
+            };
+          } catch (error) {
+            console.error('Passkey failed to sign transaction:', error);
+            return {
+              signedTxXdr: txXdr,
+              signerAddress: publicKey,
+              error: toWalletError(
+                error instanceof Error ? error.message : 'Failed to sign transaction'
+              ),
+            };
+          }
+        },
+
+        signAuthEntry: async (preimageXdr: string, _opts?: any) => {
+          try {
+            const secretKey = passkeyService.getSecretKey(publicKey);
+            if (!secretKey) {
+              throw new Error('Passkey credential not found on this device');
+            }
+            const keypair = Keypair.fromSecret(secretKey);
+            const preimageBytes = Buffer.from(preimageXdr, 'base64');
+            const payload = hash(preimageBytes);
+            const signatureBytes = keypair.sign(payload);
+
+            return {
+              signedAuthEntry: Buffer.from(signatureBytes).toString('base64'),
+              signerAddress: publicKey,
+            };
+          } catch (error) {
+            console.error('Passkey failed to sign auth entry:', error);
+            return {
+              signedAuthEntry: preimageXdr,
+              signerAddress: publicKey,
+              error: toWalletError(
+                error instanceof Error ? error.message : 'Failed to sign auth entry'
+              ),
+            };
+          }
+        },
+      };
     } else {
       // Real wallet signing using StellarWalletsKit
       return {
@@ -197,6 +358,7 @@ export function useWallet() {
     error,
 
     // Actions
+    connect,
     connectDev,
     switchPlayer,
     disconnect,
@@ -204,5 +366,7 @@ export function useWallet() {
     isDevModeAvailable,
     isDevPlayerAvailable,
     getCurrentDevPlayer,
+    registerPasskey,
+    loginPasskey,
   };
 }
