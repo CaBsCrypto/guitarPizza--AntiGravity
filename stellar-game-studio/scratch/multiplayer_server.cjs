@@ -222,12 +222,13 @@ function handleWagerLocked(ws, payload) {
     
     console.log(`[WS-Server] Match ${matchId} - ${role} confirmed wager locked`);
     
-    // If both are locked, broadcast game start
+    // If both are locked, broadcast game start with sync timestamp
     if (match.playerA.status === 'locked' && match.playerB.status === 'locked') {
-        const startMsg = JSON.stringify({ event: 'start_game', payload: { matchId } });
+        const startTime = Date.now() + 3500; // synchronized start in 3.5 seconds
+        const startMsg = JSON.stringify({ event: 'start_game', payload: { matchId, startTime } });
         match.playerA.ws.send(startMsg);
         match.playerB.ws.send(startMsg);
-        console.log(`[WS-Server] Match ${matchId} - Both locked! Sowing game start sync trigger.`);
+        console.log(`[WS-Server] Match ${matchId} - Both locked! Sowing game start sync trigger at ${startTime}.`);
     }
 }
 

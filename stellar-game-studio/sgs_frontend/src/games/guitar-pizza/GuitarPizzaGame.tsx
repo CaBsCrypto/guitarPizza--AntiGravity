@@ -464,6 +464,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
     const [mpQueueStatus, setMpQueueStatus] = useState<string>('');
 
     const [rivalData, setRivalData] = useState<{ name: string; score: number; combo: number; isFever: boolean; isMiss: boolean } | null>(null);
+    const [pvpCountdown, setPvpCountdown] = useState<number | null>(null);
     const [playerPvpStats, setPlayerPvpStats] = useState<{ score: number; combo: number } | null>(null);
 
     const [ingredients, setIngredients] = useState(() => {
@@ -917,7 +918,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
                 // Confirm wager locked to socket server
                 multiplayerService.lockWager(payload.matchId);
             },
-            onStartGame: (matchId) => {
+            onStartGame: (matchId, startTime) => {
                 addLog(`[Multiplayer] Both wagers locked. Starting game sync!`);
                 setIsPvp(true);
                 setView('lobby');
@@ -931,7 +932,25 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
                     isFever: false,
                     isMiss: false
                 });
-                handleStartGame();
+
+                if (startTime) {
+                    const diff = startTime - Date.now();
+                    addLog(`[Multiplayer] Starting game in ${diff}ms (server synchronized)`);
+                    setPvpCountdown(Math.max(1, Math.ceil(diff / 1000)));
+
+                    const timer = setInterval(() => {
+                        const remaining = startTime - Date.now();
+                        if (remaining <= 0) {
+                            clearInterval(timer);
+                            setPvpCountdown(null);
+                            handleStartGame();
+                        } else {
+                            setPvpCountdown(Math.max(1, Math.ceil(remaining / 1000)));
+                        }
+                    }, 100);
+                } else {
+                    handleStartGame();
+                }
             },
             onRivalNote: (payload) => {
                 setRivalData(prev => {
@@ -2606,8 +2625,44 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                    {/* Status & Errors Overlay */}
+                    {/* Synchronized PvP Start Countdown Overlay */}
+                    {pvpCountdown !== null && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            background: 'rgba(10, 7, 5, 0.9)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            zIndex: 3000,
+                        }}>
+                            <div style={{
+                                fontSize: '6rem',
+                                fontWeight: 'bold',
+                                color: '#00f0ff',
+                                textShadow: '0 0 20px rgba(0,240,255,0.6)',
+                                fontFamily: 'monospace'
+                            }}>
+                                {pvpCountdown}
+                            </div>
+                            <div style={{
+                                fontSize: '1.2rem',
+                                color: '#ffd700',
+                                marginTop: '1rem',
+                                letterSpacing: '0.2em',
+                                textTransform: 'uppercase',
+                                textShadow: '0 0 10px rgba(255,215,0,0.4)'
+                            }}>
+                                {language === 'es' ? '¡PREPARATE PARA COCINAR!' : 'GET READY TO COOK!'}
+                            </div>
+                        </div>
+                    )}
 
+                    {/* Status & Errors Overlay */}
                     {(status || error) && (
 
                         <div style={{

@@ -21,7 +21,7 @@ export interface MatchResolvedPayload {
 
 export type MultiplayerEventCallback = {
   onMatchFound?: (payload: MatchFoundPayload) => void;
-  onStartGame?: (matchId: number) => void;
+  onStartGame?: (matchId: number, startTime?: number) => void;
   onRivalNote?: (payload: RivalNotePayload) => void;
   onMatchResolved?: (payload: MatchResolvedPayload) => void;
   onRivalDisconnected?: (reason: string) => void;
@@ -88,7 +88,7 @@ class MultiplayerService {
             this.callbacks.onMatchFound?.(msg.payload);
             break;
           case 'start_game':
-            this.callbacks.onStartGame?.(msg.payload.matchId);
+            this.callbacks.onStartGame?.(msg.payload.matchId, msg.payload.startTime);
             break;
           case 'rival_note':
             this.callbacks.onRivalNote?.(msg.payload);
