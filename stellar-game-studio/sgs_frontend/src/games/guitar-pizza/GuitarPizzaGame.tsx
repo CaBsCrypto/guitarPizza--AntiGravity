@@ -485,7 +485,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     const handleCheckIn = async () => {
         if (!canCheckIn) {
-            alert(language === 'es' ? '⚠️ No puedes firmar el diario del Don en este momento.' : '⚠️ You cannot sign the Don\'s journal right now.');
+            alert(language === 'es' ? '⚠️ No puedes firmar el diario del Don en este momento.' : '⚠️ You cannot sign the Don\'t journal right now.');
             return;
         }
 
@@ -513,14 +513,33 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             milestoneRewardMsg = language === 'es' ? '\n\n👑 ¡RECOMPENSA LEGENDARIA de 30 días! +50 $SLICE' : '\n\n👑 30-DAY LEGENDARY REWARD! +50 $SLICE';
         }
 
-        // Mint reward on-chain if userAddress exists & connected
+        // Submit daily check-in to Stellar smart contract
         let successOnChain = false;
         if (userAddress && userAddress !== 'G_DEMO_USER' && isConnected) {
             try {
-                addLog(`[Check-in] Minting daily reward: ${reward} $SLICE to ${userAddress}...`);
-                successOnChain = true;
-            } catch (err) {
-                console.error("Failed to mint daily check-in reward on-chain:", err);
+                addLog(`[Check-in] Submitting daily check-in to Stellar smart contract...`);
+                const signer = getContractSignerRef.current();
+                const res = await StellarContractService.dailyCheckIn(userAddress, signer);
+                if (res.success) {
+                    successOnChain = true;
+                    if (res.streak !== undefined) {
+                        newStreak = res.streak;
+                    }
+                    addLog(`[Check-in] On-chain check-in confirmed successfully! Streak: ${newStreak}`);
+                } else {
+                    alert(language === 'es' 
+                        ? `⚠️ Fallo en blockchain: ${res.error}` 
+                        : `⚠️ Blockchain check-in failed: ${res.error}`
+                    );
+                    return;
+                }
+            } catch (err: any) {
+                console.error("Failed to execute daily check-in transaction:", err);
+                alert(language === 'es' 
+                    ? `⚠️ Error de red al firmar: ${err.message}` 
+                    : `⚠️ Connection error signing journal: ${err.message}`
+                );
+                return;
             }
         }
 
@@ -538,7 +557,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         alert((language === 'es' 
             ? `📝 ¡Diario firmado hoy!\n\nRacha actual: ${newStreak} ${newStreak === 1 ? 'día' : 'días'}\nRecompensa: +${reward} $SLICE${milestoneRewardMsg}` 
             : `📝 Signed the Don's journal today!\n\nCurrent streak: ${newStreak} ${newStreak === 1 ? 'day' : 'days'}\nReward: +${reward} $SLICE${milestoneRewardMsg}`) + 
-            (successOnChain ? (language === 'es' ? '\n(Transacción confirmada en Stellar Testnet)' : '\n(Transaction confirmed on Stellar Testnet)') : '')
+            (successOnChain ? "\n\n🔒 (On-Chain Transaction Confirmed)" : "")
         );
     };
 
@@ -1030,6 +1049,20 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
                     // Sync Refrigerator balances
                     await fetchRefrigeratorData();
+
+                    // Sync On-Chain Daily Check-in
+                    const onChainCheckIn = await StellarContractService.getDailyCheckIn(userAddress);
+                    if (onChainCheckIn) {
+                        const dateStr = onChainCheckIn.lastCheckinTimestamp > 0 
+                            ? new Date(onChainCheckIn.lastCheckinTimestamp * 1000).toISOString().split('T')[0]
+                            : '';
+                        if (dateStr) {
+                            setLastCheckInDate(dateStr);
+                            localStorage.setItem('gp_last_check_in_date', dateStr);
+                        }
+                        setCheckInStreak(onChainCheckIn.streak);
+                        localStorage.setItem('gp_check_in_streak', onChainCheckIn.streak.toString());
+                    }
 
 
                     if (view === 'oven') {

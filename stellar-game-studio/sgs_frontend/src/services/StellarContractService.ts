@@ -657,6 +657,71 @@ export class StellarContractService {
     }
   }
 
+  // ─── 4b. Daily Check-in ─────────────────────────────────────────────────
+  /**
+   * Submits a daily check-in to the daily-recipe contract.
+   * Employs fee-bump sponsorship if applicable.
+   */
+  static async dailyCheckIn(
+    playerAddress: string,
+    signer: SignerFn,
+    _retried = false,
+  ): Promise<{ success: boolean; streak?: number; error?: string }> {
+    try {
+      const client = await loadDailyRecipeClient(playerAddress);
+      if (!client) return { success: false, error: 'daily-recipe client unavailable' };
+
+      const tx = await client.daily_check_in({
+        player: playerAddress,
+      });
+
+      await signAndSend(tx, signer, playerAddress);
+      console.log(`[StellarContract] Daily check-in successful on-chain ✅`);
+      
+      // Query the new streak value
+      const updated = await this.getDailyCheckIn(playerAddress);
+      return { success: true, streak: updated?.streak ?? 1 };
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      if (msg.includes('AlreadyCompleted') || msg.includes('Error(Contract, #2)')) {
+        return { success: false, error: 'AlreadyCompleted' };
+      }
+      if (isAccountNotFound(err) && !_retried) {
+        console.warn('[StellarContract] dailyCheckIn: account not found — Friendbot fund...');
+        const funded = await StellarContractService.ensureAccountFunded(playerAddress);
+        if (funded) return StellarContractService.dailyCheckIn(playerAddress, signer, true);
+      }
+      console.error('[StellarContract] dailyCheckIn failed:', err);
+      return { success: false, error: msg };
+    }
+  }
+
+  /**
+   * Queries the on-chain daily check-in status for a player.
+   */
+  static async getDailyCheckIn(
+    playerAddress: string,
+  ): Promise<{ lastCheckinTimestamp: number; streak: number } | null> {
+    try {
+      const client = await loadDailyRecipeClient(playerAddress);
+      if (!client) return null;
+
+      const tx = await client.get_daily_check_in({
+        player: playerAddress,
+      });
+      const result = tx.result as any;
+      if (!result) return null;
+
+      return {
+        lastCheckinTimestamp: Number(result.last_checkin_timestamp ?? 0),
+        streak: Number(result.streak ?? 0),
+      };
+    } catch (err) {
+      console.error('[StellarContract] getDailyCheckIn failed:', err);
+      return null;
+    }
+  }
+
   // ─── 5. Claim achievement badges ───────────────────────────────────────
   /**
    * Attempts to claim every achievement the player qualifies for based on stats.

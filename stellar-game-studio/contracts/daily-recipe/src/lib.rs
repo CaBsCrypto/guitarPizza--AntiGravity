@@ -70,6 +70,13 @@ pub struct PlayerProgress {
 }
 
 #[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DailyCheckIn {
+    pub last_checkin_timestamp: u64,
+    pub streak: u32,
+}
+
+#[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
     Admin,
@@ -78,6 +85,8 @@ pub enum DataKey {
     Challenge(u64),
     /// Player progress stored per (player, week_id)
     Progress(Address, u64),
+    /// Daily checkin status per player
+    DailyCheckIn(Address),
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +104,54 @@ impl DailyRecipe {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::TrustedGame, &game_hub);
         env.storage().instance().extend_ttl(ENTRY_TTL_THRESHOLD, ENTRY_TTL);
+    }
+
+    // -----------------------------------------------------------------------
+    // Core: Daily Check-in
+    // -----------------------------------------------------------------------
+    pub fn daily_check_in(env: Env, player: Address) -> Result<u32, Error> {
+        player.require_auth();
+
+        let now = env.ledger().timestamp();
+        let day_secs = 24 * 3600;
+        let today_id = now / day_secs;
+
+        let key = DataKey::DailyCheckIn(player.clone());
+        let mut checkin: DailyCheckIn = env.storage().instance().get(&key).unwrap_or(DailyCheckIn {
+            last_checkin_timestamp: 0,
+            streak: 0,
+        });
+
+        if checkin.last_checkin_timestamp > 0 {
+            let last_day_id = checkin.last_checkin_timestamp / day_secs;
+            if last_day_id == today_id {
+                return Err(Error::AlreadyCompleted);
+            }
+            if today_id - last_day_id == 1 {
+                checkin.streak += 1;
+            } else {
+                checkin.streak = 1;
+            }
+        } else {
+            checkin.streak = 1;
+        }
+
+        checkin.last_checkin_timestamp = now;
+        env.storage().instance().set(&key, &checkin);
+        env.storage().instance().extend_ttl(ENTRY_TTL_THRESHOLD, ENTRY_TTL);
+
+        // Emit checkin event
+        env.events().publish(
+            (Symbol::new(&env, "daily_checkin"), player),
+            (now, checkin.streak),
+        );
+
+        Ok(checkin.streak)
+    }
+
+    pub fn get_daily_check_in(env: Env, player: Address) -> Option<DailyCheckIn> {
+        let key = DataKey::DailyCheckIn(player);
+        env.storage().instance().get(&key)
     }
 
     // -----------------------------------------------------------------------

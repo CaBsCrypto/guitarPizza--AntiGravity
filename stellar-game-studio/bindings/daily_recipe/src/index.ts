@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Buffer } from "buffer";
 import { Address } from "@stellar/stellar-sdk";
 import {
@@ -35,7 +34,7 @@ if (typeof window !== "undefined") {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN",
+    contractId: "CBDS3ARENCNZG4XIX7TCCWFLYYVQWD7EBMDL5Q4FQ3M7DXE4W3XVQ2PK",
   }
 } as const
 
@@ -47,7 +46,13 @@ export const Errors = {
   5: {message:"AdminRequired"}
 }
 
-export type DataKey = {tag: "Admin", values: void} | {tag: "TrustedGame", values: void} | {tag: "Challenge", values: readonly [u64]} | {tag: "Progress", values: readonly [string, u64]};
+export type DataKey = {tag: "Admin", values: void} | {tag: "TrustedGame", values: void} | {tag: "Challenge", values: readonly [u64]} | {tag: "Progress", values: readonly [string, u64]} | {tag: "DailyCheckIn", values: readonly [string]};
+
+
+export interface DailyCheckIn {
+  last_checkin_timestamp: u64;
+  streak: u32;
+}
 
 
 export interface PlayerProgress {
@@ -66,15 +71,20 @@ export interface WeeklyChallenge {
 
 export interface Client {
   /**
-   * Construct and simulate a claim_weekly transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Submit a session result to claim the weekly pizza challenge.
-   * 
-   * # Arguments
-   * * `player`           - The player claiming the achievement
-   * * `pizzas_completed` - Number of pizzas completed in the session (from receipt journal)
-   * * `receipt`          - RISC Zero receipt bytes proving the session result
+   * Construct and simulate a set_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
-  claim_weekly: ({player, pizzas_completed, receipt}: {player: string, pizzas_completed: u32, receipt: Buffer}, options?: MethodOptions) => Promise<AssembledTransaction<Result<WeeklyChallenge>>>
+  set_admin: ({new_admin}: {new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
+
+  /**
+   * Construct and simulate a get_daily_check_in transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_daily_check_in: ({player}: {player: string}, options?: MethodOptions) => Promise<AssembledTransaction<Option<DailyCheckIn>>>
+
+  /**
+   * Construct and simulate a get_current_challenge transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get current week's challenge (target + completions so far).
+   */
+  get_current_challenge: (options?: MethodOptions) => Promise<AssembledTransaction<WeeklyChallenge>>
 
   /**
    * Construct and simulate a current_week_id transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -88,15 +98,26 @@ export interface Client {
   set_trusted_game: ({new_game}: {new_game: string}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
 
   /**
-   * Construct and simulate a set_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Construct and simulate a get_player_progress transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Get a player's progress for the current week.
    */
-  set_admin: ({new_admin}: {new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
+  get_player_progress: ({player}: {player: string}, options?: MethodOptions) => Promise<AssembledTransaction<Option<PlayerProgress>>>
 
   /**
-   * Construct and simulate a get_current_challenge transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Get current week's challenge (target + completions so far).
+   * Construct and simulate a claim_weekly transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Submit a session result to claim the weekly pizza challenge.
+   * 
+   * # Arguments
+   * * `player`           - The player claiming the achievement
+   * * `pizzas_completed` - Number of pizzas completed in the session (from receipt journal)
+   * * `receipt`          - RISC Zero receipt bytes proving the session result
    */
-  get_current_challenge: (options?: MethodOptions) => Promise<AssembledTransaction<WeeklyChallenge>>
+  claim_weekly: ({player, pizzas_completed, receipt}: {player: string, pizzas_completed: u32, receipt: Buffer}, options?: MethodOptions) => Promise<AssembledTransaction<Result<WeeklyChallenge>>>
+
+  /**
+   * Construct and simulate a daily_check_in transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  daily_check_in: ({player}: {player: string}, options?: MethodOptions) => Promise<AssembledTransaction<Result<u32>>>
 
   /**
    * Construct and simulate a get_player_progress_week transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -108,12 +129,6 @@ export interface Client {
    * Construct and simulate a get_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   get_admin: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
-
-  /**
-   * Construct and simulate a get_player_progress transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Get a player's progress for the current week.
-   */
-  get_player_progress: ({player}: {player: string}, options?: MethodOptions) => Promise<AssembledTransaction<Option<PlayerProgress>>>
 
 }
 export class Client extends ContractClient {
@@ -136,29 +151,34 @@ export class Client extends ContractClient {
   constructor(public readonly options: ContractClientOptions) {
     super(
       new ContractSpec([ "AAAABAAAAAAAAAAAAAAABUVycm9yAAAAAAAABQAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAEAAAAAAAAAEEFscmVhZHlDb21wbGV0ZWQAAAACAAAAAAAAAA5JbnZhbGlkUmVjZWlwdAAAAAAAAwAAAAAAAAAPTm90RW5vdWdoUGl6emFzAAAAAAQAAAAAAAAADUFkbWluUmVxdWlyZWQAAAAAAAAF",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAALVHJ1c3RlZEdhbWUAAAAAAQAAACVDaGFsbGVuZ2UgbWV0YWRhdGEgc3RvcmVkIHBlciB3ZWVrX2lkAAAAAAAACUNoYWxsZW5nZQAAAAAAAAEAAAAGAAAAAQAAACxQbGF5ZXIgcHJvZ3Jlc3Mgc3RvcmVkIHBlciAocGxheWVyLCB3ZWVrX2lkKQAAAAhQcm9ncmVzcwAAAAIAAAATAAAABg==",
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABQAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAALVHJ1c3RlZEdhbWUAAAAAAQAAACVDaGFsbGVuZ2UgbWV0YWRhdGEgc3RvcmVkIHBlciB3ZWVrX2lkAAAAAAAACUNoYWxsZW5nZQAAAAAAAAEAAAAGAAAAAQAAACxQbGF5ZXIgcHJvZ3Jlc3Mgc3RvcmVkIHBlciAocGxheWVyLCB3ZWVrX2lkKQAAAAhQcm9ncmVzcwAAAAIAAAATAAAABgAAAAEAAAAfRGFpbHkgY2hlY2tpbiBzdGF0dXMgcGVyIHBsYXllcgAAAAAMRGFpbHlDaGVja0luAAAAAQAAABM=",
+        "AAAAAQAAAAAAAAAAAAAADERhaWx5Q2hlY2tJbgAAAAIAAAAAAAAAFmxhc3RfY2hlY2tpbl90aW1lc3RhbXAAAAAAAAYAAAAAAAAABnN0cmVhawAAAAAABA==",
         "AAAAAQAAAAAAAAAAAAAADlBsYXllclByb2dyZXNzAAAAAAAEAAAAAAAAAAtiZXN0X3BpenphcwAAAAAEAAAAAAAAAApjbGFpbWVkX2F0AAAAAAAGAAAAAAAAAAljb21wbGV0ZWQAAAAAAAABAAAAAAAAAAd3ZWVrX2lkAAAAAAY=",
         "AAAAAQAAAAAAAAAAAAAAD1dlZWtseUNoYWxsZW5nZQAAAAADAAAAAAAAAA10YXJnZXRfcGl6emFzAAAAAAAABAAAAAAAAAARdG90YWxfY29tcGxldGlvbnMAAAAAAAAEAAAAAAAAAAd3ZWVrX2lkAAAAAAY=",
-        "AAAAAAAAASZTdWJtaXQgYSBzZXNzaW9uIHJlc3VsdCB0byBjbGFpbSB0aGUgd2Vla2x5IHBpenphIGNoYWxsZW5nZS4KCiMgQXJndW1lbnRzCiogYHBsYXllcmAgICAgICAgICAgIC0gVGhlIHBsYXllciBjbGFpbWluZyB0aGUgYWNoaWV2ZW1lbnQKKiBgcGl6emFzX2NvbXBsZXRlZGAgLSBOdW1iZXIgb2YgcGl6emFzIGNvbXBsZXRlZCBpbiB0aGUgc2Vzc2lvbiAoZnJvbSByZWNlaXB0IGpvdXJuYWwpCiogYHJlY2VpcHRgICAgICAgICAgIC0gUklTQyBaZXJvIHJlY2VpcHQgYnl0ZXMgcHJvdmluZyB0aGUgc2Vzc2lvbiByZXN1bHQAAAAAAAxjbGFpbV93ZWVrbHkAAAADAAAAAAAAAAZwbGF5ZXIAAAAAABMAAAAAAAAAEHBpenphc19jb21wbGV0ZWQAAAAEAAAAAAAAAAdyZWNlaXB0AAAAAA4AAAABAAAD6QAAB9AAAAAPV2Vla2x5Q2hhbGxlbmdlAAAAAAM=",
+        "AAAAAAAAAAAAAAAJc2V0X2FkbWluAAAAAAAAAQAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEwAAAAEAAAPpAAAAAgAAAAM=",
+        "AAAAAAAAAAAAAAASZ2V0X2RhaWx5X2NoZWNrX2luAAAAAAABAAAAAAAAAAZwbGF5ZXIAAAAAABMAAAABAAAD6AAAB9AAAAAMRGFpbHlDaGVja0lu",
+        "AAAAAAAAADtHZXQgY3VycmVudCB3ZWVrJ3MgY2hhbGxlbmdlICh0YXJnZXQgKyBjb21wbGV0aW9ucyBzbyBmYXIpLgAAAAAVZ2V0X2N1cnJlbnRfY2hhbGxlbmdlAAAAAAAAAAAAAAEAAAfQAAAAD1dlZWtseUNoYWxsZW5nZQA=",
         "AAAAAAAAABhHZXQgdGhlIGN1cnJlbnQgd2VlayBJRC4AAAAPY3VycmVudF93ZWVrX2lkAAAAAAAAAAABAAAABg==",
         "AAAAAAAAAAAAAAAQc2V0X3RydXN0ZWRfZ2FtZQAAAAEAAAAAAAAACG5ld19nYW1lAAAAEwAAAAEAAAPpAAAAAgAAAAM=",
-        "AAAAAAAAAAAAAAAJc2V0X2FkbWluAAAAAAAAAQAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEwAAAAEAAAPpAAAAAgAAAAM=",
-        "AAAAAAAAADtHZXQgY3VycmVudCB3ZWVrJ3MgY2hhbGxlbmdlICh0YXJnZXQgKyBjb21wbGV0aW9ucyBzbyBmYXIpLgAAAAAVZ2V0X2N1cnJlbnRfY2hhbGxlbmdlAAAAAAAAAAAAAAEAAAfQAAAAD1dlZWtseUNoYWxsZW5nZQA=",
+        "AAAAAAAAAC1HZXQgYSBwbGF5ZXIncyBwcm9ncmVzcyBmb3IgdGhlIGN1cnJlbnQgd2Vlay4AAAAAAAATZ2V0X3BsYXllcl9wcm9ncmVzcwAAAAABAAAAAAAAAAZwbGF5ZXIAAAAAABMAAAABAAAD6AAAB9AAAAAOUGxheWVyUHJvZ3Jlc3MAAA==",
+        "AAAAAAAAASZTdWJtaXQgYSBzZXNzaW9uIHJlc3VsdCB0byBjbGFpbSB0aGUgd2Vla2x5IHBpenphIGNoYWxsZW5nZS4KCiMgQXJndW1lbnRzCiogYHBsYXllcmAgICAgICAgICAgIC0gVGhlIHBsYXllciBjbGFpbWluZyB0aGUgYWNoaWV2ZW1lbnQKKiBgcGl6emFzX2NvbXBsZXRlZGAgLSBOdW1iZXIgb2YgcGl6emFzIGNvbXBsZXRlZCBpbiB0aGUgc2Vzc2lvbiAoZnJvbSByZWNlaXB0IGpvdXJuYWwpCiogYHJlY2VpcHRgICAgICAgICAgIC0gUklTQyBaZXJvIHJlY2VpcHQgYnl0ZXMgcHJvdmluZyB0aGUgc2Vzc2lvbiByZXN1bHQAAAAAAAxjbGFpbV93ZWVrbHkAAAADAAAAAAAAAAZwbGF5ZXIAAAAAABMAAAAAAAAAEHBpenphc19jb21wbGV0ZWQAAAAEAAAAAAAAAAdyZWNlaXB0AAAAAA4AAAABAAAD6QAAB9AAAAAPV2Vla2x5Q2hhbGxlbmdlAAAAAAM=",
+        "AAAAAAAAAAAAAAAOZGFpbHlfY2hlY2tfaW4AAAAAAAEAAAAAAAAABnBsYXllcgAAAAAAEwAAAAEAAAPpAAAABAAAAAM=",
         "AAAAAAAAACxHZXQgYSBwbGF5ZXIncyBwcm9ncmVzcyBmb3IgYSBzcGVjaWZpYyB3ZWVrLgAAABhnZXRfcGxheWVyX3Byb2dyZXNzX3dlZWsAAAACAAAAAAAAAAZwbGF5ZXIAAAAAABMAAAAAAAAAB3dlZWtfaWQAAAAABgAAAAEAAAPoAAAH0AAAAA5QbGF5ZXJQcm9ncmVzcwAA",
         "AAAAAAAAAAAAAAAJZ2V0X2FkbWluAAAAAAAAAAAAAAEAAAPoAAAAEw==",
-        "AAAAAAAAAAAAAAANX19jb25zdHJ1Y3RvcgAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAIZ2FtZV9odWIAAAATAAAAAA==",
-        "AAAAAAAAAC1HZXQgYSBwbGF5ZXIncyBwcm9ncmVzcyBmb3IgdGhlIGN1cnJlbnQgd2Vlay4AAAAAAAATZ2V0X3BsYXllcl9wcm9ncmVzcwAAAAABAAAAAAAAAAZwbGF5ZXIAAAAAABMAAAABAAAD6AAAB9AAAAAOUGxheWVyUHJvZ3Jlc3MAAA==" ]),
+        "AAAAAAAAAAAAAAANX19jb25zdHJ1Y3RvcgAAAAAAAAIAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAIZ2FtZV9odWIAAAATAAAAAA==" ]),
       options
     )
   }
   public readonly fromJSON = {
-    claim_weekly: this.txFromJSON<Result<WeeklyChallenge>>,
+    set_admin: this.txFromJSON<Result<void>>,
+        get_daily_check_in: this.txFromJSON<Option<DailyCheckIn>>,
+        get_current_challenge: this.txFromJSON<WeeklyChallenge>,
         current_week_id: this.txFromJSON<u64>,
         set_trusted_game: this.txFromJSON<Result<void>>,
-        set_admin: this.txFromJSON<Result<void>>,
-        get_current_challenge: this.txFromJSON<WeeklyChallenge>,
+        get_player_progress: this.txFromJSON<Option<PlayerProgress>>,
+        claim_weekly: this.txFromJSON<Result<WeeklyChallenge>>,
+        daily_check_in: this.txFromJSON<Result<u32>>,
         get_player_progress_week: this.txFromJSON<Option<PlayerProgress>>,
-        get_admin: this.txFromJSON<Option<string>>,
-        get_player_progress: this.txFromJSON<Option<PlayerProgress>>
+        get_admin: this.txFromJSON<Option<string>>
   }
 }
