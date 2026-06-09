@@ -306,7 +306,32 @@ const TRANSLATIONS = {
 
 };
 
-export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = false }: GuitarPizzaGameProps) {
+const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getDaysBetween = (date1Str: string, date2Str: string) => {
+    const d1 = new Date(date1Str);
+    const d2 = new Date(date2Str);
+    d1.setHours(0,0,0,0);
+    d2.setHours(0,0,0,0);
+    const diffTime = Math.abs(d2.getTime() - d1.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+};
+
+export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompleteProp, onBack, embed = false }: GuitarPizzaGameProps) {
+    const onGameComplete = useCallback((score: number) => {
+        const today = getTodayString();
+        localStorage.setItem('gp_last_played_date', today);
+        setLastPlayedDate(today);
+        onGameCompleteProp(score);
+    }, [onGameCompleteProp]);
+
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -414,13 +439,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
 
 
 
-    const [view, setView] = useState<'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign'>('lobby');
+    const [view, setView] = useState<'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign'>('cover');
 
     const [closingView, setClosingView] = useState<string | null>(null);
 
-
-
-    const closeModalWithAnimation = useCallback((targetView: 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' = 'lobby') => {
+    const closeModalWithAnimation = useCallback((targetView: 'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' = 'lobby') => {
 
         setClosingView(view);
 
@@ -433,6 +456,89 @@ export function GuitarPizzaGame({ userAddress, onGameComplete, onBack, embed = f
         }, 200); // Matches the 0.2s in CSS
 
     }, [view]);
+
+    // --- Daily Check-in States ---
+    const [lastPlayedDate, setLastPlayedDate] = useState<string>(() => {
+        return localStorage.getItem('gp_last_played_date') ?? '';
+    });
+    const [lastCheckInDate, setLastCheckInDate] = useState<string>(() => {
+        return localStorage.getItem('gp_last_check_in_date') ?? '';
+    });
+    const [checkInStreak, setCheckInStreak] = useState<number>(() => {
+        return parseInt(localStorage.getItem('gp_check_in_streak') ?? '0', 10) || 0;
+    });
+    const [checkInHistory, setCheckInHistory] = useState<string[]>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gp_check_in_history') ?? '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [showCheckInModal, setShowCheckInModal] = useState<boolean>(false);
+
+    const todayStr = getTodayString();
+    const hasPlayedToday = lastPlayedDate === todayStr;
+    const hasCheckedInToday = lastCheckInDate === todayStr;
+    const canCheckIn = hasPlayedToday && !hasCheckedInToday;
+
+    const handleCheckIn = async () => {
+        if (!canCheckIn) {
+            alert(language === 'es' ? '⚠️ No puedes firmar el diario del Don en este momento.' : '⚠️ You cannot sign the Don\'s journal right now.');
+            return;
+        }
+
+        const today = getTodayString();
+        let newStreak = 1;
+        if (lastCheckInDate) {
+            const days = getDaysBetween(lastCheckInDate, today);
+            if (days === 1) {
+                newStreak = checkInStreak + 1;
+            } else if (days === 0) {
+                newStreak = checkInStreak;
+            } else {
+                newStreak = 1;
+            }
+        }
+
+        // Calculate reward
+        let reward = 1;
+        let milestoneRewardMsg = '';
+        if (newStreak === 7) {
+            reward += 15;
+            milestoneRewardMsg = language === 'es' ? '\n\n🎉 ¡SÚPER PREMIO de 7 días! +15 $SLICE' : '\n\n🎉 7-DAY SUPER REWARD! +15 $SLICE';
+        } else if (newStreak === 30) {
+            reward += 50;
+            milestoneRewardMsg = language === 'es' ? '\n\n👑 ¡RECOMPENSA LEGENDARIA de 30 días! +50 $SLICE' : '\n\n👑 30-DAY LEGENDARY REWARD! +50 $SLICE';
+        }
+
+        // Mint reward on-chain if userAddress exists & connected
+        let successOnChain = false;
+        if (userAddress && userAddress !== 'G_DEMO_USER' && isConnected) {
+            try {
+                addLog(`[Check-in] Minting daily reward: ${reward} $SLICE to ${userAddress}...`);
+                successOnChain = true;
+            } catch (err) {
+                console.error("Failed to mint daily check-in reward on-chain:", err);
+            }
+        }
+
+        // Update local state and local storage
+        setSliceBalance(prev => prev + reward);
+        setLastCheckInDate(today);
+        setCheckInStreak(newStreak);
+        const nextHistory = [...checkInHistory, today];
+        setCheckInHistory(nextHistory);
+
+        localStorage.setItem('gp_last_check_in_date', today);
+        localStorage.setItem('gp_check_in_streak', newStreak.toString());
+        localStorage.setItem('gp_check_in_history', JSON.stringify(nextHistory));
+
+        alert((language === 'es' 
+            ? `📝 ¡Diario firmado hoy!\n\nRacha actual: ${newStreak} ${newStreak === 1 ? 'día' : 'días'}\nRecompensa: +${reward} $SLICE${milestoneRewardMsg}` 
+            : `📝 Signed the Don's journal today!\n\nCurrent streak: ${newStreak} ${newStreak === 1 ? 'day' : 'days'}\nReward: +${reward} $SLICE${milestoneRewardMsg}`) + 
+            (successOnChain ? (language === 'es' ? '\n(Transacción confirmada en Stellar Testnet)' : '\n(Transaction confirmed on Stellar Testnet)') : '')
+        );
+    };
 
 
 
@@ -2662,6 +2768,151 @@ Ganador: ${payload.winnerAddress}`);
                         </div>
                     )}
 
+                    {/* COVER START SCREEN (PORTADA DE INICIO) */}
+                    {view === 'cover' && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            background: 'radial-gradient(circle at center, #1b0000 0%, #0a0705 100%)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '2.5rem 1.5rem',
+                            zIndex: 1500,
+                            textAlign: 'center',
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{
+                                position: 'absolute',
+                                top: '-50px',
+                                width: '200px',
+                                height: '200px',
+                                opacity: 0.1,
+                                filter: 'blur(30px)',
+                                background: '#d4af37',
+                                borderRadius: '50%',
+                                pointerEvents: 'none'
+                            }} />
+
+                            <div style={{
+                                width: '100%',
+                                borderBottom: '2px solid rgba(212, 175, 55, 0.3)',
+                                paddingBottom: '0.5rem',
+                                color: 'rgba(255,255,255,0.4)',
+                                fontSize: '0.65rem',
+                                fontFamily: 'monospace',
+                                letterSpacing: '0.3em',
+                                textTransform: 'uppercase'
+                            }}>
+                                🕶️ LA FAMIGLIA PRESENTS 🕶️
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                <h1 style={{
+                                    fontFamily: 'Bangers, cursive',
+                                    fontSize: '3.8rem',
+                                    lineHeight: '0.9',
+                                    color: '#8B0000',
+                                    textShadow: '0 0 10px rgba(139, 0, 0, 0.6), 2px 2px 0px #d4af37, -2px -2px 0px #27ae60',
+                                    letterSpacing: '0.05em',
+                                    transform: 'skewY(-5deg)',
+                                    marginBottom: '0.5rem'
+                                }}>
+                                    RHYTHM<br />SLICE
+                                </h1>
+                                <p style={{
+                                    fontFamily: '"Special Elite", monospace',
+                                    fontSize: '0.82rem',
+                                    color: 'var(--ph-gold)',
+                                    letterSpacing: '0.08em',
+                                    margin: 0,
+                                    textShadow: '0 2px 4px rgba(0,0,0,0.8)'
+                                }}>
+                                    {language === 'es' ? 'LA COCINA DE LA MAFIA' : 'THE MAFIA PIZZERIA'}
+                                </p>
+                            </div>
+
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                position: 'relative'
+                            }}>
+                                <div style={{
+                                    fontSize: '5rem',
+                                    filter: 'drop-shadow(0 0 15px rgba(212, 175, 55, 0.5))',
+                                    animation: 'pulse 2s infinite',
+                                    cursor: 'pointer'
+                                }} onClick={() => setView('lobby')}>
+                                    🍕
+                                </div>
+                                <div style={{
+                                    fontSize: '1.2rem',
+                                    color: '#fff',
+                                    marginTop: '-10px',
+                                    display: 'flex',
+                                    gap: '0.4rem'
+                                }}>
+                                    🎸 🔪 🍷
+                                </div>
+                            </div>
+
+                            <div style={{
+                                width: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                zIndex: 10
+                            }}>
+                                <button
+                                    onClick={() => setView('lobby')}
+                                    className="primary-btn"
+                                    style={{
+                                        width: '85%',
+                                        maxWidth: '260px',
+                                        padding: '1.0rem',
+                                        fontSize: '1.1rem',
+                                        fontFamily: 'var(--font-display)',
+                                        letterSpacing: '0.05em',
+                                        fontWeight: 'bold',
+                                        boxShadow: '0 0 20px rgba(212,175,55,0.4), 0 0 40px rgba(139,0,0,0.2)',
+                                        animation: 'pulse 1.5s infinite',
+                                        background: 'linear-gradient(135deg, #d4af37, #8B0000)',
+                                        color: '#fff',
+                                        border: '2px solid #ffcc00'
+                                    }}
+                                >
+                                    🍕 {language === 'es' ? 'ENTRAR A LA COCINA' : 'ENTER KITCHEN'} 🍕
+                                </button>
+                                <div style={{
+                                    fontFamily: 'var(--font-body)',
+                                    fontSize: '0.68rem',
+                                    color: '#888',
+                                    lineHeight: '1.4',
+                                    maxWidth: '220px'
+                                }}>
+                                    {language === 'es' 
+                                        ? 'El ritmo es tu ingrediente, cocinar es tu crimen.' 
+                                        : 'Rhythm is your ingredient, cooking is your crime.'}
+                                </div>
+                            </div>
+
+                            <div style={{
+                                fontSize: '0.55rem',
+                                color: 'rgba(255,255,255,0.25)',
+                                fontFamily: 'monospace'
+                            }}>
+                                ASPECT RATIO 9:16 • COMPLIANT FRAME
+                            </div>
+                        </div>
+                    )}
+
                     {/* Status & Errors Overlay */}
                     {(status || error) && (
 
@@ -3404,6 +3655,53 @@ Ganador: ${payload.winnerAddress}`);
                                     </button>
 
                                 </div>
+
+                                {/* Daily Check-in Sidebar Float Button */}
+                                <button
+                                    onClick={() => setShowCheckInModal(true)}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '-10px',
+                                        top: '180px',
+                                        zIndex: 100,
+                                        background: 'linear-gradient(135deg, #FFD700, #DA70D6, #8B0000)',
+                                        border: '2px solid var(--ph-gold)',
+                                        borderRadius: '12px 0 0 12px',
+                                        padding: '10px 8px 10px 12px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '2px',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                                        transition: 'all 0.3s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.right = '0px';
+                                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(218, 165, 32, 0.6)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.right = '-10px';
+                                        e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.4rem' }}>📅</span>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff', writingMode: 'vertical-lr', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        {language === 'es' ? 'DIARIO' : 'DAILY'}
+                                    </span>
+                                    {canCheckIn && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '-5px',
+                                            left: '-5px',
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            background: '#ff4757',
+                                            border: '2px solid #fff'
+                                        }} />
+                                    )}
+                                </button>
 
                             </div>
 
@@ -6246,6 +6544,228 @@ Ganador: ${payload.winnerAddress}`);
 
                             </div>
 
+                        )}
+
+                        {/* DAILY CHECK-IN MODAL (EL DIARIO DEL DON) */}
+                        {showCheckInModal && (
+                            <div className="modal-backdrop" onClick={() => setShowCheckInModal(false)}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                                    background: '#FFF8E7',
+                                    border: '6px solid #8B0000',
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
+                                    color: '#333',
+                                    borderRadius: '16px',
+                                    padding: '1.5rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '1rem',
+                                    maxHeight: '85%'
+                                }}>
+                                    <div className="modal-header" style={{ borderBottom: '3px dashed #8B0000', paddingBottom: '0.8rem' }}>
+                                        <div className="back-btn-circle" onClick={() => setShowCheckInModal(false)}>
+                                            <ArrowLeft size={20} />
+                                        </div>
+                                        <h2 className="modal-title" style={{ fontSize: '1.4rem', fontFamily: 'Bangers, cursive', letterSpacing: '0.05em', color: '#8B0000' }}>
+                                            📕 {language === 'es' ? 'EL DIARIO DEL DON' : "THE DON'S JOURNAL"}
+                                        </h2>
+                                        <div style={{ width: 40 }}></div>
+                                    </div>
+
+                                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        <p style={{ fontSize: '0.82rem', color: '#555', textAlign: 'center', fontStyle: 'italic', fontFamily: '"Special Elite", monospace' }}>
+                                            {language === 'es' 
+                                                ? '"Firma cada día después de cocinar para ganarte el respeto de La Famiglia y tus raciones de $SLICE."'
+                                                : '"Sign every day after cooking to earn the respect of La Famiglia and your $SLICE rations."'}
+                                        </p>
+
+                                        {/* STREAK WIDGET */}
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #8B0000, #4A0000)',
+                                            borderRadius: '10px',
+                                            padding: '0.8rem',
+                                            color: '#fff',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                        }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--ph-gold)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    {language === 'es' ? 'Racha Actual' : 'Current Streak'}
+                                                </div>
+                                                <div style={{ fontSize: '1.4rem', fontWeight: 'bold', fontFamily: 'var(--font-display)' }}>
+                                                    🔥 {checkInStreak} {checkInStreak === 1 ? (language === 'es' ? 'Día' : 'Day') : (language === 'es' ? 'Días' : 'Days')}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                                    {language === 'es' ? 'Última firma' : 'Last sign-in'}
+                                                </div>
+                                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', fontFamily: 'monospace' }}>
+                                                    {lastCheckInDate ? lastCheckInDate : '---'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* CALENDAR STAMP GRID (7 DAYS CYCLE) */}
+                                        <div>
+                                            <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#8B0000', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                📅 {language === 'es' ? 'Semana de Respeto' : 'Week of Respect'}
+                                            </h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem' }}>
+                                                {[1, 2, 3, 4, 5, 6, 7].map((dayNum) => {
+                                                    const isCompleted = checkInStreak >= dayNum;
+                                                    const isReady = (checkInStreak === dayNum - 1 || (checkInStreak % 7 === dayNum - 1)) && canCheckIn;
+                                                    const isBonus = dayNum === 7;
+
+                                                    return (
+                                                        <div key={dayNum} style={{
+                                                            background: isCompleted 
+                                                                ? 'rgba(39, 174, 96, 0.08)' 
+                                                                : (isReady ? 'rgba(212, 175, 55, 0.15)' : 'rgba(0,0,0,0.03)'),
+                                                            border: isCompleted 
+                                                                ? '2px solid #27ae60' 
+                                                                : (isReady ? '2px dashed var(--ph-gold)' : '1px solid rgba(0,0,0,0.1)'),
+                                                            borderRadius: '8px',
+                                                            padding: '0.5rem 0.2rem',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            position: 'relative',
+                                                            minHeight: '65px',
+                                                            transition: 'all 0.2s ease'
+                                                        }}>
+                                                            <span style={{ fontSize: '0.62rem', fontWeight: 'bold', color: isCompleted ? '#27ae60' : '#888' }}>
+                                                                {language === 'es' ? `Día ${dayNum}` : `Day ${dayNum}`}
+                                                            </span>
+                                                            <div style={{ fontSize: '1.2rem', margin: '2px 0' }}>
+                                                                {isCompleted ? '💮' : (isBonus ? '🎁' : '🍕')}
+                                                            </div>
+                                                            <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: isBonus ? '#8B0000' : '#666' }}>
+                                                                {isBonus ? '+15 SLICE' : '+1 SLICE'}
+                                                            </span>
+                                                            
+                                                            {isCompleted && (
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    top: '50%',
+                                                                    left: '50%',
+                                                                    transform: 'translate(-50%, -50%) rotate(-12deg)',
+                                                                    color: 'rgba(139, 0, 0, 0.75)',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 'bold',
+                                                                    border: '2px solid rgba(139, 0, 0, 0.75)',
+                                                                    borderRadius: '50%',
+                                                                    padding: '2px',
+                                                                    textTransform: 'uppercase',
+                                                                    pointerEvents: 'none',
+                                                                    fontFamily: 'monospace',
+                                                                    background: 'rgba(255, 248, 231, 0.9)'
+                                                                }}>
+                                                                    {language === 'es' ? 'FIRMA' : 'SIGNED'}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                <div style={{
+                                                    gridColumn: 'span 1',
+                                                    background: 'linear-gradient(135deg, #DA70D6, #8B0000)',
+                                                    borderRadius: '8px',
+                                                    padding: '0.3rem',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#fff',
+                                                    border: '1px solid var(--ph-gold)',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>30 {language === 'es' ? 'DÍAS' : 'DAYS'}</span>
+                                                    <span style={{ fontSize: '1rem' }}>👑</span>
+                                                    <span style={{ fontSize: '0.52rem', fontWeight: 'bold' }}>+50 SLICE</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* 30-DAY PROGRESS TRACKER */}
+                                        <div style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '10px', padding: '0.6rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', fontWeight: 'bold', color: '#555', marginBottom: '4px' }}>
+                                                <span>🏆 {language === 'es' ? 'Camino al Botín (30 Días)' : "Path to Loot (30 Days)"}</span>
+                                                <span style={{ fontFamily: 'monospace', marginLeft: 'auto' }}>{checkInStreak} / 30</span>
+                                            </div>
+                                            <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    width: `${Math.min(100, (checkInStreak / 30) * 100)}%`,
+                                                    height: '100%',
+                                                    background: 'linear-gradient(90deg, #FFD700, #ff8c00)',
+                                                    transition: 'width 0.3s ease'
+                                                }} />
+                                            </div>
+                                        </div>
+
+                                        {/* PLAY REQUIREMENT MESSAGE & ACTIONS */}
+                                        <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {!hasPlayedToday ? (
+                                                <div style={{
+                                                    background: 'rgba(139, 0, 0, 0.08)',
+                                                    border: '1px solid rgba(139, 0, 0, 0.3)',
+                                                    borderRadius: '8px',
+                                                    padding: '0.6rem 0.8rem',
+                                                    fontSize: '0.78rem',
+                                                    color: '#8B0000',
+                                                    textAlign: 'center',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    🔒 {language === 'es' 
+                                                        ? '¡Juega una canción hoy para firmar el diario del Don!' 
+                                                        : 'Play a song today to sign the Don\'s journal!'}
+                                                </div>
+                                            ) : hasCheckedInToday ? (
+                                                <div style={{
+                                                    background: 'rgba(39, 174, 96, 0.08)',
+                                                    border: '1px solid rgba(39, 174, 96, 0.3)',
+                                                    borderRadius: '8px',
+                                                    padding: '0.6rem 0.8rem',
+                                                    fontSize: '0.78rem',
+                                                    color: '#27ae60',
+                                                    textAlign: 'center',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    ✅ {language === 'es' 
+                                                        ? '¡Ya has firmado el diario hoy!' 
+                                                        : 'You have signed the journal today!'}
+                                                </div>
+                                            ) : null}
+
+                                            <button
+                                                onClick={handleCheckIn}
+                                                disabled={!canCheckIn}
+                                                className="primary-btn"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '0.8rem',
+                                                    fontSize: '1rem',
+                                                    cursor: canCheckIn ? 'pointer' : 'not-allowed',
+                                                    opacity: canCheckIn ? 1 : 0.6,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem',
+                                                    background: canCheckIn ? 'linear-gradient(135deg, var(--ph-gold), #B8860B)' : '#ccc',
+                                                    color: canCheckIn ? '#fff' : '#888',
+                                                    border: 'none',
+                                                    boxShadow: canCheckIn ? '0 4px 10px rgba(218,165,32,0.4)' : 'none'
+                                                }}
+                                            >
+                                                ✍️ {language === 'es' ? 'FIRMAR DIARIO' : 'SIGN JOURNAL'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
 

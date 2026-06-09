@@ -31,6 +31,38 @@ Rhythm Slice has transitioned from a single-player hackathon proof-of-concept in
 - **Refrigerator Vault (`refrigerator-vault`)**: To prevent ingredient spoilage/expiration after 7 days, players can pay a 0.5 `$SLICE` fee to lock ingredients in cold storage.
 - **Pizza Baking (`pizza-baking` / El Horno)**: Players bake complex recipes using raw ingredients to earn `$SLICE` payouts. Baking speed and payouts are boosted by equipped Oven NFTs (e.g. Boss, Consigliere, Don de la Masa).
 
+```mermaid
+flowchart TD
+    subgraph JUEGO [1. Gameplay & ZK Proofs]
+        Play[Play Rhythm Slice Game] -->|Hits/Misses/Traps Log| zkVM[RISC Zero zkVM]
+        zkVM -->|Generate Proof| ZKProof[ZK Proof-of-Play]
+        ZKProof -->|Verify on-chain| GPContract[guitar-pizza Contract]
+    end
+
+    subgraph ECO [2. Circular Tokenomics Loop]
+        GPContract -->|Reward Drop| SLICE[Earn $SLICE Tokens]
+        GPContract -->|Ingredients Drop| Ingredients[Cheese, Pepperoni, Bacon, Onion]
+        
+        SLICE -->|Stake in Horno| Staking[staking-vault Contract]
+        Staking -->|Generate extra| Ingredients
+        
+        Ingredients -->|7 Days Decay Spoilage| Spoil{How to protect?}
+        Spoil -->|Pay 0.5 $SLICE fee| Fridge[refrigerator-vault Contract]
+        Fridge -->|Preserve forever| LockedIngredients[Frozen Ingredients]
+        
+        Ingredients & LockedIngredients -->|Select recipe| Oven[pizza-baking Contract]
+        Oven -->|Bake / Burn Ingredients| BurnIngs[Burn Ingredients]
+        Oven -->|Multipliers Boost| OvenNFTs[Equipped Oven NFTs]
+        BurnIngs & OvenNFTs -->|Big Payout| SLICE
+    end
+
+    subgraph DUEL [3. PvP Escrow Dueling]
+        SLICE -->|Lock 5/10/25 $SLICE Wager| Escrow[pvp-escrow Contract]
+        Escrow -->|WebSocket Duel Match| PvP[Real-Time Battle]
+        PvP -->|Highest ZK Verified Score Wins| Winner[Claim Escrow Pool]
+    end
+```
+
 ---
 
 ## 🎯 For Judges: How ZK Powers the Game
