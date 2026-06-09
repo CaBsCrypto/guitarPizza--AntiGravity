@@ -329,8 +329,10 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         const today = getTodayString();
         localStorage.setItem('gp_last_played_date', today);
         setLastPlayedDate(today);
+        // Complete Quest 2: Ryhthm Maestro
+        incrementQuestProgress(1, 1);
         onGameCompleteProp(score);
-    }, [onGameCompleteProp]);
+    }, [onGameCompleteProp, incrementQuestProgress]);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -537,6 +539,98 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             ? `📝 ¡Diario firmado hoy!\n\nRacha actual: ${newStreak} ${newStreak === 1 ? 'día' : 'días'}\nRecompensa: +${reward} $SLICE${milestoneRewardMsg}` 
             : `📝 Signed the Don's journal today!\n\nCurrent streak: ${newStreak} ${newStreak === 1 ? 'day' : 'days'}\nReward: +${reward} $SLICE${milestoneRewardMsg}`) + 
             (successOnChain ? (language === 'es' ? '\n(Transacción confirmada en Stellar Testnet)' : '\n(Transaction confirmed on Stellar Testnet)') : '')
+        );
+    };
+
+    // --- Rare Ingredients State ---
+    const [rareIngredients, setRareIngredients] = useState<{truffle: number; caviar: number; fig: number; goldFlakes: number}>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gp_rare_ingredients') ?? '{"truffle":0,"caviar":0,"fig":0,"goldFlakes":0}');
+        } catch {
+            return { truffle: 0, caviar: 0, fig: 0, goldFlakes: 0 };
+        }
+    });
+
+    useEffect(() => {
+        localStorage.setItem('gp_rare_ingredients', JSON.stringify(rareIngredients));
+    }, [rareIngredients]);
+
+    // --- Daily Quests States ---
+    const [dailyQuestProgress, setDailyQuestProgress] = useState<number[]>(() => {
+        try {
+            const savedDate = localStorage.getItem('gp_daily_quests_date');
+            const today = getTodayString();
+            if (savedDate === today) {
+                return JSON.parse(localStorage.getItem('gp_daily_quests_progress') ?? '[0, 0, 0]');
+            }
+        } catch {}
+        return [0, 0, 0];
+    });
+
+    const [dailyQuestClaimed, setDailyQuestClaimed] = useState<boolean[]>(() => {
+        try {
+            const savedDate = localStorage.getItem('gp_daily_quests_date');
+            const today = getTodayString();
+            if (savedDate === today) {
+                return JSON.parse(localStorage.getItem('gp_daily_quests_claimed') ?? '[false, false, false]');
+            }
+        } catch {}
+        return [false, false, false];
+    });
+
+    const [showQuestsModal, setShowQuestsModal] = useState<boolean>(false);
+
+    // Sync Daily Quests to LocalStorage
+    useEffect(() => {
+        const today = getTodayString();
+        localStorage.setItem('gp_daily_quests_date', today);
+        localStorage.setItem('gp_daily_quests_progress', JSON.stringify(dailyQuestProgress));
+        localStorage.setItem('gp_daily_quests_claimed', JSON.stringify(dailyQuestClaimed));
+    }, [dailyQuestProgress, dailyQuestClaimed]);
+
+    // Helper to increment quest progress
+    const incrementQuestProgress = useCallback((questIndex: number, amount: number = 1) => {
+        setDailyQuestProgress(prev => {
+            const next = [...prev];
+            const targets = [2, 1, 1]; // Targets: 2 pizzas, 1 score completed, 1 wood speedup/stake
+            next[questIndex] = Math.min(targets[questIndex], next[questIndex] + amount);
+            return next;
+        });
+    }, []);
+
+    const claimQuestReward = (questIndex: number) => {
+        const targets = [2, 1, 1];
+        if (dailyQuestProgress[questIndex] < targets[questIndex]) return;
+        if (dailyQuestClaimed[questIndex]) return;
+
+        // Give reward based on index
+        setRareIngredients(prev => {
+            const next = { ...prev };
+            if (questIndex === 0) {
+                next.truffle += 1;
+            } else if (questIndex === 1) {
+                next.fig += 1;
+            } else if (questIndex === 2) {
+                next.goldFlakes += 1;
+            }
+            return next;
+        });
+
+        setDailyQuestClaimed(prev => {
+            const next = [...prev];
+            next[questIndex] = true;
+            return next;
+        });
+
+        const rewardLabel = questIndex === 0 
+            ? (language === 'es' ? '🍄 1 Trufa Negra' : '🍄 1 Black Truffle')
+            : (questIndex === 1 
+                ? (language === 'es' ? '🍇 1 Higo Silvestre' : '🍇 1 Wild Fig')
+                : (language === 'es' ? '✨ 1 Lámina de Oro' : '✨ 1 Gold Flake'));
+
+        alert(language === 'es' 
+            ? `🎁 ¡Recompensa reclamada!\nObtuviste: ${rewardLabel}`
+            : `🎁 Reward Claimed!\nYou obtained: ${rewardLabel}`
         );
     };
 
@@ -826,7 +920,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
         status: 'idle' | 'baking' | 'completed';
 
-        pizzaType: 'margherita' | 'pepperoni' | 'special' | null;
+        pizzaType: 'margherita' | 'pepperoni' | 'special' | 'tartufo' | 'dolce' | 'mafia' | null;
 
         startTime: number | null;
 
@@ -959,7 +1053,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
                                         ? 'margherita' 
 
-                                        : (onChainSlot.recipeId === 2 ? 'pepperoni' : (onChainSlot.recipeId === 3 ? 'special' : null)),
+                                        : (onChainSlot.recipeId === 2 ? 'pepperoni' : (onChainSlot.recipeId === 3 ? 'special' : (onChainSlot.recipeId === 4 ? 'tartufo' : (onChainSlot.recipeId === 5 ? 'dolce' : (onChainSlot.recipeId === 6 ? 'mafia' : null))))),
 
                                     startTime: onChainSlot.startTime,
 
@@ -1227,57 +1321,71 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-    const getBakeConfig = (recipe: 'margherita' | 'pepperoni' | 'special') => {
-
+    const getBakeConfig = (recipe: 'margherita' | 'pepperoni' | 'special' | 'tartufo' | 'dolce' | 'mafia') => {
         switch (recipe) {
-
             case 'margherita': return { label: '🍕 Margherita', duration: 10000, cost: { cheese: 2 }, payout: 15 };
-
             case 'pepperoni': return { label: '🍖 Pepperoni', duration: 30000, cost: { cheese: 2, pepperoni: 2 }, payout: 40 };
-
             case 'special': return { label: '⭐ Speciale', duration: 60000, cost: { cheese: 2, pepperoni: 2, bacon: 2, onion: 2 }, payout: 100 };
-
+            case 'tartufo': return { label: '🍄 Tartufo Prestigio', duration: 45000, cost: { cheese: 2, pepperoni: 1, truffle: 1 }, payout: 120 };
+            case 'dolce': return { label: '🍇 Dolce Vita', duration: 40000, cost: { cheese: 2, onion: 1, fig: 1 }, payout: 100 };
+            case 'mafia': return { label: '👑 della Mafia', duration: 90000, cost: { cheese: 2, bacon: 2, caviar: 1, goldFlakes: 1 }, payout: 250 };
         }
-
     };
 
-
-
-    const startBaking = async (slotId: number, recipe: 'margherita' | 'pepperoni' | 'special') => {
-
+    const startBaking = async (slotId: number, recipe: 'margherita' | 'pepperoni' | 'special' | 'tartufo' | 'dolce' | 'mafia') => {
         const config = getBakeConfig(recipe);
-
         if (!config) return;
 
+        // Check and deduct fuel cost
+        let fuelCost = 0.0;
+        if (selectedFuel === 'cherry') fuelCost = 0.5;
+        else if (selectedFuel === 'mesquite') fuelCost = 1.2;
 
-
-        // Check ingredients
-
-        const nextIngredients = { ...ingredients };
-
-        for (const [ing, required] of Object.entries(config.cost)) {
-
-            if ((nextIngredients as any)[ing] < required) {
-
-                alert(`⚠️ No tienes suficientes ingredientes para hornear esta pizza. Necesitas ${required} ${ing}.`);
-
+        if (fuelCost > 0) {
+            if (sliceBalance < fuelCost) {
+                alert(language === 'es' 
+                    ? `⚠️ Saldo de $SLICE insuficiente para comprar leña de cerezo/mezquite (${fuelCost} SLICE).` 
+                    : `⚠️ Insufficient $SLICE balance to purchase wood fuel (${fuelCost} SLICE).`
+                );
                 return;
-
             }
-
+            setSliceBalance(prev => Math.max(0, prev - fuelCost));
+            // Complete Quest 3: Elite Patron
+            incrementQuestProgress(2, 1);
         }
 
-
-
-        // Deduct local ingredients
+        // Check ingredients
+        const nextIngredients = { ...ingredients };
+        const nextRareIngredients = { ...rareIngredients };
 
         for (const [ing, required] of Object.entries(config.cost)) {
+            if (ing in nextIngredients) {
+                if ((nextIngredients as any)[ing] < required) {
+                    alert(`⚠️ No tienes suficientes ingredientes para hornear esta pizza. Necesitas ${required} ${ing}.`);
+                    return;
+                }
+            } else if (ing in nextRareIngredients) {
+                if ((nextRareIngredients as any)[ing] < required) {
+                    alert(`⚠️ No tienes suficientes ingredientes de prestigio. Necesitas ${required} ${ing}.`);
+                    return;
+                }
+            } else {
+                alert(`⚠️ Ingrediente desconocido: ${ing}`);
+                return;
+            }
+        }
 
-            (nextIngredients as any)[ing] -= required;
-
+        // Deduct local ingredients
+        for (const [ing, required] of Object.entries(config.cost)) {
+            if (ing in nextIngredients) {
+                (nextIngredients as any)[ing] -= required;
+            } else if (ing in nextRareIngredients) {
+                (nextRareIngredients as any)[ing] -= required;
+            }
         }
 
         setIngredients(nextIngredients);
+        setRareIngredients(nextRareIngredients);
 
 
 
@@ -1359,7 +1467,7 @@ Ganador: ${payload.winnerAddress}`);
 
             try {
 
-                const recipeId = recipe === 'margherita' ? 1 : (recipe === 'pepperoni' ? 2 : 3);
+                const recipeId = recipe === 'margherita' ? 1 : (recipe === 'pepperoni' ? 2 : (recipe === 'special' ? 3 : (recipe === 'tartufo' ? 4 : (recipe === 'dolce' ? 5 : 6))));
 
                 const signer = getContractSignerRef.current();
 
@@ -1468,6 +1576,8 @@ Ganador: ${payload.winnerAddress}`);
         // Add to SLICE balance and reset slot
 
         setSliceBalance(prev => prev + payout);
+        // Complete Quest 1: Pizza Apprentice
+        incrementQuestProgress(0, 1);
 
         setOvenSlots(prev => prev.map(s => {
 
@@ -5161,6 +5271,138 @@ Ganador: ${payload.winnerAddress}`);
                                                                             <span>⭐ Speciale (60s)</span>
 
                                                                             <span style={{ color: (ingredients.cheese >= 2 && ingredients.pepperoni >= 2 && ingredients.bacon >= 2 && ingredients.onion >= 2) ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>Todo 2+</span>
+
+                                                                        </button>
+
+
+
+                                                                        {/* Recipe Tartufo (Prestige) */}
+
+                                                                        <button
+
+                                                                            onClick={() => startBaking(slot.id, 'tartufo')}
+
+                                                                            style={{
+
+                                                                                display: 'flex',
+
+                                                                                justifyContent: 'space-between',
+
+                                                                                alignItems: 'center',
+
+                                                                                padding: '0.2rem 0.4rem',
+
+                                                                                background: 'rgba(139, 92, 246, 0.15)',
+
+                                                                                border: '1px solid rgba(139, 92, 246, 0.3)',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: '#d8b4fe',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                width: '100%',
+
+                                                                                marginTop: '0.2rem'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            <span>🍄 Tartufo (45s)</span>
+
+                                                                            <span style={{ color: (ingredients.cheese >= 2 && ingredients.pepperoni >= 1 && rareIngredients.truffle >= 1) ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>🍄 {rareIngredients.truffle}/1</span>
+
+                                                                        </button>
+
+
+
+                                                                        {/* Recipe Dolce Vita (Prestige) */}
+
+                                                                        <button
+
+                                                                            onClick={() => startBaking(slot.id, 'dolce')}
+
+                                                                            style={{
+
+                                                                                display: 'flex',
+
+                                                                                justifyContent: 'space-between',
+
+                                                                                alignItems: 'center',
+
+                                                                                padding: '0.2rem 0.4rem',
+
+                                                                                background: 'rgba(139, 92, 246, 0.15)',
+
+                                                                                border: '1px solid rgba(139, 92, 246, 0.3)',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: '#d8b4fe',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                width: '100%',
+
+                                                                                marginTop: '0.2rem'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            <span>🍇 Dolce Vita (40s)</span>
+
+                                                                            <span style={{ color: (ingredients.cheese >= 2 && ingredients.onion >= 1 && rareIngredients.fig >= 1) ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>🍇 {rareIngredients.fig}/1</span>
+
+                                                                        </button>
+
+
+
+                                                                        {/* Recipe della Mafia (Prestige) */}
+
+                                                                        <button
+
+                                                                            onClick={() => startBaking(slot.id, 'mafia')}
+
+                                                                            style={{
+
+                                                                                display: 'flex',
+
+                                                                                justifyContent: 'space-between',
+
+                                                                                alignItems: 'center',
+
+                                                                                padding: '0.2rem 0.4rem',
+
+                                                                                background: 'rgba(217, 70, 239, 0.2)',
+
+                                                                                border: '1px solid rgba(217, 70, 239, 0.4)',
+
+                                                                                borderRadius: '4px',
+
+                                                                                color: '#f472b6',
+
+                                                                                fontSize: '0.6rem',
+
+                                                                                cursor: 'pointer',
+
+                                                                                width: '100%',
+
+                                                                                marginTop: '0.2rem'
+
+                                                                            }}
+
+                                                                        >
+
+                                                                            <span>👑 della Mafia (90s)</span>
+
+                                                                            <span style={{ color: (ingredients.cheese >= 2 && ingredients.bacon >= 2 && rareIngredients.caviar >= 1 && rareIngredients.goldFlakes >= 1) ? '#2ecc71' : '#e74c3c', fontWeight: 'bold' }}>✨ {rareIngredients.goldFlakes}/1</span>
 
                                                                         </button>
 
