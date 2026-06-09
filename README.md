@@ -1,35 +1,29 @@
-# 🍕 Rhythm Slice — ZK-Verified Rhythm Game on Stellar
+# 🍕 Rhythm Slice — ZK-Verified Mafia Pizzeria Rhythm Game on Stellar
 
-> **Stellar Hacks: ZK Gaming Hackathon submission**
-> A rhythm game where every score is cryptographically proven — not just recorded.
+> **Stellar Hacks: ZK Gaming Hackathon Submission**  
+> A premium retro-arcade style rhythm game where every note hit and pizza baked is cryptographically proven off-chain and verified on-chain.
 
-[![Live Demo](https://img.shields.io/badge/🎮_Play_Now-rhythmslice.spicycrust.com-yellow)](https://rhythmslice.spicycrust.com)
-[![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-blue)](https://stellar.org)
-[![ZK Verified](https://img.shields.io/badge/ZK-RISC%20Zero-purple)](https://dev.risczero.com/)
-[![Soroban SDK](https://img.shields.io/badge/Soroban-25.0.2-orange)](https://soroban.stellar.org)
-
-**[→ Play it now: rhythmslice.spicycrust.com](https://rhythmslice.spicycrust.com)**
+<div align="center">
+  <img src="stellar-game-studio/sgs_frontend/public/game/assets/Benny.png" width="300" alt="Benny the Cook" style="border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+  <br />
+  <a href="https://rhythmslice.spicycrust.com"><strong>🎮 Play Live Demo: rhythmslice.spicycrust.com</strong></a>
+</div>
 
 ---
 
-## ⚡ Post-Hackathon Major Web3 Upgrades
+## 🌟 The Concept: Welcome to La Cucina of the Pizza Mafia
 
-Rhythm Slice has transitioned from a single-player hackathon proof-of-concept into a **fully featured Web3 gaming ecosystem** featuring a non-custodial biometric onboarding flow, real-time multiplayer wagers, and a multi-contract circular economy.
+In **Rhythm Slice**, you don't just click circles or press buttons — you are **Benny the Cook**, baking under the strict supervision of the Pizza Mafia. 
 
-### 🔑 1. Biometric Onboarding (Passkeys)
-- **Keyless Non-Custodial Wallets**: Integrated WebAuthn / Passkeys (supporting Windows Hello, TouchID/FaceID, or local device PIN).
-- **Zero Friction**: Players can sign up and sign Stellar transactions using their device's built-in biometrics without installing external browser extensions (like Freighter/Albedo).
+Every level is a song chart where you must hit key ingredients (Cheese, Pepperoni, Bacon, Onion) on the beat while avoiding toxic traps (spilled sauce, spoiled toppings). The better you play, the more ingredients you harvest. 
 
-### 📡 2. Real-Time PVP Multiplayer
-- **Matchmaking & Rooms**: Custom signaling server running on WebSockets for public queue matchmaking and private "La Famiglia" lobby invitations.
-- **Latency & Countdown Sync**: Integrated server-side timestamped synchronization (`startTime` broadcast) with 100ms client-side latency compensation. Both players start the song and note charts at the exact same millisecond.
-- **Tug-of-War HUD**: Real-time visual Tension Bar representing score differentials, accompanied by reactive rival avatars representing misses, combo streaks, and Fever triggers.
-- **PVP Escrow**: Multi-contract wager resolution locked in `pvp-escrow` where winner takes the pool based on verified ZK proofs.
+But there's a catch: **La Casa does not trust a cook's word.** To claim your rewards, you must submit a cryptographically verified **Zero-Knowledge Proof (ZK Proof)** of your gameplay session, generated in your browser using **RISC Zero zkVM**.
 
-### 🔄 3. Circular Tokenomics Ecosystem
-- **Staking Vault (`staking-vault`)**: Users stake `$SLICE` in the vault to generate fresh pizza ingredients (Cheese, Pepperoni, Bacon, Onion) over ledger blocks.
-- **Refrigerator Vault (`refrigerator-vault`)**: To prevent ingredient spoilage/expiration after 7 days, players can pay a 0.5 `$SLICE` fee to lock ingredients in cold storage.
-- **Pizza Baking (`pizza-baking` / El Horno)**: Players bake complex recipes using raw ingredients to earn `$SLICE` payouts. Baking speed and payouts are boosted by equipped Oven NFTs (e.g. Boss, Consigliere, Don de la Masa).
+---
+
+## 🔄 The $SLICE Circular Economy
+
+Rhythm Slice features a fully closed, multi-contract economic loop designed to encourage constant play, strategic staking, and NFT utilization:
 
 ```mermaid
 flowchart TD
@@ -54,6 +48,8 @@ flowchart TD
         Oven -->|Bake / Burn Ingredients| BurnIngs[Burn Ingredients]
         Oven -->|Multipliers Boost| OvenNFTs[Equipped Oven NFTs]
         BurnIngs & OvenNFTs -->|Big Payout| SLICE
+      
+        Oven -->|Elite Wood Fuel: Cherry/Mesquite| Fuel[Burn $SLICE for Payout Boost]
     end
 
     subgraph DUEL [3. PvP Escrow Dueling]
@@ -63,94 +59,90 @@ flowchart TD
     end
 ```
 
----
+### 1. Timed-Baking (El Horno de la Famiglia)
+Once you have harvested ingredients, enter the bakery. Choose from multiple recipes to bake:
+*   **🍕 Margherita**: Basic recipe (10 seconds, pays out 15 $SLICE).
+*   **🍖 Pepperoni**: Medium recipe (30 seconds, pays out 40 $SLICE).
+*   **⭐ Speciale**: Advanced recipe (60 seconds, pays out 100 $SLICE).
+*   **🍄 Tartufo Prestigio, Dolce Vita & della Mafia**: Premium prestige recipes requiring rare ingredients (earned from daily quests) paying up to **250 $SLICE**.
+*   **🔥 Wood Fuel Selection**: Boost your ovens by selecting premium wood! Standard wood is free, while **Cherry Wood (0.5 $SLICE)** and **Mesquite Wood (1.2 $SLICE)** speed up baking times and boost yield.
 
-## 🎯 For Judges: How ZK Powers the Game
+### 2. Ingredient Spoilage & Cold Storage
+Raw ingredients expire and rot after **7 days**. To protect your culinary capital, deposit your ingredients into the `refrigerator-vault` contract by paying a flat **0.5 $SLICE fee**. Frozen ingredients are preserved indefinitely.
 
-ZK is the gating mechanism for every single on-chain action. **Nothing touches the blockchain without a proof.**
-
-### The Core Flow
-
-```
-Player plays Rhythm Slice in the browser (off-chain)
-        │
-        ▼
-Input log captured: every key press, timing delta, trap event
-        │
-        ▼
-RISC Zero zkVM runs the game logic deterministically
-  → Produces: journal (public outputs) + seal (proof)
-        │
-        ├──► guitar-pizza contract: verifies receipt → stores score → calls GameHub
-        ├──► zk-leaderboard contract: only accepts entries backed by a valid receipt
-        ├──► achievement-vault contract: badges minted only if proof confirms condition
-        └──► daily-recipe contract: weekly challenge claimed only with verified pizza count
-```
-
-### What the ZK Circuit Proves
-
-The journal is the **public output** — what the blockchain reads and trusts:
-
-| Field | Type | What it proves |
-|-------|------|----------------|
-| `score` | u32 | Final score is correctly derived from inputs |
-| `perfect_hits` / `total_hits` | u32 | Timing accuracy is real, not inflated |
-| `traps_avoided` / `total_traps` | u32 | Player *didn't* press a key during trap windows |
-| `fever_seconds` | u32 | Fever mode duration is genuine |
-| `pizzas_completed` | u32 | Full pizza count matches ingredient hits |
-| `player_addr_hash` | [u8;32] | keccak256 of Stellar address — ties proof to wallet |
-| `session_id` | u32 | Anti-replay — each session is unique |
-| `song_hash` | [u8;32] | Commitment to the note chart played |
+### 3. $SLICE LP Staking (Defindex Integration)
+Deposit your `$SLICE` and `XLM` 50/50 into the official **Defindex Vault** directly from the dashboard. Earn Defindex LP tokens on-chain and compound your mafia tokens passively.
 
 ---
 
-## 📦 Smart Contracts — Stellar Testnet
+## 🖼️ Equipped Oven NFTs Collection
+Baking is amplified by equipping **Oven NFTs**. Higher rarity ovens reduce bake times and multiply payouts. 
 
-All contracts are deployed, verified, and active on Stellar Testnet:
-
-1. **`guitar-pizza` (Core Sessions)**: `CBOKHYCJYPAIF3NQHPQGJTDJGCKBDC2FN5IXPBFI7L4UDIIFCLVED4HF`
-2. **`slice-token` (Rhythm Token)**: `CDQQS675FAF3GXEV4Y5CQVWVHWOONDWMIM2QDVSQUHADA3XDDXSXZOFR` (with raised daily limit for active testnet validation)
-3. **`zk-leaderboard` (ZK-Gated Leaderboards)**: `CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV`
-4. **`achievement-vault` (Badges)**: `CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC`
-5. **`daily-recipe` (Weekly Challenge)**: `CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN`
-6. **`staking-vault` (Liquidity Staking)**: `CCFFCESR67QY2KDAOQGUKG3LWR6BFWXKGWF75TS75VX7IOBKHOSXJCW3`
-7. **`refrigerator-vault` (Ingredient Storage)**: `CDNVDFIU5YHPB4PSPMJU24K7GF6EJWAKYRQGQCRNHYB5FPJR446VJYF2`
-8. **`pizza-baking` (El Horno)**: `CC6JCDRZE7RQF4NDX6ITDQITCII7VS5MUJRZKXGYLQS2JQX6HRIAOP7M`
-9. **`pvp-escrow` (Multiplayer Wager)**: `CAG2HF4P6FWMGQXJEP5RQQSO2WTMSQSQIQCPGME263HOPP337TXQWJM6`
+| Oven NFT | Style / Rarity | Benefit |
+|----------|----------------|---------|
+| <img src="stellar-game-studio/sgs_frontend/public/game/assets/nfts/og_oven_pixel.png" width="100"/> | **The OG Oven** (Common) | Baseline baking speed |
+| <img src="stellar-game-studio/sgs_frontend/public/game/assets/nfts/brick_oven_pixel.png" width="100"/> | **Brick Oven** (Uncommon) | -10% Bake Time |
+| <img src="stellar-game-studio/sgs_frontend/public/game/assets/nfts/neon_oven_pixel.png" width="100"/> | **Neon Oven** (Rare) | -25% Bake Time, +10% Payout |
+| <img src="stellar-game-studio/sgs_frontend/public/game/assets/nfts/golden_oven_pixel.png" width="100"/> | **Golden Capo** (Legendary) | -50% Bake Time, +30% Payout |
 
 ---
 
-## 🛠️ Tech Stack
+## 🔑 Key Web3 Features & Upgrades
+
+### 1. Biometric Onboarding (Passkeys)
+*   **Keyless Non-Custodial Wallets**: Using the WebAuthn standard, players can sign up and sign Stellar transactions using their device's PIN or biometrics (TouchID/FaceID).
+*   **Sponsored Transactions**: PizzaDAO sponsors the gas fee of Passkey players on the testnet using transaction wrapping (**Fee-Bump** envelopes), allowing a 100% gasless user experience.
+
+### 2. Real-Time PVP Multiplayer
+*   **WebSocket Matchmaking**: Enter the queue to get paired up with another cook instantly.
+*   **RTT Latency Sync**: Interactive RTT checks sync the note charts so both players start at the exact same millisecond.
+*   **Tug-of-War PvP Escrow**: Both players lock $SLICE in `pvp-escrow` before playing. The contract evaluates both ZK Proofs and automatically releases the pool to the cook with the highest score.
+
+### 3. Daily Quests (Contratos del Día)
+*   Complete dynamic daily objectives (e.g., Bake 2 pizzas, play 1 song, use premium fuel) to earn **Prestige Ingredients** (Truffle, Fig, Caviar, Gold Flakes) and bake luxury recipes!
+
+---
+
+## 🛠️ Tech Stack & Architecture
 
 | Layer | Technology |
 |-------|-----------|
-| Blockchain | Stellar Soroban / Protocol 25 (X-Ray) |
-| Cryptography | RISC Zero zkVM — journal + seal pattern |
-| Contracts | Rust + Soroban SDK 25.0.2 |
-| Frontend | React 18 + TypeScript + Vite 7 |
-| Real-Time Network | WebSockets Matching + Local RTT Countdown Compensation |
-| Authentication | Passkeys / WebAuthn Protocol |
-| Game Engine | HTML5 Canvas-based JS engine |
-| CI/CD | GitHub Actions + Vercel Production Auto-deploys |
+| **Blockchain** | Stellar Soroban (Rust SDK 25.0.2) |
+| **Zero-Knowledge** | RISC Zero zkVM |
+| **Frontend** | React 19 + TypeScript + HTML5 Canvas |
+| **Real-Time Layer** | WebSockets Signaling (Go-ready API) |
+| **Styling** | Vanilla CSS + HSL Dark Pizzeria aesthetics |
 
 ---
 
-## 🚀 Quick Start
+## 📦 Smart Contract addresses (Stellar Testnet)
+
+*   **`guitar-pizza` (Core sessions & mint gating)**: `CBOKHYCJYPAIF3NQHPQGJTDJGCKBDC2FN5IXPBFI7L4UDIIFCLVED4HF`
+*   **`slice-token` (Utility token)**: `CDQQS675FAF3GXEV4Y5CQVWVHWOONDWMIM2QDVSQUHADA3XDDXSXZOFR`
+*   **`refrigerator-vault` (Ingredient preservation)**: `CDNVDFIU5YHPB4PSPMJU24K7GF6EJWAKYRQGQCRNHYB5FPJR446VJYF2`
+*   **`pizza-baking` (El Horno cooking loop)**: `CC6JCDRZE7RQF4NDX6ITDQITCII7VS5MUJRZKXGYLQS2JQX6HRIAOP7M`
+*   **`pvp-escrow` (Matchmaking escrow payouts)**: `CAG2HF4P6FWMGQXJEP5RQQSO2WTMSQSQIQCPGME263HOPP337TXQWJM6`
+*   **`nft-collectibles` (Oven NFTs)**: `CBC3AGOZTWKEII45VBRWLOGMBNGBJ6ABPP6MOFAZM2HFHP2NKPXXEWXB`
+
+---
+
+## 🚀 Quick Start for Developers
+
+To run and test the ecosystem locally:
 
 ```bash
+# Clone the repository
 git clone https://github.com/CaBsCrypto/guitarPizza--AntiGravity.git
 cd guitarPizza--AntiGravity/stellar-game-studio
 
 # Install dependencies
 pnpm install
 
-# Deploy new local/testnet contracts and generate TypeScript bindings
+# Compile contracts and generate Soroban JS bindings
 pnpm run setup
 
 # Run the frontend dev server
 pnpm run dev
 ```
 
----
-
-Built with ❤️ for **Stellar Hacks: ZK Gaming** | $10,000 Prize Pool
+Built with ❤️ for **Stellar Hacks: ZK Gaming**.
