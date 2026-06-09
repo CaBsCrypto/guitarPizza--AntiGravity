@@ -320,7 +320,7 @@ const getDaysBetween = (date1Str: string, date2Str: string) => {
     d1.setHours(0,0,0,0);
     d2.setHours(0,0,0,0);
     const diffTime = Math.abs(d2.getTime() - d1.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
 };
 
