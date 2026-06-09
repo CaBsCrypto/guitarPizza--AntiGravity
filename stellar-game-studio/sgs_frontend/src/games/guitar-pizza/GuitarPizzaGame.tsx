@@ -2877,7 +2877,6 @@ Ganador: ${payload.winnerAddress}`);
                             </div>
                         </div>
                     )}
-
                     {/* COVER START SCREEN (PORTADA DE INICIO) */}
                     {view === 'cover' && (
                         <div style={{
@@ -2886,7 +2885,7 @@ Ganador: ${payload.winnerAddress}`);
                             left: 0,
                             width: '100%',
                             height: '100%',
-                            background: 'radial-gradient(circle at center, #1b0000 0%, #0a0705 100%)',
+                            background: 'linear-gradient(180deg, rgba(10, 7, 5, 0.8) 0%, rgba(27, 0, 0, 0.95) 100%), url("/game/assets/pizzeria_bg.png") center/cover no-repeat',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -2896,49 +2895,103 @@ Ganador: ${payload.winnerAddress}`);
                             textAlign: 'center',
                             overflow: 'hidden'
                         }}>
+                            <style>{`
+                                @keyframes floatSlow {
+                                    0% { transform: translateY(0px) rotate(0deg); opacity: 0.15; }
+                                    50% { transform: translateY(-40px) rotate(180deg); opacity: 0.45; }
+                                    100% { transform: translateY(0px) rotate(360deg); opacity: 0.15; }
+                                }
+                                @keyframes neonPulse {
+                                    0% { text-shadow: 0 0 10px rgba(139,0,0,0.6), 2px 2px 0px #d4af37, -2px -2px 0px #27ae60; }
+                                    50% { text-shadow: 0 0 25px rgba(231,76,60,0.95), 2px 2px 0px #f1c40f, -2px -2px 0px #2ecc71; }
+                                    100% { text-shadow: 0 0 10px rgba(139,0,0,0.6), 2px 2px 0px #d4af37, -2px -2px 0px #27ae60; }
+                                }
+                            `}</style>
+
+                            {/* Retro Scanline Overlay */}
                             <div style={{
                                 position: 'absolute',
-                                top: '-50px',
-                                width: '200px',
-                                height: '200px',
-                                opacity: 0.1,
-                                filter: 'blur(30px)',
-                                background: '#d4af37',
-                                borderRadius: '50%',
-                                pointerEvents: 'none'
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
+                                backgroundSize: '100% 4px, 6px 100%',
+                                pointerEvents: 'none',
+                                zIndex: 1
                             }} />
 
+                            {/* Floating Background Ingredients */}
+                            <div style={{ position: 'absolute', top: '15%', left: '10%', fontSize: '2rem', animation: 'floatSlow 12s infinite ease-in-out', pointerEvents: 'none', zIndex: 0 }}>🧀</div>
+                            <div style={{ position: 'absolute', top: '45%', right: '12%', fontSize: '2.2rem', animation: 'floatSlow 15s infinite ease-in-out 2s', pointerEvents: 'none', zIndex: 0 }}>🍖</div>
+                            <div style={{ position: 'absolute', top: '70%', left: '15%', fontSize: '1.8rem', animation: 'floatSlow 10s infinite ease-in-out 1s', pointerEvents: 'none', zIndex: 0 }}>🧅</div>
+                            <div style={{ position: 'absolute', top: '25%', right: '15%', fontSize: '2rem', animation: 'floatSlow 14s infinite ease-in-out 3s', pointerEvents: 'none', zIndex: 0 }}>🥓</div>
+                            <div style={{ position: 'absolute', top: '55%', left: '8%', fontSize: '2rem', animation: 'floatSlow 11s infinite ease-in-out 4s', pointerEvents: 'none', zIndex: 0 }}>🍄</div>
+
+                            {/* Top Banner */}
                             <div style={{
                                 width: '100%',
-                                borderBottom: '2px solid rgba(212, 175, 55, 0.3)',
+                                borderBottom: '2px double rgba(212, 175, 55, 0.5)',
                                 paddingBottom: '0.5rem',
-                                color: 'rgba(255,255,255,0.4)',
-                                fontSize: '0.65rem',
+                                color: '#d4af37',
+                                fontSize: '0.75rem',
                                 fontFamily: 'monospace',
                                 letterSpacing: '0.3em',
-                                textTransform: 'uppercase'
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                textShadow: '0 0 8px rgba(212, 175, 55, 0.4)',
+                                zIndex: 10
                             }}>
                                 🕶️ LA FAMIGLIA PRESENTS 🕶️
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                            {/* Title Container */}
+                            <div style={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'center', 
+                                gap: '0.75rem',
+                                zIndex: 10,
+                                border: '3px double rgba(212, 175, 55, 0.4)',
+                                padding: '1.5rem',
+                                borderRadius: '16px',
+                                background: 'rgba(10, 7, 5, 0.85)',
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.1)'
+                            }}>
                                 <h1 style={{
                                     fontFamily: 'Bangers, cursive',
-                                    fontSize: '3.8rem',
-                                    lineHeight: '0.9',
-                                    color: '#8B0000',
-                                    textShadow: '0 0 10px rgba(139, 0, 0, 0.6), 2px 2px 0px #d4af37, -2px -2px 0px #27ae60',
-                                    letterSpacing: '0.05em',
-                                    transform: 'skewY(-5deg)',
-                                    marginBottom: '0.5rem'
+                                    fontSize: '4.2rem',
+                                    lineHeight: '0.85',
+                                    color: '#e74c3c',
+                                    animation: 'neonPulse 3s infinite ease-in-out',
+                                    letterSpacing: '0.06em',
+                                    transform: 'skewY(-4deg)',
+                                    margin: '0 0 0.5rem 0'
                                 }}>
                                     RHYTHM<br />SLICE
                                 </h1>
+                                
+                                <div style={{
+                                    display: 'inline-block',
+                                    padding: '0.2rem 0.6rem',
+                                    background: 'rgba(212, 175, 55, 0.15)',
+                                    border: '1px solid #d4af37',
+                                    borderRadius: '50px',
+                                    fontSize: '0.55rem',
+                                    fontFamily: 'monospace',
+                                    color: '#ffcc00',
+                                    fontWeight: 'bold',
+                                    letterSpacing: '0.15em',
+                                    marginBottom: '0.2rem'
+                                }}>
+                                    SOROBAN ZK EDITION
+                                </div>
+
                                 <p style={{
                                     fontFamily: '"Special Elite", monospace',
-                                    fontSize: '0.82rem',
-                                    color: 'var(--ph-gold)',
-                                    letterSpacing: '0.08em',
+                                    fontSize: '0.88rem',
+                                    color: '#fff',
+                                    letterSpacing: '0.1em',
                                     margin: 0,
                                     textShadow: '0 2px 4px rgba(0,0,0,0.8)'
                                 }}>
@@ -2946,32 +2999,39 @@ Ganador: ${payload.winnerAddress}`);
                                 </p>
                             </div>
 
+                            {/* Pizza Centerpiece */}
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 gap: '0.5rem',
-                                position: 'relative'
+                                position: 'relative',
+                                zIndex: 10
                             }}>
                                 <div style={{
-                                    fontSize: '5rem',
-                                    filter: 'drop-shadow(0 0 15px rgba(212, 175, 55, 0.5))',
-                                    animation: 'pulse 2s infinite',
-                                    cursor: 'pointer'
-                                }} onClick={() => setView('lobby')}>
+                                    fontSize: '5.5rem',
+                                    filter: 'drop-shadow(0 0 20px rgba(212, 175, 55, 0.7))',
+                                    animation: 'pulse 1.8s infinite ease-in-out',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s'
+                                }} 
+                                onClick={() => setView('lobby')}
+                                >
                                     🍕
                                 </div>
                                 <div style={{
-                                    fontSize: '1.2rem',
+                                    fontSize: '1.3rem',
                                     color: '#fff',
                                     marginTop: '-10px',
                                     display: 'flex',
-                                    gap: '0.4rem'
+                                    gap: '0.5rem',
+                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
                                 }}>
                                     🎸 🔪 🍷
                                 </div>
                             </div>
 
+                            {/* Footer Play Controls */}
                             <div style={{
                                 width: '100%',
                                 display: 'flex',
@@ -2986,39 +3046,43 @@ Ganador: ${payload.winnerAddress}`);
                                     style={{
                                         width: '85%',
                                         maxWidth: '260px',
-                                        padding: '1.0rem',
-                                        fontSize: '1.1rem',
+                                        padding: '1.1rem',
+                                        fontSize: '1.2rem',
                                         fontFamily: 'var(--font-display)',
-                                        letterSpacing: '0.05em',
+                                        letterSpacing: '0.08em',
                                         fontWeight: 'bold',
-                                        boxShadow: '0 0 20px rgba(212,175,55,0.4), 0 0 40px rgba(139,0,0,0.2)',
-                                        animation: 'pulse 1.5s infinite',
-                                        background: 'linear-gradient(135deg, #d4af37, #8B0000)',
+                                        boxShadow: '0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(139,0,0,0.3)',
+                                        animation: 'pulse 1.4s infinite ease-in-out',
+                                        background: 'linear-gradient(135deg, #d4af37, #c0392b)',
                                         color: '#fff',
-                                        border: '2px solid #ffcc00'
+                                        border: '2px solid #ffcc00',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     🍕 {language === 'es' ? 'ENTRAR A LA COCINA' : 'ENTER KITCHEN'} 🍕
                                 </button>
                                 <div style={{
                                     fontFamily: 'var(--font-body)',
-                                    fontSize: '0.68rem',
-                                    color: '#888',
+                                    fontSize: '0.7rem',
+                                    color: '#aaa',
                                     lineHeight: '1.4',
-                                    maxWidth: '220px'
+                                    maxWidth: '230px',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.6)'
                                 }}>
                                     {language === 'es' 
                                         ? 'El ritmo es tu ingrediente, cocinar es tu crimen.' 
                                         : 'Rhythm is your ingredient, cooking is your crime.'}
                                 </div>
-                            </div>
 
-                            <div style={{
-                                fontSize: '0.55rem',
-                                color: 'rgba(255,255,255,0.25)',
-                                fontFamily: 'monospace'
-                            }}>
-                                ASPECT RATIO 9:16 • COMPLIANT FRAME
+                                <div style={{
+                                    fontSize: '0.55rem',
+                                    color: 'rgba(255,255,255,0.25)',
+                                    fontFamily: 'monospace',
+                                    marginTop: '0.5rem'
+                                }}>
+                                    ASPECT RATIO 9:16 • COMPLIANT FRAME
+                                </div>
                             </div>
                         </div>
                     )}
