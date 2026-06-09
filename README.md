@@ -33,7 +33,7 @@ Rhythm Slice has transitioned from a single-player hackathon proof-of-concept in
 
 ---
 
-## ## 🎯 For Judges: How ZK Powers the Game
+## 🎯 For Judges: How ZK Powers the Game
 
 ZK is the gating mechanism for every single on-chain action. **Nothing touches the blockchain without a proof.**
 
