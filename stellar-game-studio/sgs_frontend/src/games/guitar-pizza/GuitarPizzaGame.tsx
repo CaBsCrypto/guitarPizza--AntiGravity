@@ -441,11 +441,11 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
 
 
-    const [view, setView] = useState<'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign'>('cover');
+    const [view, setView] = useState<'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' | 'bank'>('cover');
 
     const [closingView, setClosingView] = useState<string | null>(null);
 
-    const closeModalWithAnimation = useCallback((targetView: 'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' = 'lobby') => {
+    const closeModalWithAnimation = useCallback((targetView: 'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' | 'bank' = 'lobby') => {
 
         setClosingView(view);
 
@@ -595,8 +595,30 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             const targets = [2, 1, 1]; // Targets: 2 pizzas, 1 score completed, 1 wood speedup/stake
             next[questIndex] = Math.min(targets[questIndex], next[questIndex] + amount);
             return next;
+
         });
+
     }, []);
+
+    // --- Defindex LP & Staking States ---
+
+    const [defindexLpBalance, setDefindexLpBalance] = useState<number>(0);
+    const [stakeAmountSlice, setStakeAmountSlice] = useState<string>('');
+    const [stakeAmountXlm, setStakeAmountXlm] = useState<string>('');
+    const [withdrawAmountLp, setWithdrawAmountLp] = useState<string>('');
+    const [defindexLoading, setDefindexLoading] = useState<boolean>(false);
+
+    // --- ZK Leaderboard Level Selection ---
+    const [leaderboardSongId, setLeaderboardSongId] = useState<number>(1);
+
+    // --- Offline Transaction Queue ---
+    const [pendingTxs, setPendingTxs] = useState<any[]>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('gp_pending_txs') ?? '[]');
+        } catch {
+            return [];
+        }
+    });
 
     const claimQuestReward = (questIndex: number) => {
         const targets = [2, 1, 1];
@@ -988,30 +1010,23 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
 
 
-    // Load balances from contract when entering the Oven view
-
+    // Load balances from contract when entering Oven/Bank views
     useEffect(() => {
-
-        if ((view === 'oven' || view === 'songpicker') && userAddress) {
-
+        if ((view === 'oven' || view === 'songpicker' || view === 'bank') && userAddress) {
             const fetchOnChainData = async () => {
-
                 try {
-
                     const balance = await StellarContractService.getSliceBalance(userAddress);
-
                     setSliceBalance(balance);
-
                     
-
                     const staked = await StellarContractService.getStakedBalance(userAddress);
-
                     setStakedSlice(staked);
 
-
                     const tickets = await StellarContractService.getTournamentTickets(userAddress);
-
                     setTicketBalance(tickets);
+
+                    // Sync Defindex LP balance
+                    const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
+                    setDefindexLpBalance(lpBal);
 
                     // Sync Refrigerator balances
                     await fetchRefrigeratorData();
@@ -1090,6 +1105,137 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         }
 
     }, [view, userAddress, fetchRefrigeratorData]);
+
+    // --- Defindex Vault Staking Handlers ---
+    const handleDefindexDeposit = async () => {
+        const sliceVal = parseFloat(stakeAmountSlice);
+        const xlmVal = parseFloat(stakeAmountXlm);
+        if (isNaN(sliceVal) || sliceVal <= 0 || isNaN(xlmVal) || xlmVal <= 0) {
+            alert(language === 'es' ? 'Por favor ingresa cantidades válidas de SLICE y XLM.' : 'Please enter valid SLICE and XLM amounts.');
+            return;
+        }
+        if (sliceBalance < sliceVal) {
+            alert(language === 'es' ? 'Saldo de SLICE insuficiente.' : 'Insufficient SLICE balance.');
+            return;
+        }
+
+        setDefindexLoading(true);
+        try {
+            const signer = getContractSignerRef.current();
+            addLog(`🏦 Depositando ${sliceVal} SLICE y ${xlmVal} XLM en la Bóveda de Defindex...`);
+            const res = await StellarContractService.depositDefindexVault(userAddress, sliceVal, xlmVal, signer);
+            if (res.success) {
+                addLog(`🏦 Depósito en Defindex exitoso! (tx: ${res.txHash || ''})`);
+                alert(language === 'es' ? '¡Depósito en Defindex completado exitosamente!' : 'Defindex deposit completed successfully!');
+                setStakeAmountSlice('');
+                setStakeAmountXlm('');
+                
+                // Complete Quest 3: Spend slice in fuel or stake/liquidity
+                incrementQuestProgress(2, 1);
+                
+                // Refresh balances
+                const balance = await StellarContractService.getSliceBalance(userAddress);
+                setSliceBalance(balance);
+                const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
+                setDefindexLpBalance(lpBal);
+            } else {
+                alert(`⚠️ Error: ${res.error}`);
+            }
+        } catch (e: any) {
+            alert(`⚠️ Error: ${e.message}`);
+        } finally {
+            setDefindexLoading(false);
+        }
+    };
+
+    const handleDefindexWithdraw = async () => {
+        const lpVal = parseFloat(withdrawAmountLp);
+        if (isNaN(lpVal) || lpVal <= 0) {
+            alert(language === 'es' ? 'Por favor ingresa una cantidad de LP válida.' : 'Please enter a valid LP amount.');
+            return;
+        }
+        if (defindexLpBalance < lpVal) {
+            alert(language === 'es' ? 'Saldo de LP insuficiente.' : 'Insufficient LP balance.');
+            return;
+        }
+
+        setDefindexLoading(true);
+        try {
+            const signer = getContractSignerRef.current();
+            addLog(`🏦 Retirando liquidez de la Bóveda de Defindex usando ${lpVal} LP...`);
+            const res = await StellarContractService.withdrawDefindexVault(userAddress, lpVal, signer);
+            if (res.success) {
+                addLog(`🏦 Retiro de Defindex exitoso! (tx: ${res.txHash || ''})`);
+                alert(language === 'es' ? '¡Retiro de Defindex completado exitosamente!' : 'Defindex withdrawal completed successfully!');
+                setWithdrawAmountLp('');
+                // Refresh balances
+                const balance = await StellarContractService.getSliceBalance(userAddress);
+                setSliceBalance(balance);
+                const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
+                setDefindexLpBalance(lpBal);
+            } else {
+                alert(`⚠️ Error: ${res.error}`);
+            }
+        } catch (e: any) {
+            alert(`⚠️ Error: ${e.message}`);
+        } finally {
+            setDefindexLoading(false);
+        }
+    };
+
+    // --- Offline Transaction Queue Processing ---
+    const processPendingQueue = useCallback(async () => {
+        if (pendingTxs.length === 0 || !userAddress || userAddress === 'G_DEMO_USER' || !navigator.onLine) return;
+        const queueToProcess = [...pendingTxs];
+        addLog(`🔄 Found ${queueToProcess.length} pending ZK score submissions. Attempting auto-sync...`);
+        
+        let processedAny = false;
+        const remainingQueue: any[] = [];
+
+        for (const item of queueToProcess) {
+            try {
+                const signer = getContractSignerRef.current();
+                const result = await StellarContractService.postGameFlow(userAddress, item.sessionStats, signer);
+                if (result.scoreSubmitted) {
+                    addLog(`✅ Auto-synced score of ${item.score} successfully!`);
+                    processedAny = true;
+                    if (result.sliceClaimed) {
+                        setSliceBalance(prev => prev + result.sliceAmount);
+                    }
+                } else {
+                    remainingQueue.push(item);
+                }
+            } catch (err) {
+                console.error("Auto-sync failed for score", item.score, err);
+                remainingQueue.push(item);
+            }
+        }
+
+        setPendingTxs(remainingQueue);
+        localStorage.setItem('gp_pending_txs', JSON.stringify(remainingQueue));
+        
+        if (processedAny) {
+            alert(language === 'es'
+                ? "🔄 ¡Sincronización completada! Tus récords pendientes han sido enviados a Stellar."
+                : "🔄 Sync completed! Your pending records have been submitted to Stellar."
+            );
+            loadLeaderboard();
+        }
+    }, [pendingTxs, userAddress, loadLeaderboard, language]);
+
+    useEffect(() => {
+        const handleOnline = () => {
+            processPendingQueue();
+        };
+        window.addEventListener('online', handleOnline);
+        return () => window.removeEventListener('online', handleOnline);
+    }, [processPendingQueue]);
+
+    useEffect(() => {
+        if (view === 'lobby' && userAddress && navigator.onLine) {
+            processPendingQueue();
+        }
+    }, [view, userAddress, processPendingQueue]);
 
     // Initialize WebSocket Multiplayer Connection
     useEffect(() => {
@@ -1783,8 +1929,6 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-    // ── Leaderboard loader ────────────────────────────────────────────────────
-
     const loadLeaderboard = useCallback(async () => {
 
         setLeaderboardLoading(true);
@@ -1793,7 +1937,7 @@ Ganador: ${payload.winnerAddress}`);
 
         try {
 
-            const entries = await StellarContractService.getLeaderboard(userAddress, 1);
+            const entries = await StellarContractService.getLeaderboard(userAddress, leaderboardSongId);
 
             const arr = entries as any[];
 
@@ -1835,7 +1979,7 @@ Ganador: ${payload.winnerAddress}`);
 
         }
 
-    }, [userAddress]);
+    }, [userAddress, leaderboardSongId]);
 
 
 
@@ -2621,6 +2765,25 @@ Ganador: ${payload.winnerAddress}`);
 
 
                         } catch (err: any) {
+                            if (!navigator.onLine || err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.message?.includes("network")) {
+                                addLog("⚠️ Network offline. Saving ZK proof locally for automatic sync.");
+                                const nextQueue = [...pendingTxs, {
+                                    sessionStats,
+                                    score: verifiedScore,
+                                    timestamp: Date.now()
+                                }];
+                                setPendingTxs(nextQueue);
+                                localStorage.setItem('gp_pending_txs', JSON.stringify(nextQueue));
+                                setProofStatus('idle');
+                                setIsVerifying(false);
+                                setStatus('');
+                                alert(language === 'es' 
+                                    ? "⚠️ Sin conexión a internet. Tu récord y prueba ZK se guardaron localmente. Se sincronizarán automáticamente al reconectarte."
+                                    : "⚠️ No internet connection. Your record and ZK proof have been saved locally. They will auto-sync when you reconnect."
+                                );
+                                onGameComplete(verifiedScore);
+                                return;
+                            }
 
                             console.error("[GuitarPizza] Verification failed:", err);
 
@@ -6097,7 +6260,40 @@ Ganador: ${payload.winnerAddress}`);
 
                                     </div>
 
-
+                                    {/* Song Selector for dynamic ZK Leaderboard */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.8rem',
+                                        padding: '0.6rem 1rem',
+                                        background: 'rgba(0,0,0,0.2)',
+                                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '0.5rem'
+                                    }}>
+                                        <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold' }}>
+                                            {language === 'es' ? 'Canción de la Mafia:' : 'Mafia Track:'}
+                                        </span>
+                                        <select
+                                            value={leaderboardSongId}
+                                            onChange={(e) => setLeaderboardSongId(Number(e.target.value))}
+                                            style={{
+                                                background: '#222',
+                                                color: '#fff',
+                                                border: '1px solid #ff3e3e',
+                                                padding: '0.4rem 0.8rem',
+                                                borderRadius: '4px',
+                                                fontSize: '0.85rem',
+                                                cursor: 'pointer',
+                                                outline: 'none',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            <option value={1}>🍕 O Sole Mio (Classic)</option>
+                                            <option value={2}>🎸 Tarantella Rock (Medium)</option>
+                                            <option value={3}>🎹 Bella Ciao (Hard)</option>
+                                        </select>
+                                    </div>
 
                                     {/* Leaderboard submission badge from last game */}
 
@@ -6275,6 +6471,270 @@ Ganador: ${payload.winnerAddress}`);
 
                             </div>
 
+                        )}
+
+
+
+                        {/* ── DEFINDEX LP VAULT / COSA NOSTRA BANK MODAL ────────────────── */}
+                        {(view === 'bank' || closingView === 'bank') && (
+                            <div className={`modal-backdrop ${closingView === 'bank' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                                    background: 'rgba(15, 15, 20, 0.98)',
+                                    border: '4px solid #d4af37', // Gold frame
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.95), inset 0 0 30px rgba(212, 175, 55, 0.15)',
+                                    color: '#FFF8E7',
+                                    borderRadius: '16px',
+                                    padding: '1.5rem',
+                                    width: '95%',
+                                    maxWidth: '650px',
+                                    position: 'relative'
+                                }}>
+                                    <div className="modal-header" style={{ borderBottom: '2px dashed #d4af37', paddingBottom: '0.8rem', marginBottom: '1.2rem' }}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{ borderColor: '#d4af37' }}>
+                                            <ArrowLeft size={20} style={{ color: '#d4af37' }} />
+                                        </div>
+                                        <h2 className="modal-title" style={{ color: '#d4af37', fontFamily: 'Courier New, monospace', textShadow: '0 0 8px rgba(212,175,55,0.4)' }}>
+                                            🏦 BANCA DI COSA NOSTRA
+                                        </h2>
+                                        <button
+                                            onClick={async () => {
+                                                if (userAddress) {
+                                                    const bal = await StellarContractService.getSliceBalance(userAddress);
+                                                    setSliceBalance(bal);
+                                                    const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
+                                                    setDefindexLpBalance(lpBal);
+                                                }
+                                            }}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#d4af37' }}
+                                            title="Sync Bank"
+                                        >↺</button>
+                                    </div>
+
+                                    <div style={{
+                                        background: 'rgba(0, 0, 0, 0.4)',
+                                        padding: '1rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(212, 175, 55, 0.2)',
+                                        marginBottom: '1.5rem',
+                                        fontSize: '0.9rem',
+                                        lineHeight: '1.4'
+                                    }}>
+                                        <p style={{ margin: 0, color: '#aaa', fontStyle: 'italic', textAlign: 'center' }}>
+                                            {language === 'es'
+                                                ? "«Aquí es donde 'limpiamos' la harina y los tokens de la pizzería. Deposita SLICE y XLM en el pool automatizado de Defindex para generar rendimiento y respaldar la liquidez de la familia.»"
+                                                : "«This is where we 'wash' the flour and pizzeria tokens. Deposit SLICE and XLM into the automated Defindex vault to generate yield and secure the Famiglia's liquidity.»"
+                                            }
+                                        </p>
+                                    </div>
+
+                                    {/* Balances Dashboard */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gap: '1rem',
+                                        marginBottom: '1.5rem'
+                                    }}>
+                                        <div style={{
+                                            background: 'rgba(255, 255, 255, 0.03)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            padding: '0.8rem',
+                                            borderRadius: '8px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                {language === 'es' ? 'Tu Saldo SLICE' : 'Your SLICE Balance'}
+                                            </div>
+                                            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#ff3e3e', marginTop: '0.2rem' }}>
+                                                {sliceBalance.toFixed(2)} $SLICE
+                                            </div>
+                                        </div>
+                                        <div style={{
+                                            background: 'rgba(212, 175, 55, 0.05)',
+                                            border: '1px solid rgba(212, 175, 55, 0.2)',
+                                            padding: '0.8rem',
+                                            borderRadius: '8px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#d4af37', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                {language === 'es' ? 'Tokens LP Defindex' : 'Defindex LP Tokens'}
+                                            </div>
+                                            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#d4af37', marginTop: '0.2rem' }}>
+                                                {defindexLpBalance.toFixed(4)} LP
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Tabs / Two Columns */}
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: window.innerWidth > 600 ? '1fr 1fr' : '1fr',
+                                        gap: '1.5rem'
+                                    }}>
+                                        {/* Column 1: Deposit / Liquidity Provision */}
+                                        <div style={{
+                                            background: 'rgba(0,0,0,0.2)',
+                                            padding: '1.2rem',
+                                            borderRadius: '10px',
+                                            border: '1px solid rgba(255,255,255,0.05)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.8rem'
+                                        }}>
+                                            <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#27ae60', borderBottom: '1px solid rgba(39, 174, 96, 0.2)', paddingBottom: '0.3rem' }}>
+                                                📥 {language === 'es' ? 'Depositar Liquidez' : 'Deposit Liquidity'}
+                                            </h3>
+                                            
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>$SLICE Amount</label>
+                                                <input 
+                                                    type="number" 
+                                                    placeholder="0.0"
+                                                    value={stakeAmountSlice}
+                                                    onChange={(e) => setStakeAmountSlice(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: '#15151a',
+                                                        border: '1px solid rgba(255,255,255,0.15)',
+                                                        borderRadius: '6px',
+                                                        padding: '0.5rem',
+                                                        color: '#fff',
+                                                        outline: 'none',
+                                                        fontSize: '0.9rem'
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>$XLM Amount</label>
+                                                <input 
+                                                    type="number" 
+                                                    placeholder="0.0"
+                                                    value={stakeAmountXlm}
+                                                    onChange={(e) => setStakeAmountXlm(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: '#15151a',
+                                                        border: '1px solid rgba(255,255,255,0.15)',
+                                                        borderRadius: '6px',
+                                                        padding: '0.5rem',
+                                                        color: '#fff',
+                                                        outline: 'none',
+                                                        fontSize: '0.9rem'
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <button 
+                                                onClick={handleDefindexDeposit}
+                                                disabled={defindexLoading}
+                                                style={{
+                                                    background: '#27ae60',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    padding: '0.7rem',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer',
+                                                    marginTop: '0.5rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem'
+                                                }}
+                                            >
+                                                {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                                {language === 'es' ? 'Lavar Dinero (Depositar)' : 'Launder Money (Deposit)'}
+                                            </button>
+                                        </div>
+
+                                        {/* Column 2: Withdraw Liquidity */}
+                                        <div style={{
+                                            background: 'rgba(0,0,0,0.2)',
+                                            padding: '1.2rem',
+                                            borderRadius: '10px',
+                                            border: '1px solid rgba(255,255,255,0.05)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.8rem'
+                                        }}>
+                                            <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#ff3e3e', borderBottom: '1px solid rgba(255, 62, 62, 0.2)', paddingBottom: '0.3rem' }}>
+                                                📤 {language === 'es' ? 'Retirar LP' : 'Withdraw LP'}
+                                            </h3>
+
+                                            <div>
+                                                <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>LP Token Amount</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="0.0"
+                                                        value={withdrawAmountLp}
+                                                        onChange={(e) => setWithdrawAmountLp(e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            background: '#15151a',
+                                                            border: '1px solid rgba(255,255,255,0.15)',
+                                                            borderRadius: '6px',
+                                                            padding: '0.5rem',
+                                                            paddingRight: '3.5rem',
+                                                            color: '#fff',
+                                                            outline: 'none',
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    />
+                                                    <button 
+                                                        onClick={() => setWithdrawAmountLp(defindexLpBalance.toString())}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            right: '5px',
+                                                            top: '50%',
+                                                            transform: 'translateY(-50%)',
+                                                            background: 'rgba(212, 175, 55, 0.2)',
+                                                            border: '1px solid #d4af37',
+                                                            color: '#d4af37',
+                                                            borderRadius: '4px',
+                                                            padding: '0.2rem 0.4rem',
+                                                            fontSize: '0.7rem',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        MAX
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <p style={{ fontSize: '0.7rem', color: '#777', margin: '0.5rem 0' }}>
+                                                {language === 'es'
+                                                    ? 'Retirar liquidez quemará tus tokens LP y devolverá las cantidades proporcionales de SLICE y XLM a tu billetera.'
+                                                    : 'Withdrawing liquidity will burn your LP tokens and return the proportional SLICE and XLM to your wallet.'
+                                                }
+                                            </p>
+
+                                            <button 
+                                                onClick={handleDefindexWithdraw}
+                                                disabled={defindexLoading}
+                                                style={{
+                                                    background: '#ff3e3e',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    padding: '0.7rem',
+                                                    fontWeight: 'bold',
+                                                    cursor: 'pointer',
+                                                    marginTop: 'auto',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem'
+                                                }}
+                                            >
+                                                {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                                {language === 'es' ? 'Recuperar Fondos (Retirar)' : 'Retrieve Funds (Withdraw)'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
 
