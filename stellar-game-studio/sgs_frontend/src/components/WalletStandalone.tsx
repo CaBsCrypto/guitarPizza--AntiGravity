@@ -143,19 +143,24 @@ export function WalletStandalone() {
                   signal: controller.signal
                 });
                 clearTimeout(timeoutId);
-                const data = await res.json();
-                if (data.success) {
-                  alert(
-                    "🎉 ¡HORNO ACUÑADO EXITOSAMENTE!\n\n" +
-                    "Se ha minteado tu nuevo NFT en Soroban Testnet.\n\n" +
-                    (data.txHash ? `Tx Hash: ${data.txHash}\n\n` : '') +
-                    "Dirígete a 'EL HORNO (VAULT)' -> 'Mi Colección' para equiparlo y multiplicar tus drops."
-                  );
-                  // Dispatch update to refresh lists on-screen
-                  window.dispatchEvent(new Event('collection-updated'));
-                } else {
-                  alert("⚠️ Error al mintear: " + (data.error || data.message || "Desconocido"));
+                const responseText = await res.text();
+                let data: any = {};
+                try {
+                  data = JSON.parse(responseText);
+                } catch (e) {}
+
+                if (!res.ok) {
+                  throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
                 }
+
+                alert(
+                  "🎉 ¡HORNO ACUÑADO EXITOSAMENTE!\n\n" +
+                  "Se ha minteado tu nuevo NFT en Soroban Testnet.\n\n" +
+                  (data.txHash ? `Tx Hash: ${data.txHash}\n\n` : '') +
+                  "Dirígete a 'EL HORNO (VAULT)' -> 'Mi Colección' para equiparlo y multiplicar tus drops."
+                );
+                // Dispatch update to refresh lists on-screen
+                window.dispatchEvent(new Event('collection-updated'));
               } catch (err: any) {
                 clearTimeout(timeoutId);
                 const errorMsg = err.name === 'AbortError' 
@@ -189,14 +194,19 @@ export function WalletStandalone() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ playerAddress: publicKey, amount: 8 }),
                 });
-                const data = await res.json();
-                if (data.success) {
-                  alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE a tu wallet.\n\nTx Hash: ${data.txHash || 'Confirmada'}`);
-                  // Refresh balance chip visually using event dispatch
-                  window.dispatchEvent(new Event('balance-updated'));
-                } else {
-                  alert("⚠️ Error al airdropear: " + (data.error || "Desconocido"));
+                const responseText = await res.text();
+                let data: any = {};
+                try {
+                  data = JSON.parse(responseText);
+                } catch (e) {}
+
+                if (!res.ok) {
+                  throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
                 }
+
+                alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE a tu wallet.\n\nTx Hash: ${data.txHash || 'Confirmada'}`);
+                // Refresh balance chip visually using event dispatch
+                window.dispatchEvent(new Event('balance-updated'));
               } catch (err: any) {
                 alert("⚠️ Error de conexión: " + (err.message || err));
               } finally {

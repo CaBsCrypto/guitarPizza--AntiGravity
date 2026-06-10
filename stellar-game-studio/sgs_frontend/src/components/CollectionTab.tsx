@@ -576,14 +576,26 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                         onClick={async () => {
                             try {
                                 setLoading(true);
-                                await fetch('/api/drop-oven', {
+                                const res = await fetch('/api/drop-oven', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ playerAddress: userAddress, isDevMint: true })
                                 });
+                                const responseText = await res.text();
+                                let data: any = {};
+                                try {
+                                    data = JSON.parse(responseText);
+                                } catch (e) {}
+
+                                if (!res.ok) {
+                                    throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
+                                }
                                 alert("Dev Mint successful!");
                                 window.dispatchEvent(new Event('collection-updated'));
-                            } catch(e) { console.error(e); }
+                            } catch(e: any) {
+                                console.error(e);
+                                alert("⚠️ Error: " + (e.message || e));
+                            }
                             finally { setLoading(false); }
                         }}
                         style={{
@@ -603,16 +615,21 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ playerAddress: userAddress, amount: 8 })
                                 });
-                                const data = await res.json();
-                                if (data.success) {
-                                    alert(`🎉 ¡Dev Airdrop Exitoso!\n\nSe han transferido 8 $SLICE a la wallet.`);
-                                    window.dispatchEvent(new Event('balance-updated'));
-                                    window.dispatchEvent(new Event('collection-updated'));
-                                } else {
-                                    alert("⚠️ Error: " + (data.error || "Desconocido"));
+                                const responseText = await res.text();
+                                let data: any = {};
+                                try {
+                                    data = JSON.parse(responseText);
+                                } catch (e) {}
+
+                                if (!res.ok) {
+                                    throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
                                 }
-                            } catch(e) { 
-                                console.error(e); 
+                                alert(`🎉 ¡Dev Airdrop Exitoso!\n\nSe han transferido 8 $SLICE a la wallet.`);
+                                window.dispatchEvent(new Event('balance-updated'));
+                                window.dispatchEvent(new Event('collection-updated'));
+                            } catch(err: any) { 
+                                console.error(err); 
+                                alert("⚠️ Error: " + (err.message || err));
                             } finally { 
                                 btn.disabled = false;
                                 btn.textContent = language === 'es' ? '+ Forzar Dev Airdrop (8 $SLICE)' : '+ Force Dev Airdrop (8 $SLICE)';
