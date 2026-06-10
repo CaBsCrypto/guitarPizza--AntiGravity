@@ -8,7 +8,7 @@ import { ProofGenerator } from '../../zk/ProofGenerator';
 
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
 
-import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
+import { StellarContractService, type GameSessionStats, ACHIEVEMENT, CONTRACT_IDS } from '../../services/StellarContractService';
 import { multiplayerService } from '../../services/MultiplayerService';
 import { useFriendsStore } from '../../store/friendsSlice';
 
@@ -518,15 +518,6 @@ function OnboardingModal({
 }
 
 export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompleteProp, onBack, embed = false }: GuitarPizzaGameProps) {
-    const onGameComplete = useCallback((score: number) => {
-        const today = getTodayString();
-        localStorage.setItem('gp_last_played_date', today);
-        setLastPlayedDate(today);
-        // Complete Quest 2: Ryhthm Maestro
-        incrementQuestProgress(1, 1);
-        onGameCompleteProp(score);
-    }, [onGameCompleteProp, incrementQuestProgress]);
-
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -812,17 +803,23 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         localStorage.setItem('gp_daily_quests_claimed', JSON.stringify(dailyQuestClaimed));
     }, [dailyQuestProgress, dailyQuestClaimed]);
 
-    // Helper to increment quest progress
     const incrementQuestProgress = useCallback((questIndex: number, amount: number = 1) => {
         setDailyQuestProgress(prev => {
             const next = [...prev];
-            const targets = [2, 1, 1]; // Targets: 2 pizzas, 1 score completed, 1 wood speedup/stake
+            const targets = [2, 1, 1]; // Targets: 2 pizzas, 1 score completed, 1 wood speedup/slate
             next[questIndex] = Math.min(targets[questIndex], next[questIndex] + amount);
             return next;
-
         });
-
     }, []);
+
+    const onGameComplete = useCallback((score: number) => {
+        const today = getTodayString();
+        localStorage.setItem('gp_last_played_date', today);
+        setLastPlayedDate(today);
+        // Complete Quest 2: Ryhthm Maestro
+        incrementQuestProgress(1, 1);
+        onGameCompleteProp(score);
+    }, [onGameCompleteProp, incrementQuestProgress]);
 
     // --- Defindex LP & Staking States ---
 
@@ -1420,6 +1417,31 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             setDefindexLoading(false);
         }
     };
+
+    const loadLeaderboard = useCallback(async () => {
+        setLeaderboardLoading(true);
+        setLeaderboardError(null);
+        try {
+            const entries = await StellarContractService.getLeaderboard(userAddress, leaderboardSongId);
+            const arr = entries as any[];
+            const mapped = arr.slice(0, 10).map((e: any, i: number) => {
+                const playerStr = typeof e.player === 'string'
+                    ? e.player
+                    : (e.player?.toString?.() ?? String(e.player ?? ''));
+                const scoreNum = typeof e.score === 'bigint' ? Number(e.score) : Number(e.score ?? 0);
+                return { rank: i + 1, player: playerStr, score: scoreNum };
+            });
+            setLeaderboard(mapped);
+            if (arr.length === 0) {
+                console.warn('[Leaderboard] No entries returned — board may be empty or query failed.');
+            }
+        } catch (err) {
+            console.error('[Leaderboard] Failed to load:', err);
+            setLeaderboardError('Could not load leaderboard. Check console.');
+        } finally {
+            setLeaderboardLoading(false);
+        }
+    }, [userAddress, leaderboardSongId]);
 
     // --- Offline Transaction Queue Processing ---
     const processPendingQueue = useCallback(async () => {
@@ -2167,59 +2189,6 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-    const loadLeaderboard = useCallback(async () => {
-
-        setLeaderboardLoading(true);
-
-        setLeaderboardError(null);
-
-        try {
-
-            const entries = await StellarContractService.getLeaderboard(userAddress, leaderboardSongId);
-
-            const arr = entries as any[];
-
-            const mapped = arr.slice(0, 10).map((e: any, i: number) => {
-
-                // e.player may be an Address object or already a string
-
-                const playerStr = typeof e.player === 'string'
-
-                    ? e.player
-
-                    : (e.player?.toString?.() ?? String(e.player ?? ''));
-
-                // e.score is u64 (BigInt) or number
-
-                const scoreNum = typeof e.score === 'bigint' ? Number(e.score) : Number(e.score ?? 0);
-
-                return { rank: i + 1, player: playerStr, score: scoreNum };
-
-            });
-
-            setLeaderboard(mapped);
-
-            if (arr.length === 0) {
-
-                console.warn('[Leaderboard] No entries returned — board may be empty or query failed.');
-
-            }
-
-        } catch (err) {
-
-            console.error('[Leaderboard] Failed to load:', err);
-
-            setLeaderboardError('Could not load leaderboard. Check console.');
-
-        } finally {
-
-            setLeaderboardLoading(false);
-
-        }
-
-    }, [userAddress, leaderboardSongId]);
-
-
 
     // Audio Toggle Handler
 
@@ -2639,7 +2608,8 @@ Ganador: ${payload.winnerAddress}`);
 
                         setProofStatus('generating');
 
-
+                        let verifiedScore = finalScore;
+                        let sessionStats: GameSessionStats | null = null;
 
                         try {
 
@@ -2681,21 +2651,17 @@ Ganador: ${payload.winnerAddress}`);
 
                             // any mismatch between the recalculation formula and the actual gameplay.
 
-                            const verifiedScore = finalScore;
+                            verifiedScore = finalScore;
 
                             addLog(`[GuitarPizza] Engine score: ${finalScore} | ZK-verified score: ${verifiedScore}`);
 
                             addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
 
-
-
                             // Update local balance
 
                             setPizzaBalance(prev => prev + verifiedScore);
 
-
-
-                            const sessionStats: GameSessionStats = {
+                            sessionStats = {
 
                                 levelId: 1,
 
@@ -3006,13 +2972,26 @@ Ganador: ${payload.winnerAddress}`);
                             if (!navigator.onLine || err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.message?.includes("network")) {
                                 addLog("⚠️ Network offline. Saving ZK proof locally for automatic sync.");
                                 const nextQueue = [...pendingTxs, {
-                                    sessionStats,
+                                    sessionStats: sessionStats || {
+                                        levelId: 1,
+                                        score: verifiedScore,
+                                        sessionId: onChainSessionIdRef.current,
+                                        perfectHits: 0,
+                                        totalHits: 0,
+                                        totalNotes: 0,
+                                        trapsAvoided: 0,
+                                        totalTraps: 0,
+                                        feverSeconds: 0,
+                                        pizzasCompleted: 0,
+                                        comboBonus: 0,
+                                        playerAddress: userAddress,
+                                    },
                                     score: verifiedScore,
                                     timestamp: Date.now()
                                 }];
                                 setPendingTxs(nextQueue);
                                 localStorage.setItem('gp_pending_txs', JSON.stringify(nextQueue));
-                                setProofStatus('idle');
+                                setProofStatus('failed');
                                 setIsVerifying(false);
                                 setStatus('');
                                 alert(language === 'es' 

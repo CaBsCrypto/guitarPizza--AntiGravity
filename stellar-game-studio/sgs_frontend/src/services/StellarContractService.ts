@@ -23,7 +23,7 @@ import { getContractId } from '../utils/constants';
 import { passkeyService } from './PasskeyService';
 
 // ─── Contract IDs (Resolved dynamically or via Testnet fallback) ───────────
-const CONTRACT_IDS = {
+export const CONTRACT_IDS = {
   guitarPizza: getContractId('guitar-pizza'),
   zkLeaderboard: getContractId('zk-leaderboard'),
   dailyRecipe: getContractId('daily-recipe'),
