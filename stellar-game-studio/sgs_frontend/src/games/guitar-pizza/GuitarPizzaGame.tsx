@@ -637,7 +637,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
 
 
-    const [view, setView] = useState<'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' | 'bank'>('cover');
+    const [view, setView] = useState<'cover' | 'lobby' | 'story' | 'howto' | 'store' | 'leaderboard' | 'songpicker' | 'oven' | 'collection' | 'pvplobby' | 'campaign' | 'bank'>('lobby');
 
     const [closingView, setClosingView] = useState<string | null>(null);
 
