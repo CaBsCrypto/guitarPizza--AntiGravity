@@ -8661,13 +8661,13 @@ interface OnboardingModalProps {
   dismissOnboarding: () => void;
 }
 
-const OnboardingModal: React.FC<OnboardingModalProps> = ({
+function OnboardingModal({
   showOnboarding,
   onboardingStep,
   setOnboardingStep,
   language,
   dismissOnboarding,
-}) => {
+}: OnboardingModalProps) {
   if (!showOnboarding) return null;
 
   return (
@@ -8844,5 +8844,5 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       </div>
     </div>
   );
-};
+}
 
