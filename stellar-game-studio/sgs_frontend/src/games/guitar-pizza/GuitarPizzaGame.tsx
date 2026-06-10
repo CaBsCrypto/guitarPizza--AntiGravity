@@ -4003,11 +4003,11 @@ Ganador: ${payload.winnerAddress}`);
                             <div style={{
                                 width: '87%',
                                 maxWidth: '300px',
-                                marginTop: '0.5rem',
-                                marginBottom: '-0.5rem',
+                                marginTop: '0.3rem',
+                                marginBottom: '-0.3rem',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '0.35rem',
+                                gap: '0.2rem',
                             }}>
                                 {/* ── Streak Row ──────────────────────────────────── */}
                                 <div
@@ -4017,8 +4017,8 @@ Ganador: ${payload.winnerAddress}`);
                                             ? 'linear-gradient(90deg, rgba(139,0,0,0.85), rgba(212,175,55,0.25))'
                                             : 'rgba(0,0,0,0.3)',
                                         border: canCheckIn ? '1.5px solid #d4af37' : '1.5px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '10px',
-                                        padding: '0.35rem 0.75rem',
+                                        borderRadius: '8px',
+                                        padding: '0.25rem 0.6rem',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
@@ -4082,14 +4082,14 @@ Ganador: ${payload.winnerAddress}`);
                                             style={{
                                                 background: claimed ? 'rgba(39,174,96,0.08)' : completed ? 'rgba(212,175,55,0.12)' : 'rgba(0,0,0,0.3)',
                                                 border: claimed ? '1px solid rgba(39,174,96,0.4)' : completed ? '1px solid rgba(212,175,55,0.6)' : '1px solid rgba(255,255,255,0.07)',
-                                                borderRadius: '8px',
-                                                padding: '0.28rem 0.6rem',
+                                                borderRadius: '6px',
+                                                padding: '0.18rem 0.5rem',
                                                 cursor: completed && !claimed ? 'pointer' : 'default',
                                                 transition: 'all 0.2s ease',
                                             }}
                                         >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
-                                                <span style={{ fontSize: '0.62rem', color: claimed ? '#27ae60' : completed ? '#d4af37' : 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.1rem' }}>
+                                                <span style={{ fontSize: '0.58rem', color: claimed ? '#27ae60' : completed ? '#d4af37' : 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>
                                                     {questLabels[idx]}
                                                 </span>
                                                 <span style={{
@@ -4113,30 +4113,30 @@ Ganador: ${payload.winnerAddress}`);
                                                 }} />
                                             </div>
                                             {completed && !claimed && (
-                                                <div style={{ fontSize: '0.58rem', color: '#d4af37', textAlign: 'right', marginTop: '0.1rem', fontFamily: 'monospace' }}>
+                                                <div style={{ fontSize: '0.55rem', color: '#d4af37', textAlign: 'right', marginTop: '0.05rem', fontFamily: 'monospace' }}>
                                                     🎁 {questRewards[idx]}
                                                 </div>
                                             )}
                                         </div>
                                     );
-                                })}
-                            </div>
+                                 })}
+                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.5rem', width: '80%', maxWidth: '300px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.6rem', width: '80%', maxWidth: '300px' }}>
 
-                                <button id="startBtn"
+                                 <button id="startBtn"
 
-                                    onClick={() => setView('campaign')}
+                                     onClick={() => setView('campaign')}
 
-                                    disabled={!engineRef.current}
+                                     disabled={!engineRef.current}
 
-                                    style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1rem', padding: '0.75rem' }}
+                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '0.92rem', padding: '0.55rem' }}
 
-                                >
+                                 >
 
-                                    {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
+                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
 
-                                </button>
+                                 </button>
 
 
 
@@ -4276,7 +4276,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                         width: '100%',
 
-                                        marginBottom: '0.6rem',
+                                        marginBottom: '0.45rem',
 
                                         background: '#2D0808',
                                         opacity: 1,
@@ -4284,7 +4284,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                         border: '2px solid var(--ph-gold)',
 
-                                        boxShadow: '0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 10px rgba(255, 69, 0, 0.2)',
+                                        boxShadow: '0 0 12px rgba(255, 69, 0, 0.4), inset 0 0 8px rgba(255, 69, 0, 0.2)',
 
                                         color: '#FFF8DC',
 
@@ -4294,11 +4294,11 @@ Ganador: ${payload.winnerAddress}`);
 
                                         justifyContent: 'center',
 
-                                        gap: '0.8rem',
+                                        gap: '0.6rem',
 
-                                        height: '52px',
+                                        height: '42px',
 
-                                        borderRadius: '10px',
+                                        borderRadius: '8px',
 
                                         cursor: 'pointer',
 
@@ -4314,7 +4314,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                         e.currentTarget.style.transform = 'scale(1.02)';
 
-                                        e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 69, 0, 0.7), inset 0 0 15px rgba(255, 69, 0, 0.3)';
+                                        e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 69, 0, 0.7), inset 0 0 12px rgba(255, 69, 0, 0.3)';
 
                                     }}
 
@@ -4322,15 +4322,15 @@ Ganador: ${payload.winnerAddress}`);
 
                                         e.currentTarget.style.transform = 'scale(1)';
 
-                                        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 10px rgba(255, 69, 0, 0.2)';
+                                        e.currentTarget.style.boxShadow = '0 0 12px rgba(255, 69, 0, 0.4), inset 0 0 8px rgba(255, 69, 0, 0.2)';
 
                                     }}
 
                                 >
 
-                                    <span style={{ fontSize: '1.4rem' }}>🔥</span>
+                                    <span style={{ fontSize: '1.2rem' }}>🔥</span>
 
-                                    <span style={{ fontSize: '0.85rem', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', fontWeight: 'bold', color: 'var(--ph-gold)' }}>
+                                    <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontWeight: 'bold', color: 'var(--ph-gold)' }}>
 
                                         {language === 'es' ? '🔥 HORNO TIMED-BAKE & NFT' : '🔥 TIMED-BAKE OVEN & NFT'}
 
