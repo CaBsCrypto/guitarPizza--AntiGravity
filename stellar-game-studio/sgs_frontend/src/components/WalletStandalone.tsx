@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '../hooks/useWallet';
 import { useSliceBalance } from '../hooks/useSliceBalance';
 import { passkeyService, type PasskeyAccount } from '../services/PasskeyService';
+import { useWalletStore } from '../store/walletSlice';
 import './WalletStandalone.css';
 
 export function WalletStandalone() {
@@ -266,9 +267,7 @@ export function WalletStandalone() {
               borderColor: 'rgba(180, 150, 30, 0.5)'
             }}
             onClick={() => {
-              import('../store/walletSlice').then(({ useWalletStore }) => {
-                useWalletStore.getState().setWallet('G_DEMO_USER', 'dev-demo', 'dev');
-              });
+              useWalletStore.getState().setWallet('G_DEMO_USER', 'dev-demo', 'dev');
             }}
             title="Play without connecting a real wallet"
           >

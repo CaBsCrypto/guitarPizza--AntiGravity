@@ -7,6 +7,7 @@ import { Settings, Volume2, VolumeX, ArrowLeft, ShieldCheck, Loader2, Globe } fr
 import { ProofGenerator } from '../../zk/ProofGenerator';
 
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
+import { OnboardingModal } from './components/OnboardingModal';
 
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT } from '../../services/StellarContractService';
 import { multiplayerService } from '../../services/MultiplayerService';
@@ -376,7 +377,6 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     useEffect(() => { getContractSignerRef.current = getContractSigner; }, [getContractSigner]);
 
 
-
     // UI State
 
     const [showSettings, setShowSettings] = useState(false);
@@ -392,6 +392,19 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     });
 
     const t = TRANSLATIONS[language];
+
+    // New Player Onboarding — shows once on first visit
+    const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+        try { return !localStorage.getItem('gp_onboarding_done'); }
+        catch { return false; }
+    });
+
+    const [onboardingStep, setOnboardingStep] = useState(0);
+
+    const dismissOnboarding = () => {
+        setShowOnboarding(false);
+        try { localStorage.setItem('gp_onboarding_done', '1'); } catch { /* noop */ }
+    };
 
 
 
@@ -3258,26 +3271,82 @@ Ganador: ${payload.winnerAddress}`);
                                 >
                                     🍕 {language === 'es' ? 'ENTRAR A LA COCINA' : 'ENTER KITCHEN'} 🍕
                                 </button>
+                                {/* Wallet Status / New Player Hint */}
+                                {userAddress ? (
+                                    <div style={{
+                                        background: 'rgba(39,174,96,0.12)',
+                                        border: '1px solid rgba(39,174,96,0.35)',
+                                        borderRadius: '10px',
+                                        padding: '0.5rem 0.9rem',
+                                        fontSize: '0.65rem',
+                                        fontFamily: 'monospace',
+                                        color: '#27ae60',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        maxWidth: '240px',
+                                    }}>
+                                        <span style={{ fontSize: '0.9rem' }}>✅</span>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', letterSpacing: '0.04em' }}>
+                                                {language === 'es' ? 'WALLET CONECTADA' : 'WALLET CONNECTED'}
+                                            </div>
+                                            <div style={{ color: '#88cc88', opacity: 0.8 }}>
+                                                {userAddress.slice(0, 6)}…{userAddress.slice(-4)}
+                                            </div>
+                                        </div>
+                                        {checkInStreak > 0 && (
+                                            <div style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#d4af37', fontSize: '0.75rem' }}>
+                                                🔥 {checkInStreak}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        background: 'rgba(212,175,55,0.1)',
+                                        border: '1px dashed rgba(212,175,55,0.5)',
+                                        borderRadius: '10px',
+                                        padding: '0.5rem 0.9rem',
+                                        fontSize: '0.65rem',
+                                        fontFamily: 'monospace',
+                                        color: '#d4af37',
+                                        maxWidth: '240px',
+                                        textAlign: 'center',
+                                        lineHeight: '1.5',
+                                    }}>
+                                        🔑 {language === 'es'
+                                            ? 'Conecta una wallet Stellar para ganar $SLICE y NFTs on-chain'
+                                            : 'Connect a Stellar wallet to earn $SLICE & on-chain NFTs'}
+                                    </div>
+                                )}
+
+                                {/* Feature Icons Row */}
                                 <div style={{
-                                    fontFamily: 'var(--font-body)',
-                                    fontSize: '0.7rem',
-                                    color: '#aaa',
-                                    lineHeight: '1.4',
-                                    maxWidth: '230px',
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.6)'
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    gap: '1rem',
+                                    marginTop: '0.2rem',
                                 }}>
-                                    {language === 'es' 
-                                        ? 'El ritmo es tu ingrediente, cocinar es tu crimen.' 
-                                        : 'Rhythm is your ingredient, cooking is your crime.'}
+                                    {[
+                                        { icon: '🎸', label: language === 'es' ? 'Ritmo' : 'Rhythm' },
+                                        { icon: '🍕', label: language === 'es' ? 'Pizza' : 'Pizza' },
+                                        { icon: '⛓', label: language === 'es' ? 'On-chain' : 'On-chain' },
+                                        { icon: '⚔️', label: 'PvP' },
+                                    ].map(f => (
+                                        <div key={f.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                            <span style={{ fontSize: '1.1rem' }}>{f.icon}</span>
+                                            <span style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</span>
+                                        </div>
+                                    ))}
                                 </div>
 
                                 <div style={{
-                                    fontSize: '0.55rem',
-                                    color: 'rgba(255,255,255,0.25)',
+                                    fontSize: '0.48rem',
+                                    color: 'rgba(255,255,255,0.18)',
                                     fontFamily: 'monospace',
-                                    marginTop: '0.5rem'
+                                    marginTop: '0.2rem'
                                 }}>
-                                    ASPECT RATIO 9:16 • COMPLIANT FRAME
+                                    SOROBAN ZK EDITION • STELLAR TESTNET
                                 </div>
                             </div>
                         </div>
@@ -3758,7 +3827,129 @@ Ganador: ${payload.winnerAddress}`);
 
                             </div>
 
+                            {/* ── DAILY ENGAGEMENT HUD ─────────────────────────────────── */}
+                            {/* Compact quest progress + check-in streak, always visible in lobby */}
+                            <div style={{
+                                width: '87%',
+                                maxWidth: '300px',
+                                marginTop: '0.5rem',
+                                marginBottom: '-0.5rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.35rem',
+                            }}>
+                                {/* ── Streak Row ──────────────────────────────────── */}
+                                <div
+                                    onClick={() => setShowCheckInModal(true)}
+                                    style={{
+                                        background: canCheckIn
+                                            ? 'linear-gradient(90deg, rgba(139,0,0,0.85), rgba(212,175,55,0.25))'
+                                            : 'rgba(0,0,0,0.3)',
+                                        border: canCheckIn ? '1.5px solid #d4af37' : '1.5px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '10px',
+                                        padding: '0.35rem 0.75rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <span style={{ fontSize: '1rem' }}>🔥</span>
+                                        <div>
+                                            <div style={{ fontSize: '0.6rem', color: '#d4af37', fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                                {language === 'es' ? 'Racha del Don' : "Don's Streak"}
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fff', fontFamily: 'var(--font-display)' }}>
+                                                {checkInStreak} {checkInStreak === 1 ? (language === 'es' ? 'día' : 'day') : (language === 'es' ? 'días' : 'days')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        {canCheckIn ? (
+                                            <div style={{
+                                                background: '#d4af37',
+                                                color: '#1a0000',
+                                                fontSize: '0.58rem',
+                                                fontWeight: 'bold',
+                                                fontFamily: 'monospace',
+                                                padding: '2px 7px',
+                                                borderRadius: '8px',
+                                                letterSpacing: '0.05em',
+                                                animation: 'pulse 1.5s infinite',
+                                            }}>
+                                                {language === 'es' ? '✍ FIRMAR YA' : '✍ SIGN NOW'}
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                                                {language === 'es' ? '✓ firmado hoy' : '✓ signed today'}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
+                                {/* ── Quest Bars Row ──────────────────────────────── */}
+                                {(['pizzaCooked', 'scoreComplete', 'stakeComplete'] as const).map((_qKey, idx) => {
+                                    const questTargets = [2, 1, 1];
+                                    const questLabels = language === 'es'
+                                        ? ['🍕 Hornear 2 pizzas', '🎵 Completar 1 canción', '🥩 Congelar ingredientes']
+                                        : ['🍕 Bake 2 pizzas', '🎵 Complete 1 song', '🥩 Freeze ingredients'];
+                                    const questRewards = ['🍄 1 Trufa', '🍇 1 Higo', '✨ 1 Oro'];
+                                    const target = questTargets[idx];
+                                    const progress = Math.min(dailyQuestProgress[idx] ?? 0, target);
+                                    const claimed = dailyQuestClaimed[idx] ?? false;
+                                    const pct = Math.round((progress / target) * 100);
+                                    const completed = progress >= target;
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onClick={() => completed && !claimed ? claimQuestReward(idx) : undefined}
+                                            style={{
+                                                background: claimed ? 'rgba(39,174,96,0.08)' : completed ? 'rgba(212,175,55,0.12)' : 'rgba(0,0,0,0.3)',
+                                                border: claimed ? '1px solid rgba(39,174,96,0.4)' : completed ? '1px solid rgba(212,175,55,0.6)' : '1px solid rgba(255,255,255,0.07)',
+                                                borderRadius: '8px',
+                                                padding: '0.28rem 0.6rem',
+                                                cursor: completed && !claimed ? 'pointer' : 'default',
+                                                transition: 'all 0.2s ease',
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.15rem' }}>
+                                                <span style={{ fontSize: '0.62rem', color: claimed ? '#27ae60' : completed ? '#d4af37' : 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>
+                                                    {questLabels[idx]}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: '0.58rem',
+                                                    fontWeight: 'bold',
+                                                    color: claimed ? '#27ae60' : completed ? '#d4af37' : 'rgba(255,255,255,0.4)',
+                                                    fontFamily: 'monospace'
+                                                }}>
+                                                    {claimed ? '✓ ' + (language === 'es' ? 'RECLAMADO' : 'CLAIMED')
+                                                        : completed ? (language === 'es' ? 'TAP RECLAMAR' : 'TAP CLAIM')
+                                                        : `${progress}/${target}`}
+                                                </span>
+                                            </div>
+                                            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px', height: '4px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    height: '100%',
+                                                    width: `${pct}%`,
+                                                    background: claimed ? '#27ae60' : completed ? '#d4af37' : 'linear-gradient(90deg, #8B0000, #e74c3c)',
+                                                    borderRadius: '4px',
+                                                    transition: 'width 0.5s ease',
+                                                }} />
+                                            </div>
+                                            {completed && !claimed && (
+                                                <div style={{ fontSize: '0.58rem', color: '#d4af37', textAlign: 'right', marginTop: '0.1rem', fontFamily: 'monospace' }}>
+                                                    🎁 {questRewards[idx]}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.5rem', width: '80%', maxWidth: '300px' }}>
 
@@ -4280,72 +4471,141 @@ Ganador: ${payload.winnerAddress}`);
                                                         </div>
 
                                                         <div style={{
-
                                                             fontSize: '0.7rem',
-
                                                             color: isSelected ? '#14532D' : '#666',
-
                                                             marginTop: '3px',
-
                                                             fontWeight: '600',
-
                                                             lineHeight: '1.15'
-
                                                         }}>
-
                                                             {song.artist}
-
                                                         </div>
+
+                                                        {/* Difficulty Stars */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '5px' }}>
+                                                            {[1, 2, 3].map(star => (
+                                                                <span
+                                                                    key={star}
+                                                                    style={{
+                                                                        fontSize: '0.65rem',
+                                                                        opacity: star <= song.difficulty ? 1 : 0.2,
+                                                                        filter: star <= song.difficulty
+                                                                            ? (song.difficulty === 3 ? 'drop-shadow(0 0 3px #ff4444)' : 'drop-shadow(0 0 2px #d4af37)')
+                                                                            : 'none',
+                                                                        transition: 'all 0.2s',
+                                                                    }}
+                                                                >
+                                                                    {song.difficulty === 3 ? '💀' : '🍕'}
+                                                                </span>
+                                                            ))}
+                                                            <span style={{
+                                                                fontSize: '0.52rem',
+                                                                fontFamily: 'monospace',
+                                                                marginLeft: '3px',
+                                                                color: song.difficulty === 3 ? '#cc3333' : song.difficulty === 2 ? '#c0852a' : '#27ae60',
+                                                                fontWeight: 'bold',
+                                                                letterSpacing: '0.03em',
+                                                            }}>
+                                                                {song.difficulty === 1
+                                                                    ? (language === 'es' ? 'FÁCIL' : 'EASY')
+                                                                    : song.difficulty === 2
+                                                                        ? (language === 'es' ? 'MEDIO' : 'MEDIUM')
+                                                                        : (language === 'es' ? 'DIFÍCIL' : 'HARD')}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Personal Best */}
+                                                        {personalBests[song.id] ? (
+                                                            <div style={{
+                                                                fontSize: '0.52rem',
+                                                                fontFamily: 'monospace',
+                                                                marginTop: '3px',
+                                                                color: '#8B6914',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '3px',
+                                                            }}>
+                                                                <span>🏆</span>
+                                                                <span style={{ fontWeight: 'bold' }}>{personalBests[song.id].toLocaleString()}</span>
+                                                                <span style={{ opacity: 0.7 }}>{language === 'es' ? 'pts récord' : 'pts best'}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{
+                                                                fontSize: '0.5rem',
+                                                                fontFamily: 'monospace',
+                                                                marginTop: '3px',
+                                                                color: 'rgba(0,0,0,0.25)',
+                                                                fontStyle: 'italic',
+                                                            }}>
+                                                                {language === 'es' ? '— sin récord aún' : '— no record yet'}
+                                                            </div>
+                                                        )}
 
                                                     </div>
 
 
 
                                                     {/* Right side stats */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: '6px', flexShrink: 0, paddingTop: '0.2rem' }}>
 
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: '8px', flexShrink: 0, paddingTop: '0.2rem' }}>
-
+                                                        {/* BPM Badge */}
                                                         <div style={{
-
                                                             fontSize: '0.7rem',
-
                                                             fontWeight: '900',
-
                                                             background: isSelected ? '#27AE60' : '#EAE3D1',
-
                                                             color: isSelected ? 'white' : '#666',
-
                                                             padding: '2px 6px',
-
                                                             border: isSelected ? '1px solid #1E8449' : '1px solid #D1C5AD',
-
                                                             borderRadius: '6px',
-
                                                             letterSpacing: '0.05em',
-
                                                             boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.3)' : 'none'
-
                                                         }}>
-
                                                             {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
-
                                                         </div>
 
+                                                        {/* Duration */}
                                                         <div style={{
-
                                                             fontSize: '0.9rem',
-
                                                             fontFamily: 'var(--font-mono)',
-
                                                             color: isSelected ? '#1E8449' : '#333',
-
                                                             fontWeight: 'bold'
-
                                                         }}>
-
                                                             {mins}:{secs.toString().padStart(2, '0')}
-
                                                         </div>
+
+                                                        {/* New Record indicator (only when selected and PB exists) */}
+                                                        {isSelected && personalBests[song.id] && (
+                                                            <div style={{
+                                                                background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))',
+                                                                border: '1px solid rgba(212,175,55,0.5)',
+                                                                borderRadius: '6px',
+                                                                padding: '3px 6px',
+                                                                textAlign: 'center',
+                                                            }}>
+                                                                <div style={{ fontSize: '0.5rem', color: '#8B6914', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+                                                                    🏆 BEST
+                                                                </div>
+                                                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#8B6914', fontFamily: 'monospace' }}>
+                                                                    {personalBests[song.id].toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Play Count placeholder — shows '▶ Beat it' for no-record songs when selected */}
+                                                        {isSelected && !personalBests[song.id] && song.available && (
+                                                            <div style={{
+                                                                fontSize: '0.52rem',
+                                                                fontFamily: 'monospace',
+                                                                color: '#8B0000',
+                                                                fontWeight: 'bold',
+                                                                letterSpacing: '0.04em',
+                                                                border: '1px dashed rgba(139,0,0,0.4)',
+                                                                borderRadius: '5px',
+                                                                padding: '2px 5px',
+                                                                textAlign: 'center',
+                                                            }}>
+                                                                ▶ {language === 'es' ? 'SIN RÉCORD' : 'NO RECORD'}
+                                                            </div>
+                                                        )}
 
                                                     </div>
 
@@ -8163,12 +8423,89 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
+                                {/* Check-in Prompt (shows if not yet checked in today) */}
+                                {canCheckIn && (
+                                    <div
+                                        onClick={() => { closeTxPopup(); setShowCheckInModal(true); }}
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(139,0,0,0.12), rgba(212,175,55,0.1))',
+                                            border: '1.5px dashed #d4af37',
+                                            borderRadius: '10px',
+                                            padding: '0.65rem 1rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.7rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.15)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139,0,0,0.12), rgba(212,175,55,0.1))')}
+                                    >
+                                        <span style={{ fontSize: '1.4rem' }}>📕</span>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.78rem', color: '#8B0000', letterSpacing: '0.04em' }}>
+                                                {language === 'es' ? '¡Firma el Diario del Don hoy!' : "Sign the Don's Journal today!"}
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: '#888', marginTop: '1px' }}>
+                                                {checkInStreak > 0
+                                                    ? (language === 'es' ? `Racha actual: 🔥 ${checkInStreak} días` : `Current streak: 🔥 ${checkInStreak} days`)
+                                                    : (language === 'es' ? 'Empieza tu racha hoy' : 'Start your streak today')}
+                                            </div>
+                                        </div>
+                                        <div style={{
+                                            background: '#d4af37',
+                                            color: '#1a0000',
+                                            fontSize: '0.6rem',
+                                            fontWeight: 'bold',
+                                            padding: '3px 8px',
+                                            borderRadius: '6px',
+                                            fontFamily: 'monospace',
+                                            flexShrink: 0,
+                                            animation: 'pulse 1.5s infinite',
+                                        }}>
+                                            ✍ {language === 'es' ? 'FIRMAR' : 'SIGN'}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Quest Progress Summary */}
+                                {dailyQuestProgress.some((p, i) => p > 0 && !(dailyQuestClaimed[i])) && (
+                                    <div style={{
+                                        background: 'rgba(0,0,0,0.04)',
+                                        border: '1px solid rgba(0,0,0,0.1)',
+                                        borderRadius: '10px',
+                                        padding: '0.6rem 0.8rem',
+                                    }}>
+                                        <div style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
+                                            📋 {language === 'es' ? 'Misiones de Hoy' : "Today's Quests"}
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                            {[
+                                                { label: language === 'es' ? '🍕 Hornear 2 pizzas' : '🍕 Bake 2 pizzas', target: 2, reward: '🍄' },
+                                                { label: language === 'es' ? '🎵 Completar 1 canción' : '🎵 Complete 1 song', target: 1, reward: '🍇' },
+                                                { label: language === 'es' ? '🥩 Congelar ingredientes' : '🥩 Freeze ingredients', target: 1, reward: '✨' },
+                                            ].map((q, idx) => {
+                                                const prog = Math.min(dailyQuestProgress[idx] ?? 0, q.target);
+                                                const claimed = dailyQuestClaimed[idx] ?? false;
+                                                const done = prog >= q.target;
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <div style={{ flex: 1, background: 'rgba(0,0,0,0.06)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
+                                                            <div style={{ height: '100%', width: `${Math.round((prog / q.target) * 100)}%`, background: claimed ? '#27ae60' : done ? '#d4af37' : '#8B0000', borderRadius: '4px', transition: 'width 0.4s ease' }} />
+                                                        </div>
+                                                        <span style={{ fontSize: '0.62rem', color: claimed ? '#27ae60' : done ? '#d4af37' : '#888', fontFamily: 'monospace', minWidth: '60px' }}>
+                                                            {q.label.split(' ').slice(0, 2).join(' ')} {prog}/{q.target} {claimed ? '✓' : done ? q.reward : ''}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Countdown */}
-
                                 <div style={{ textAlign: 'center', color: '#555', fontSize: '0.72rem' }}>
-
                                     {language === 'es' ? 'Cierre automático en' : 'Auto-closing in'} {popupCountdown}s
-
                                 </div>
 
                             </div>
@@ -8176,6 +8513,17 @@ Ganador: ${payload.winnerAddress}`);
                         </div>
 
                     )}
+
+
+
+                    {/* ── NEW PLAYER ONBOARDING MODAL ────────────────────────────── */}
+                    <OnboardingModal
+                        showOnboarding={showOnboarding}
+                        onboardingStep={onboardingStep}
+                        setOnboardingStep={setOnboardingStep}
+                        language={language}
+                        dismissOnboarding={dismissOnboarding}
+                    />
 
 
 

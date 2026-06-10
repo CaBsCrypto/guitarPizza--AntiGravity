@@ -36,10 +36,36 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('noirc') || id.includes('acvm')) {
+            if (
+              id.includes('@noir-lang') || 
+              id.includes('barretenberg') || 
+              id.includes('@noble') ||
+              id.includes('noirc') || 
+              id.includes('acvm') ||
+              id.includes('@aztec')
+            ) {
               return 'zk-engine';
             }
-            return 'vendor';
+            if (
+              id.includes('@stellar') || 
+              id.includes('stellar-sdk') || 
+              id.includes('freighter-api') || 
+              id.includes('@creit-tech') || 
+              id.includes('sac-sdk') || 
+              id.includes('buffer') ||
+              id.includes('tweetnacl')
+            ) {
+              return 'stellar';
+            }
+            if (
+              id.includes('react') || 
+              id.includes('react-dom') || 
+              id.includes('zustand') ||
+              id.includes('clsx') ||
+              id.includes('tailwind-merge')
+            ) {
+              return 'vendor';
+            }
           }
         }
       }
