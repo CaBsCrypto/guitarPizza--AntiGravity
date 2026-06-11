@@ -1899,6 +1899,8 @@ Ganador: ${payload.winnerAddress}`);
 
                 const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : null;
 
+                const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
+
                 const result = await StellarContractService.startBake(
 
                     userAddress,
@@ -1912,6 +1914,8 @@ Ganador: ${payload.winnerAddress}`);
                     basePayoutRaw,
 
                     ovenNftId,
+
+                    fuelType,
 
                     signer
 
@@ -1961,7 +1965,7 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-        // Submit Soroban Transaction for speed up / unlock
+        // Submit Soroban Transaction for slot unlock
 
         if (userAddress) {
 
@@ -1969,7 +1973,7 @@ Ganador: ${payload.winnerAddress}`);
 
                 const signer = getContractSignerRef.current();
 
-                const result = await StellarContractService.speedUpBake(userAddress, slotId, signer);
+                const result = await StellarContractService.unlockBakingSlot(userAddress, slotId, signer);
 
                 if (result.success) {
 

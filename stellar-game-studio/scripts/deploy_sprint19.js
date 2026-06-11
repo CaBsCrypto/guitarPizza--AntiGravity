@@ -117,6 +117,18 @@ try {
   run(`stellar contract invoke --id ${zkLeaderboardId} --source-account ${adminSecret} --network ${NETWORK} -- set_verifier --verifier ${risc0VerifierId} --image_id ${placeholderImageId}`);
   console.log('zk-leaderboard configured successfully!');
 
+  // 9.4. Deploy pizza-baking
+  console.log('\n--- 9.4. Deploying pizza-baking ---');
+  const pizzaBakingId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\pizza_baking.wasm --source-account ${adminSecret} --network ${NETWORK}`);
+  console.log(`pizza-baking ID: ${pizzaBakingId}`);
+
+  // 9.5. Initialize pizza-baking
+  console.log('\n--- 9.5. Initializing pizza-baking ---');
+  const nftContractId = 'CBC3AGOZTWKEII45VBRWLOGMBNGBJ6ABPP6MOFAZM2HFHP2NKPXXEWXB';
+  run(`stellar contract invoke --id ${pizzaBakingId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --admin ${adminAddress} --slice_token ${sliceTokenId} --nft_contract ${nftContractId}`);
+  run(`stellar contract invoke --id ${pizzaBakingId} --source-account ${adminSecret} --network ${NETWORK} -- set_ingredients --cheese ${cheeseToken} --pepperoni ${pepperoniToken} --bacon ${baconToken} --onion ${onionToken}`);
+  console.log('pizza-baking initialized and ingredients configured successfully!');
+
   // 10. Update deployment.json
   console.log('\n--- 10. Updating deployment.json ---');
   const deploymentInfo = {
@@ -130,7 +142,8 @@ try {
       "pvp-escrow": pvpEscrowId,
       "refrigerator-vault": refrigeratorVaultId,
       "tournaments": tournamentsId,
-      "risc0-verifier": risc0VerifierId
+      "risc0-verifier": risc0VerifierId,
+      "pizza-baking": pizzaBakingId
     },
     network: NETWORK,
     rpcUrl: RPC_URL,
@@ -159,6 +172,7 @@ VITE_PVP_ESCROW_CONTRACT_ID=${pvpEscrowId}
 VITE_REFRIGERATOR_VAULT_CONTRACT_ID=${refrigeratorVaultId}
 VITE_TOURNAMENTS_CONTRACT_ID=${tournamentsId}
 VITE_RISC0_VERIFIER_CONTRACT_ID=${risc0VerifierId}
+VITE_PIZZA_BAKING_CONTRACT_ID=${pizzaBakingId}
 
 # Dev wallet addresses for testing
 VITE_DEV_ADMIN_ADDRESS=${adminAddress}
@@ -187,6 +201,7 @@ VITE_DEV_PLAYER2_SECRET=${player2Secret}
   constants = constants.replace(/'refrigerator-vault':\s*'.*?',?/, `'refrigerator-vault': '${refrigeratorVaultId}',`);
   constants = constants.replace(/'tournaments':\s*'.*?',?/, `'tournaments':        '${tournamentsId}',`);
   constants = constants.replace(/'risc0-verifier':\s*'.*?',?/, `'risc0-verifier':    '${risc0VerifierId}',`);
+  constants = constants.replace(/'pizza-baking':\s*'.*?',?/, `'pizza-baking':       '${pizzaBakingId}',`);
 
   fs.writeFileSync(constantsPath, constants);
   console.log("constants.ts updated.");

@@ -1637,6 +1637,7 @@ export class StellarContractService {
     durationSec: number,
     basePayoutRaw: number,
     ovenNftId: number | null,
+    fuelType: number,
     signer: SignerFn,
   ): Promise<{ success: boolean; txHash?: string; error?: string }> {
     const contractId = CONTRACT_IDS.pizzaBaking;
@@ -1656,7 +1657,8 @@ export class StellarContractService {
             nativeToScVal(recipeId, { type: 'u32' }),
             nativeToScVal(BigInt(durationSec), { type: 'u64' }),
             nativeToScVal(BigInt(basePayoutRaw), { type: 'u64' }),
-            ovenNftId !== null ? nativeToScVal(ovenNftId, { type: 'u32' }) : nativeToScVal(null)
+            ovenNftId !== null ? nativeToScVal(ovenNftId, { type: 'u32' }) : nativeToScVal(null),
+            nativeToScVal(fuelType, { type: 'u32' })
           )
         )
         .setTimeout(30)
@@ -1800,6 +1802,92 @@ export class StellarContractService {
     } catch (err: any) {
       console.error('[StellarContract] claimBake failed:', err);
       return { success: false, error: err?.message ?? String(err) };
+    }
+  }
+
+  static async unlockBakingSlot(
+    playerAddress: string,
+    slotId: number,
+    signer: SignerFn,
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    const contractId = CONTRACT_IDS.pizzaBaking;
+    if (!contractId) return { success: false, error: 'Pizza Baking contract not configured' };
+    try {
+      const server = new SorobanRpc.Server(RPC_URL);
+      const contract = new Contract(contractId);
+      const tx = new TransactionBuilder(
+        await server.getAccount(playerAddress),
+        { fee: '100', networkPassphrase: NETWORK_PASS },
+      )
+        .addOperation(
+          contract.call(
+            'unlock_slot',
+            new Address(playerAddress).toScVal(),
+            nativeToScVal(slotId, { type: 'u32' })
+          )
+        )
+        .setTimeout(30)
+        .build();
+
+      const txWrapper = {
+        tx,
+        signAndSend: async (opts: any) => {
+          const { signedTxXdr } = await opts.signTransaction(tx.toXDR());
+          const signedInner = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASS);
+          const response = await server.sendTransaction(signedInner as any);
+          if (response.status === 'ERROR') throw new Error(JSON.stringify(response.errorResult));
+          
+          let status = response.status as any;
+          const hash = response.hash;
+          let attempts = 0;
+          while ((status === 'PENDING' || status === 'NOT_FOUND') && attempts < 15) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const statusResponse = await server.getTransaction(hash);
+            status = statusResponse.status;
+            if (status === 'SUCCESS') return { getTransactionResponse: { txHash: hash } };
+            if (status === 'FAILED') throw new Error(`Tx failed`);
+            attempts++;
+          }
+          return { getTransactionResponse: { txHash: hash } };
+        }
+      };
+
+      const txHash = await signAndSend(txWrapper, signer, playerAddress);
+      return { success: true, txHash };
+    } catch (err: any) {
+      console.error('[StellarContract] unlockBakingSlot failed:', err);
+      return { success: false, error: err?.message ?? String(err) };
+    }
+  }
+
+  static async isBakingSlotUnlocked(playerAddress: string, slotId: number): Promise<boolean> {
+    const contractId = CONTRACT_IDS.pizzaBaking;
+    if (!contractId) return false;
+    try {
+      const server = new SorobanRpc.Server(RPC_URL);
+      const contract = new Contract(contractId);
+      const sourceAccount = await server.getAccount(TESTNET_SIM_SOURCE);
+      const tx = new TransactionBuilder(
+        sourceAccount,
+        { fee: '100', networkPassphrase: NETWORK_PASS },
+      )
+        .addOperation(
+          contract.call(
+            'is_slot_unlocked',
+            new Address(playerAddress).toScVal(),
+            nativeToScVal(slotId, { type: 'u32' })
+          )
+        )
+        .setTimeout(30)
+        .build();
+      const result = await server.simulateTransaction(tx);
+      if (SorobanRpc.Api.isSimulationSuccess(result) && result.result) {
+        return Boolean(scValToNative(result.result.retval));
+      }
+      return false;
+    } catch (err) {
+      console.error('[StellarContract] isBakingSlotUnlocked failed:', err);
+      return false;
     }
   }
 

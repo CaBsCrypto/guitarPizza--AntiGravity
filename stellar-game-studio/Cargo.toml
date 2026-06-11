@@ -18,6 +18,7 @@ members = [
   "contracts/nft-collectibles",
   "contracts/refrigerator-vault",
   "contracts/risc0-verifier",
+  "contracts/pizza-baking",
 ]
 
 [workspace.dependencies]

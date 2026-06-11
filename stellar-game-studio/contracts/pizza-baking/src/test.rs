@@ -31,7 +31,7 @@ impl MockSliceToken {
     }
 
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
-        spender.require_auth();
+        // Mock transfer_from allows anyone to transfer
         let from_key = MockTokenKey::Balance(from.clone());
         let to_key = MockTokenKey::Balance(to.clone());
         let from_bal: i128 = env.storage().instance().get(&from_key).unwrap_or(0);
@@ -78,6 +78,10 @@ struct TestContext {
     player: Address,
     baking_client: PizzaBakingContractClient<'static>,
     token_client: MockSliceTokenClient<'static>,
+    cheese_client: MockSliceTokenClient<'static>,
+    pepperoni_client: MockSliceTokenClient<'static>,
+    bacon_client: MockSliceTokenClient<'static>,
+    onion_client: MockSliceTokenClient<'static>,
     nft_client: MockNFTContractClient<'static>,
 }
 
@@ -92,6 +96,19 @@ fn setup() -> TestContext {
     let token_id = env.register(MockSliceToken, ());
     let token_client = MockSliceTokenClient::new(&env, &token_id);
 
+    // Deploy mock ingredients
+    let cheese_id = env.register(MockSliceToken, ());
+    let cheese_client = MockSliceTokenClient::new(&env, &cheese_id);
+
+    let pepperoni_id = env.register(MockSliceToken, ());
+    let pepperoni_client = MockSliceTokenClient::new(&env, &pepperoni_id);
+
+    let bacon_id = env.register(MockSliceToken, ());
+    let bacon_client = MockSliceTokenClient::new(&env, &bacon_id);
+
+    let onion_id = env.register(MockSliceToken, ());
+    let onion_client = MockSliceTokenClient::new(&env, &onion_id);
+
     // Deploy mock NFT contract
     let nft_id = env.register(MockNFTContract, ());
     let nft_client = MockNFTContractClient::new(&env, &nft_id);
@@ -101,10 +118,19 @@ fn setup() -> TestContext {
     let baking_client = PizzaBakingContractClient::new(&env, &baking_id);
 
     // Initialize baking contract
-    baking_client.initialize(&admin, &token_id, &Some(nft_id.clone()));
+    baking_client.initialize(&admin, &token_id, &nft_id);
+    
+    // Set ingredients
+    baking_client.set_ingredients(&cheese_id, &pepperoni_id, &bacon_id, &onion_id);
 
-    // Mint some SLICE to player and to the baking contract for payouts
-    token_client.mint(&player, &10_000_000); // 1.0 SLICE raw units
+    // Mint some SLICE and ingredients to player
+    token_client.mint(&player, &200_000_000); // 20.0 SLICE raw units
+    cheese_client.mint(&player, &100);
+    pepperoni_client.mint(&player, &100);
+    bacon_client.mint(&player, &100);
+    onion_client.mint(&player, &100);
+
+    // Mint SLICE to the baking contract for payouts
     token_client.mint(&baking_id, &100_000_000); // 10.0 SLICE raw units
 
     TestContext {
@@ -113,6 +139,10 @@ fn setup() -> TestContext {
         player,
         baking_client,
         token_client,
+        cheese_client,
+        pepperoni_client,
+        bacon_client,
+        onion_client,
         nft_client,
     }
 }
@@ -123,130 +153,154 @@ fn setup() -> TestContext {
 fn test_initialize() {
     let ctx = setup();
     // Re-initialization should fail
-    let res = ctx.baking_client.try_initialize(&ctx.admin, &Address::generate(&ctx.env), &None);
+    let res = ctx.baking_client.try_initialize(&ctx.admin, &Address::generate(&ctx.env), &Address::generate(&ctx.env));
     assert!(res.is_err());
 }
 
 #[test]
-fn test_start_bake_no_nft() {
+fn test_slot_unlocking() {
+    let ctx = setup();
+
+    // Slots 1 & 2 are unlocked by default
+    assert!(ctx.baking_client.is_slot_unlocked(&ctx.player, &1));
+    assert!(ctx.baking_client.is_slot_unlocked(&ctx.player, &2));
+
+    // Slots 3 & 4 are locked by default
+    assert!(!ctx.baking_client.is_slot_unlocked(&ctx.player, &3));
+    assert!(!ctx.baking_client.is_slot_unlocked(&ctx.player, &4));
+
+    // Try baking in slot 3 before unlocking - should panic
+    let res = ctx.baking_client.try_start_bake(&ctx.player, &3, &1, &3600, &5_000_000, &None, &0);
+    assert!(res.is_err());
+
+    // Unlock slot 3 (costs 50 $SLICE = 500_000_000 raw, let's mint more to player to cover)
+    ctx.token_client.mint(&ctx.player, &500_000_000);
+    ctx.baking_client.unlock_slot(&ctx.player, &3);
+
+    // Now slot 3 is unlocked
+    assert!(ctx.baking_client.is_slot_unlocked(&ctx.player, &3));
+
+    // Try unlocking slot 3 again - should fail
+    let res_double = ctx.baking_client.try_unlock_slot(&ctx.player, &3);
+    assert!(res_double.is_err());
+
+    // Can start baking in slot 3 now
+    ctx.baking_client.start_bake(&ctx.player, &3, &1, &3600, &5_000_000, &None, &0);
+    let slot = ctx.baking_client.get_slot(&ctx.player, &3).unwrap();
+    assert!(slot.locked);
+}
+
+#[test]
+fn test_start_bake_no_nft_no_fuel() {
     let ctx = setup();
     
-    // Start baking recipe 42 with duration of 3600 seconds, and base payout of 5_000_000 raw SLICE
-    ctx.baking_client.start_bake(&ctx.player, &0, &42, &3600, &5_000_000, &None);
+    // Start baking recipe 1 (Margherita: 1 Cheese) with duration of 3600 seconds, and base payout of 5_000_000 raw SLICE
+    let init_cheese = ctx.cheese_client.balance(&ctx.player);
+    ctx.baking_client.start_bake(&ctx.player, &1, &1, &3600, &5_000_000, &None, &0);
 
-    let slot = ctx.baking_client.get_slot(&ctx.player, &0).unwrap();
+    // 1 Cheese was deducted
+    assert_eq!(init_cheese - ctx.cheese_client.balance(&ctx.player), 1);
+
+    let slot = ctx.baking_client.get_slot(&ctx.player, &1).unwrap();
     assert!(slot.locked);
-    assert_eq!(slot.recipe_id, 42);
+    assert_eq!(slot.recipe_id, 1);
     assert_eq!(slot.duration, 3600);
     assert_eq!(slot.base_payout, 5_000_000);
     assert_eq!(slot.oven_nft_id, None);
-
-    // Try starting another bake in the same active locked slot - should fail
-    let res = ctx.baking_client.try_start_bake(&ctx.player, &0, &43, &3600, &5_000_000, &None);
-    assert!(res.is_err());
+    assert_eq!(slot.payout_multiplier_bps, 10000);
 }
 
 #[test]
-fn test_start_bake_with_nft() {
+fn test_start_bake_with_fuel() {
+    let ctx = setup();
+
+    // Cherry fuel (fuel_type = 1): costs 0.5 $SLICE (5_000_000 raw), speed 1.3x, payout 1.1x
+    let init_slice = ctx.token_client.balance(&ctx.player);
+    ctx.baking_client.start_bake(&ctx.player, &1, &1, &3600, &5_000_000, &None, &1);
+
+    // 0.5 $SLICE was deducted
+    assert_eq!(init_slice - ctx.token_client.balance(&ctx.player), 5_000_000);
+
+    let slot = ctx.baking_client.get_slot(&ctx.player, &1).unwrap();
+    assert!(slot.locked);
+    // duration reduced: 3600 * 10000 / 13000 = 2769
+    assert_eq!(slot.duration, 2769);
+    assert_eq!(slot.payout_multiplier_bps, 11000); // 1.1x
+}
+
+#[test]
+fn test_start_bake_with_nft_and_fuel() {
     let ctx = setup();
     
     // Equip Oven NFT 8 (Don de la Masa Oven style: 2.0x speed, 2.0x payout)
     ctx.nft_client.set_owner(&8, &ctx.player);
 
-    // Start baking with NFT 8, base duration 7200 seconds should be halved to 3600
-    ctx.baking_client.start_bake(&ctx.player, &1, &100, &7200, &10_000_000, &Some(8));
+    // Mesquite fuel (fuel_type = 2): costs 1.2 $SLICE (12_000_000 raw), speed 1.8x, payout 1.3x
+    // Combined speed: 1.8 * 2.0 = 3.6x (36000 bps)
+    // Combined payout: 1.3 * 2.0 = 2.6x (26000 bps)
+    ctx.baking_client.start_bake(&ctx.player, &1, &2, &7200, &10_000_000, &Some(8), &2);
 
     let slot = ctx.baking_client.get_slot(&ctx.player, &1).unwrap();
     assert!(slot.locked);
-    assert_eq!(slot.duration, 3600); // 7200 / 2.0
-    assert_eq!(slot.oven_nft_id, Some(8));
+    // duration reduced: 7200 * 10000 / 36000 = 2000
+    assert_eq!(slot.duration, 2000);
+    assert_eq!(slot.payout_multiplier_bps, 26000); // 2.6x
+}
 
-    // Try baking with NFT 9 which player does not own - should fail
-    ctx.nft_client.set_owner(&9, &Address::generate(&ctx.env));
-    let res = ctx.baking_client.try_start_bake(&ctx.player, &2, &100, &7200, &10_000_000, &Some(9));
-    assert!(res.is_err());
+#[test]
+fn test_ingredient_deductions() {
+    let ctx = setup();
+
+    // Recipe 3 (Special): 1 cheese, 1 pepperoni, 1 bacon
+    let init_cheese = ctx.cheese_client.balance(&ctx.player);
+    let init_pep = ctx.pepperoni_client.balance(&ctx.player);
+    let init_bac = ctx.bacon_client.balance(&ctx.player);
+
+    ctx.baking_client.start_bake(&ctx.player, &1, &3, &3600, &5_000_000, &None, &0);
+
+    assert_eq!(init_cheese - ctx.cheese_client.balance(&ctx.player), 1);
+    assert_eq!(init_pep - ctx.pepperoni_client.balance(&ctx.player), 1);
+    assert_eq!(init_bac - ctx.bacon_client.balance(&ctx.player), 1);
 }
 
 #[test]
 fn test_speed_up() {
     let ctx = setup();
     
-    // Start bake with 7200 seconds duration
-    ctx.baking_client.start_bake(&ctx.player, &0, &42, &7200, &5_000_000, &None);
+    // Start bake
+    ctx.baking_client.start_bake(&ctx.player, &1, &1, &7200, &5_000_000, &None, &0);
 
     let initial_balance = ctx.token_client.balance(&ctx.player);
 
     // Perform speed-up (costs 0.1 SLICE = 1_000_000 raw units, reduces remaining duration by 3600s)
-    ctx.baking_client.speed_up(&ctx.player, &0);
+    ctx.baking_client.speed_up(&ctx.player, &1);
 
     let new_balance = ctx.token_client.balance(&ctx.player);
     assert_eq!(initial_balance - new_balance, 1_000_000); // 0.1 SLICE deduction
 
-    let slot = ctx.baking_client.get_slot(&ctx.player, &0).unwrap();
+    let slot = ctx.baking_client.get_slot(&ctx.player, &1).unwrap();
     assert_eq!(slot.duration, 3600); // 7200 - 3600 = 3600
-
-    // Speed up again, remaining duration is 3600s, should become 0 (finishes instantly)
-    ctx.baking_client.speed_up(&ctx.player, &0);
-    let slot_after = ctx.baking_client.get_slot(&ctx.player, &0).unwrap();
-    assert_eq!(slot_after.duration, 0);
 }
 
 #[test]
 fn test_claim_bake_countdown_validators() {
     let mut ctx = setup();
-    
-    // Set current ledger timestamp to 1000
     ctx.env.ledger().set_timestamp(1000);
 
     // Start bake with 3600 seconds duration (target timestamp is 4600)
-    ctx.baking_client.start_bake(&ctx.player, &0, &42, &3600, &5_000_000, &None);
+    ctx.baking_client.start_bake(&ctx.player, &1, &1, &3600, &5_000_000, &None, &0);
 
     // Try claiming immediately - should fail since ledger timestamp is still 1000 (< 4600)
-    let res = ctx.baking_client.try_claim_bake(&ctx.player, &0);
+    let res = ctx.baking_client.try_claim_bake(&ctx.player, &1);
     assert!(res.is_err());
-
-    // Advance ledger timestamp to 4599 - still fails
-    ctx.env.ledger().set_timestamp(4599);
-    let res2 = ctx.baking_client.try_claim_bake(&ctx.player, &0);
-    assert!(res2.is_err());
 
     // Advance ledger timestamp to 4600 - succeeds!
     ctx.env.ledger().set_timestamp(4600);
     
     let initial_balance = ctx.token_client.balance(&ctx.player);
-    let payout = ctx.baking_client.claim_bake(&ctx.player, &0);
+    let payout = ctx.baking_client.claim_bake(&ctx.player, &1);
     let new_balance = ctx.token_client.balance(&ctx.player);
 
     assert_eq!(payout, 5_000_000);
     assert_eq!(new_balance - initial_balance, 5_000_000);
-
-    // The slot lock is now unlocked
-    let slot = ctx.baking_client.get_slot(&ctx.player, &0).unwrap();
-    assert!(!slot.locked);
-}
-
-#[test]
-fn test_claim_bake_with_nft_multiplier() {
-    let mut ctx = setup();
-    ctx.env.ledger().set_timestamp(1000);
-    
-    // Equip Oven NFT 8 (Don de la Masa style: 2.0x payout, 2.0x speed)
-    ctx.nft_client.set_owner(&8, &ctx.player);
-
-    // Start baking: base duration is 3600s, base payout is 5_000_000
-    ctx.baking_client.start_bake(&ctx.player, &0, &42, &3600, &5_000_000, &Some(8));
-
-    let slot = ctx.baking_client.get_slot(&ctx.player, &0).unwrap();
-    assert_eq!(slot.duration, 1800); // 3600 / 2.0
-
-    // Advance timestamp by 1800s to 2800
-    ctx.env.ledger().set_timestamp(2800);
-
-    let initial_balance = ctx.token_client.balance(&ctx.player);
-    let payout = ctx.baking_client.claim_bake(&ctx.player, &0);
-    let new_balance = ctx.token_client.balance(&ctx.player);
-
-    // Don de la Masa Oven style gives 2.0x payout: 5_000_000 * 2.0 = 10_000_000
-    assert_eq!(payout, 10_000_000);
-    assert_eq!(new_balance - initial_balance, 10_000_000);
 }

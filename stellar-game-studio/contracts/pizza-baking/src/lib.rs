@@ -28,6 +28,7 @@ pub struct BakingSlot {
     pub duration: u64,
     pub oven_nft_id: Option<u32>,
     pub base_payout: u64,
+    pub payout_multiplier_bps: u64,
 }
 
 #[contracttype]
@@ -36,6 +37,12 @@ pub enum DataKey {
     SliceToken,
     NFTContract,
     BakingSlot(Address, u32), // (player, slot_id)
+    SlotUnlocked(Address, u32), // (player, slot_id)
+    CheeseToken,
+    PepperoniToken,
+    BaconToken,
+    OnionToken,
+    Initialized,
 }
 
 // ── Contract Definition ──────────────────────────────────────────────────
@@ -45,25 +52,89 @@ pub struct PizzaBakingContract;
 
 #[contractimpl]
 impl PizzaBakingContract {
-    /// Initialize the contract with admin, slice token, and optional NFT contract.
+    /// Initialize the contract with admin, slice token, and NFT contract.
     pub fn initialize(
         env: Env,
         admin: Address,
         slice_token: Address,
-        nft_contract: Option<Address>,
+        nft_contract: Address,
     ) {
-        if env.storage().instance().has(&DataKey::Admin) {
+        if env.storage().instance().has(&DataKey::Initialized) {
             panic!("Already initialized");
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::SliceToken, &slice_token);
-        if let Some(nft) = nft_contract {
-            env.storage().instance().set(&DataKey::NFTContract, &nft);
+        env.storage().instance().set(&DataKey::NFTContract, &nft_contract);
+        env.storage().instance().set(&DataKey::Initialized, &true);
+    }
+
+    /// Set standard ingredient token addresses.
+    pub fn set_ingredients(
+        env: Env,
+        cheese: Address,
+        pepperoni: Address,
+        bacon: Address,
+        onion: Address,
+    ) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).expect("Not initialized");
+        admin.require_auth();
+
+        env.storage().instance().set(&DataKey::CheeseToken, &cheese);
+        env.storage().instance().set(&DataKey::PepperoniToken, &pepperoni);
+        env.storage().instance().set(&DataKey::BaconToken, &bacon);
+        env.storage().instance().set(&DataKey::OnionToken, &onion);
+    }
+
+    /// Unlock permanently locked slot 3 or 4 by paying $SLICE.
+    pub fn unlock_slot(env: Env, player: Address, slot_id: u32) {
+        player.require_auth();
+
+        if slot_id != 3 && slot_id != 4 {
+            panic!("Only slots 3 and 4 can be unlocked");
         }
+
+        let key = DataKey::SlotUnlocked(player.clone(), slot_id);
+        if env.storage().persistent().has(&key) {
+            panic!("Slot already unlocked");
+        }
+
+        let cost: i128 = if slot_id == 3 {
+            50 * 10_000_000 // 50 $SLICE scaled by 1e7
+        } else {
+            100 * 10_000_000 // 100 $SLICE scaled by 1e7
+        };
+
+        let slice_token: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::SliceToken)
+            .expect("Slice token not configured");
+
+        let slice_client = SliceTokenClient::new(&env, &slice_token);
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).expect("Admin not configured");
+
+        // Transfer unlock cost from player to admin
+        slice_client.transfer(&player, &admin, &cost);
+
+        env.storage().persistent().set(&key, &true);
+
+        env.events().publish(
+            (symbol_short!("unlock"), player, slot_id),
+            (cost,),
+        );
+    }
+
+    /// Query whether a specific slot is unlocked for a player.
+    pub fn is_slot_unlocked(env: Env, player: Address, slot_id: u32) -> bool {
+        if slot_id == 1 || slot_id == 2 {
+            return true;
+        }
+        let key = DataKey::SlotUnlocked(player, slot_id);
+        env.storage().persistent().has(&key)
     }
 
     /// Start baking a pizza in a specific slot.
-    /// Requires active slot lock checks and speed/payout calculations from Equipped Oven NFT.
+    /// Deducts ingredients directly from the player's wallet and charges wood fuel fees if selected.
     pub fn start_bake(
         env: Env,
         player: Address,
@@ -72,10 +143,19 @@ impl PizzaBakingContract {
         duration: u64,
         base_payout: u64,
         oven_nft_id: Option<u32>,
+        fuel_type: u32, // 0 = None, 1 = Cherry, 2 = Mesquite
     ) {
         player.require_auth();
 
-        // 1. Check active slot lock
+        // 1. Verify slot is unlocked
+        if slot_id != 1 && slot_id != 2 {
+            let unlock_key = DataKey::SlotUnlocked(player.clone(), slot_id);
+            if !env.storage().persistent().has(&unlock_key) {
+                panic!("Slot is permanently locked. Unlock it first.");
+            }
+        }
+
+        // 2. Check active slot lock
         let key = DataKey::BakingSlot(player.clone(), slot_id);
         let existing: Option<BakingSlot> = env.storage().persistent().get(&key);
         if let Some(ref slot) = existing {
@@ -84,41 +164,100 @@ impl PizzaBakingContract {
             }
         }
 
-        // 2. Validate Oven NFT ownership and get multipliers if present
-        let mut speed_multiplier_bps = 10000; // 1.0x default
-        let mut payout_multiplier_bps = 10000; // 1.0x default
+        let slice_token: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::SliceToken)
+            .expect("Slice token not configured");
+        let slice_client = SliceTokenClient::new(&env, &slice_token);
 
-        if let Some(nft_id) = oven_nft_id {
-            let nft_contract_opt: Option<Address> = env
-                .storage()
-                .instance()
-                .get(&DataKey::NFTContract);
-            
-            if let Some(nft_contract) = nft_contract_opt {
-                let nft_client = NFTClient::new(&env, &nft_contract);
-                let owner = nft_client.owner_of(&nft_id);
-                if owner != player {
-                    panic!("Player does not own Equipped Oven NFT");
-                }
-                
-                // Fetch multipliers based on style
-                let (speed, payout) = Self::get_nft_multipliers(nft_id);
-                speed_multiplier_bps = speed;
-                payout_multiplier_bps = payout;
+        // 3. Deduct wood fuel fee
+        let mut wood_speed_bps = 10000;
+        let mut wood_payout_bps = 10000;
+        if fuel_type > 0 {
+            let fuel_cost: i128 = if fuel_type == 1 {
+                5_000_000 // 0.5 $SLICE (scaled by 1e7)
+            } else if fuel_type == 2 {
+                12_000_000 // 1.2 $SLICE
             } else {
-                panic!("NFT contract address not configured");
+                panic!("Invalid fuel type");
+            };
+            
+            // Transfer fuel fee to the contract treasury (permanent sink)
+            slice_client.transfer(&player, &env.current_contract_address(), &fuel_cost);
+
+            if fuel_type == 1 {
+                wood_speed_bps = 13000;  // 1.3x speed
+                wood_payout_bps = 11000; // 1.1x payout
+            } else if fuel_type == 2 {
+                wood_speed_bps = 18000;  // 1.8x speed
+                wood_payout_bps = 13000; // 1.3x payout
             }
         }
 
-        // 3. Compute speed multiplier effect (reduces duration)
-        // actual_duration = base_duration * 10000 / speed_multiplier_bps
-        let actual_duration = if speed_multiplier_bps > 0 {
-            (duration * 10000) / speed_multiplier_bps
+        // 4. Validate Oven NFT ownership and get multipliers if present
+        let mut nft_speed_bps = 10000; // 1.0x default
+        let mut nft_payout_bps = 10000; // 1.0x default
+
+        if let Some(nft_id) = oven_nft_id {
+            let nft_contract: Address = env
+                .storage()
+                .instance()
+                .get(&DataKey::NFTContract)
+                .expect("NFT contract address not configured");
+            
+            let nft_client = NFTClient::new(&env, &nft_contract);
+            let owner = nft_client.owner_of(&nft_id);
+            if owner != player {
+                panic!("Player does not own Equipped Oven NFT");
+            }
+            
+            // Fetch multipliers based on style
+            let (speed, payout) = Self::get_nft_multipliers(nft_id);
+            nft_speed_bps = speed;
+            nft_payout_bps = payout;
+        }
+
+        // 5. Compute combined speed and payout multipliers
+        let combined_speed_bps = (wood_speed_bps * nft_speed_bps) / 10000;
+        let combined_payout_multiplier_bps = (wood_payout_bps * nft_payout_bps) / 10000;
+
+        let actual_duration = if combined_speed_bps > 0 {
+            (duration * 10000) / combined_speed_bps
         } else {
             duration
         };
 
-        // 4. Save new locked baking slot status
+        // 6. Deduct required ingredients from player's wallet via transfer_from
+        let (cheese_cost, pepperoni_cost, bacon_cost, onion_cost) = match recipe_id {
+            1 => (1, 0, 0, 0), // Margherita
+            2 => (1, 1, 0, 0), // Pepperoni
+            3 => (1, 1, 1, 0), // Special
+            4 => (2, 1, 0, 0), // Tartufo (rare truffle ignored on-chain)
+            5 => (2, 0, 0, 1), // Dolce (rare fig ignored)
+            6 => (2, 0, 2, 0), // Mafia (rare caviar/gold ignored)
+            _ => panic!("Invalid recipe_id"),
+        };
+
+        let deduct_ingredient = |token_key: DataKey, cost: i128| {
+            if cost > 0 {
+                let token_addr: Address = env
+                    .storage()
+                    .instance()
+                    .get(&token_key)
+                    .expect("Ingredient token not configured");
+                let client = SliceTokenClient::new(&env, &token_addr);
+                // Transfer from player to contract treasury/burn
+                client.transfer_from(&env.current_contract_address(), &player, &env.current_contract_address(), &cost);
+            }
+        };
+
+        deduct_ingredient(DataKey::CheeseToken, cheese_cost);
+        deduct_ingredient(DataKey::PepperoniToken, pepperoni_cost);
+        deduct_ingredient(DataKey::BaconToken, bacon_cost);
+        deduct_ingredient(DataKey::OnionToken, onion_cost);
+
+        // 7. Save new locked baking slot status
         let new_slot = BakingSlot {
             locked: true,
             recipe_id,
@@ -126,6 +265,7 @@ impl PizzaBakingContract {
             duration: actual_duration,
             oven_nft_id,
             base_payout,
+            payout_multiplier_bps: combined_payout_multiplier_bps,
         };
 
         env.storage().persistent().set(&key, &new_slot);
@@ -133,7 +273,7 @@ impl PizzaBakingContract {
         // Publish start event
         env.events().publish(
             (symbol_short!("start"), player, slot_id),
-            (recipe_id, actual_duration, oven_nft_id),
+            (recipe_id, actual_duration, oven_nft_id, fuel_type),
         );
     }
 
@@ -207,14 +347,8 @@ impl PizzaBakingContract {
             panic!("Ledger timestamp countdown validator failed: bake in progress");
         }
 
-        // Calculate Equipped Oven NFT payout multiplier bonus
-        let mut payout_multiplier_bps = 10000; // 1.0x default
-        if let Some(nft_id) = slot.oven_nft_id {
-            let (_, payout) = Self::get_nft_multipliers(nft_id);
-            payout_multiplier_bps = payout;
-        }
-
-        let actual_payout = (slot.base_payout * payout_multiplier_bps) / 10000;
+        // Combined payout multiplier bonus computed at start_bake
+        let actual_payout = (slot.base_payout * slot.payout_multiplier_bps) / 10000;
 
         // Unlock active slot lock
         slot.locked = false;
