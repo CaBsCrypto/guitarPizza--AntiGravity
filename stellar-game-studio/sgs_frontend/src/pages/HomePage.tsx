@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import type { Page } from '../types/navigation';
 import { ChevronLeft, ChevronRight, Pin } from 'lucide-react';
+import { getContractId } from '../utils/constants';
 import './HomePage.css';
 
 interface HomePageProps {
@@ -313,16 +314,22 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </div>
                 <div className="hp-contracts-list">
                   {[
-                    { name: 'guitar-pizza', addr: 'CADIKXHE6RAW4LDGV6MNTSDEK5JKCNFWUQLCYUZA7DDTOIMF6PTVAMTH', icon: '🍕' },
-                    { name: 'zk-leaderboard', addr: 'CAFKIEE76S5LHA2QJ3PYU7WW2VSCYCW2FDLCC2RTQLBTZRYTL5UL5PYV', icon: '🏆' },
-                    { name: 'achievement-vault', addr: 'CCGVC6WRVP5BNFVBQRZ3KNGTSMR37QHGAZ76NB7FXUT4LSGORTPAERVC', icon: '🎖️' },
-                    { name: 'daily-recipe', addr: 'CBWPTLNG5BZQUWQYRBTRGUARM7XUEUASASWMGLPIRKSNNVO7R4K3HOVN', icon: '📋' },
-                    { name: 'game-hub', addr: 'CB4VZAT2U3UC6XFK3N23SKRF2NDCMP3QHJYMCHHFMZO7MRQO6DQ2EMYG', icon: '🌐', isHub: true },
+                    { name: 'guitar-pizza', addr: getContractId('guitar-pizza'), icon: '🍕' },
+                    { name: 'zk-leaderboard', addr: getContractId('zk-leaderboard'), icon: '🏆' },
+                    { name: 'achievement-vault', addr: getContractId('achievement-vault'), icon: '🎖️' },
+                    { name: 'daily-recipe', addr: getContractId('daily-recipe'), icon: '📋' },
+                    { name: 'game-hub', addr: getContractId('mock-game-hub'), icon: '🌐', isHub: true },
+                    { name: '$SLICE token', addr: getContractId('slice-token'), icon: '🪙' },
+                    { name: 'staking-vault', addr: getContractId('staking-vault'), icon: '🔥' },
+                    { name: 'refrigerator-vault', addr: getContractId('refrigerator-vault'), icon: '❄️' },
+                    { name: 'pvp-escrow', addr: getContractId('pvp-escrow'), icon: '⚖️' },
+                    { name: 'tournaments', addr: getContractId('tournaments'), icon: '⚔️' },
+                    { name: 'pizza-baking', addr: getContractId('pizza-baking'), icon: '⏲️' },
                   ].map((c) => (
                     <div key={c.name} className={`hp-contract-row${c.isHub ? ' hp-contract-hub' : ''}`}>
                       <span className="hp-contract-icon">{c.icon}</span>
                       <span className="hp-contract-name">{c.name}</span>
-                      <code className="hp-contract-addr">{c.addr}</code>
+                      <code className="hp-contract-addr">{c.addr || 'Not Deployed'}</code>
                     </div>
                   ))}
                 </div>
