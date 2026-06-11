@@ -211,3 +211,20 @@ In this sprint, we implemented a decoupled, on-chain cross-contract architecture
    - Updated all config maps (`deployment.json`, `.env`, and `constants.ts`).
    - Confirmed Vite compiles cleanly (`pnpm build`) and typechecks (`npx tsc --noEmit`) with zero errors.
 
+---
+
+## 🍕 Sprint 20 & 21 Post-Deploy Fixes: Recipe Cost Alignment and Payout Scaling
+
+To ensure that the Timed-Baking ecosystem runs perfectly in the live testnet environment, we applied the following critical fixes:
+
+1. **Recipe Ingredients Costs Alignment:**
+   - Modified `getBakeConfig` in [GuitarPizzaGame.tsx](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/sgs_frontend/src/games/guitar-pizza/GuitarPizzaGame.tsx) to match the on-chain recipe cost logic.
+   - Replaced exotic ingredients (Truffles, Figs, Caviar, Gold Flakes) with standard gameplay drops (Cheese, Pepperoni, Bacon, Onion) to make all recipes bakeable and clearable under standard gameplay rules.
+
+2. **Soroban Payout Decimal Scaling (10^7):**
+   - Scaled the `basePayoutRaw` parameter by `1e7` (for 7-decimal `$SLICE`) inside `StellarContractService.startBake` to register the correct reward amount on the on-chain contract.
+   - Divided the raw `base_payout` returned by `getBakingSlot` by `1e7` in [StellarContractService.ts](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/sgs_frontend/src/services/StellarContractService.ts) to ensure that the frontend displays and processes payouts in whole token units.
+
+3. **Production Build and Push:**
+   - Verified that Vite compiles cleanly with zero warnings or errors.
+   - Committed the updates and pushed to GitHub main, triggering a successful Vercel production deployment.
