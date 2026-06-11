@@ -882,7 +882,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     // Timed-Baking Oven States
 
-    const [ovenTab, setOvenTab] = useState<'baking' | 'classic' | 'collection' | 'refrigerator'>('baking');
+    const [ovenTab, setOvenTab] = useState<'baking' | 'classic' | 'collection' | 'refrigerator' | 'recipes'>('baking');
 
     const [stakedSlice, setStakedSlice] = useState<number>(() => {
 
@@ -1749,12 +1749,12 @@ Ganador: ${payload.winnerAddress}`);
 
     const getBakeConfig = (recipe: 'margherita' | 'pepperoni' | 'special' | 'tartufo' | 'dolce' | 'mafia') => {
         switch (recipe) {
-            case 'margherita': return { label: '🍕 Margherita', duration: 10000, cost: { cheese: 2 }, payout: 15 };
-            case 'pepperoni': return { label: '🍖 Pepperoni', duration: 30000, cost: { cheese: 2, pepperoni: 2 }, payout: 40 };
-            case 'special': return { label: '⭐ Speciale', duration: 60000, cost: { cheese: 2, pepperoni: 2, bacon: 2, onion: 2 }, payout: 100 };
-            case 'tartufo': return { label: '🍄 Tartufo Prestigio', duration: 45000, cost: { cheese: 2, pepperoni: 1, truffle: 1 }, payout: 120 };
-            case 'dolce': return { label: '🍇 Dolce Vita', duration: 40000, cost: { cheese: 2, onion: 1, fig: 1 }, payout: 100 };
-            case 'mafia': return { label: '👑 della Mafia', duration: 90000, cost: { cheese: 2, bacon: 2, caviar: 1, goldFlakes: 1 }, payout: 250 };
+            case 'margherita': return { label: '🍕 Margherita', duration: 10000, cost: { cheese: 1 }, payout: 15 };
+            case 'pepperoni': return { label: '🍖 Pepperoni', duration: 30000, cost: { cheese: 1, pepperoni: 1 }, payout: 40 };
+            case 'special': return { label: '⭐ Speciale', duration: 60000, cost: { cheese: 1, pepperoni: 1, bacon: 1 }, payout: 100 };
+            case 'tartufo': return { label: '🍄 Tartufo Prestigio', duration: 45000, cost: { cheese: 2, pepperoni: 1 }, payout: 120 };
+            case 'dolce': return { label: '🍇 Dolce Vita', duration: 40000, cost: { cheese: 2, onion: 1 }, payout: 100 };
+            case 'mafia': return { label: '👑 della Mafia', duration: 90000, cost: { cheese: 2, bacon: 2 }, payout: 250 };
         }
     };
 

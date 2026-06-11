@@ -1619,7 +1619,7 @@ export class StellarContractService {
             startTime: Number(raw.start_time),
             duration: Number(raw.duration),
             ovenNftId: raw.oven_nft_id !== undefined && raw.oven_nft_id !== null ? Number(raw.oven_nft_id) : null,
-            basePayout: Number(raw.base_payout)
+            basePayout: Number(raw.base_payout) / 1e7
           };
         }
       }
@@ -1656,7 +1656,7 @@ export class StellarContractService {
             nativeToScVal(slotId, { type: 'u32' }),
             nativeToScVal(recipeId, { type: 'u32' }),
             nativeToScVal(BigInt(durationSec), { type: 'u64' }),
-            nativeToScVal(BigInt(basePayoutRaw), { type: 'u64' }),
+            nativeToScVal(BigInt(Math.floor(basePayoutRaw * 1e7)), { type: 'u64' }),
             ovenNftId !== null ? nativeToScVal(ovenNftId, { type: 'u32' }) : nativeToScVal(null),
             nativeToScVal(fuelType, { type: 'u32' })
           )
