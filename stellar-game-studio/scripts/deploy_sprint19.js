@@ -93,11 +93,29 @@ try {
   run(`stellar contract invoke --id ${tournamentsId} --source-account ${adminSecret} --network ${NETWORK} -- set_staking_vault --address ${stakingVaultId}`);
   console.log('Tournaments contract initialized and linked successfully!');
 
-  // 9. Configure Guitar Pizza to link to $SLICE
-  console.log('\n--- 9. Configuring Guitar Pizza to link to $SLICE ---');
+  // 9. Deploy RISC Zero Verifier
+  console.log('\n--- 9. Deploying RISC Zero Verifier ---');
+  const risc0VerifierId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\risc0_verifier.wasm --source-account ${adminSecret} --network ${NETWORK}`);
+  console.log(`risc0-verifier ID: ${risc0VerifierId}`);
+
+  // 9.1. Initialize RISC Zero Verifier
+  console.log('\n--- 9.1. Initializing RISC Zero Verifier ---');
+  run(`stellar contract invoke --id ${risc0VerifierId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --admin ${adminAddress}`);
+  console.log('RISC Zero Verifier initialized successfully!');
+
+  // 9.2. Configure Guitar Pizza to link to $SLICE and RISC Zero Verifier
+  console.log('\n--- 9.2. Configuring Guitar Pizza ---');
   run(`stellar contract invoke --id ${guitarPizzaId} --source-account ${adminSecret} --network ${NETWORK} -- set_slice_token --slice_token ${sliceTokenId}`);
   run(`stellar contract invoke --id ${guitarPizzaId} --source-account ${adminSecret} --network ${NETWORK} -- set_slice_config --slice_per_win 1`);
+  // image_id = 32 bytes placeholder (all 1s)
+  const placeholderImageId = '0101010101010101010101010101010101010101010101010101010101010101';
+  run(`stellar contract invoke --id ${guitarPizzaId} --source-account ${adminSecret} --network ${NETWORK} -- set_verifier --verifier ${risc0VerifierId} --image_id ${placeholderImageId}`);
   console.log('Guitar Pizza configured successfully!');
+
+  // 9.3. Configure zk-leaderboard to link to RISC Zero Verifier
+  console.log('\n--- 9.3. Configuring zk-leaderboard ---');
+  run(`stellar contract invoke --id ${zkLeaderboardId} --source-account ${adminSecret} --network ${NETWORK} -- set_verifier --verifier ${risc0VerifierId} --image_id ${placeholderImageId}`);
+  console.log('zk-leaderboard configured successfully!');
 
   // 10. Update deployment.json
   console.log('\n--- 10. Updating deployment.json ---');
@@ -111,7 +129,8 @@ try {
       "staking-vault": stakingVaultId,
       "pvp-escrow": pvpEscrowId,
       "refrigerator-vault": refrigeratorVaultId,
-      "tournaments": tournamentsId
+      "tournaments": tournamentsId,
+      "risc0-verifier": risc0VerifierId
     },
     network: NETWORK,
     rpcUrl: RPC_URL,
@@ -139,6 +158,7 @@ VITE_STAKING_VAULT_CONTRACT_ID=${stakingVaultId}
 VITE_PVP_ESCROW_CONTRACT_ID=${pvpEscrowId}
 VITE_REFRIGERATOR_VAULT_CONTRACT_ID=${refrigeratorVaultId}
 VITE_TOURNAMENTS_CONTRACT_ID=${tournamentsId}
+VITE_RISC0_VERIFIER_CONTRACT_ID=${risc0VerifierId}
 
 # Dev wallet addresses for testing
 VITE_DEV_ADMIN_ADDRESS=${adminAddress}
@@ -166,6 +186,7 @@ VITE_DEV_PLAYER2_SECRET=${player2Secret}
   constants = constants.replace(/'mock-game-hub':\s*'.*?',?/, `'mock-game-hub':     '${mockHubId}',`);
   constants = constants.replace(/'refrigerator-vault':\s*'.*?',?/, `'refrigerator-vault': '${refrigeratorVaultId}',`);
   constants = constants.replace(/'tournaments':\s*'.*?',?/, `'tournaments':        '${tournamentsId}',`);
+  constants = constants.replace(/'risc0-verifier':\s*'.*?',?/, `'risc0-verifier':    '${risc0VerifierId}',`);
 
   fs.writeFileSync(constantsPath, constants);
   console.log("constants.ts updated.");

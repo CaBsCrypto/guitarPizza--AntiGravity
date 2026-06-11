@@ -290,3 +290,74 @@ fn test_admin_auth_setters() {
     assert_eq!(client.get_admin(), Some(new_admin));
     assert_eq!(client.get_trusted_game(), Some(new_trusted_game));
 }
+
+mod mock_verifier_impl {
+    use soroban_sdk::{contract, contractimpl, Bytes, BytesN, Env};
+    #[contract]
+    pub struct MockVerifier;
+    #[contractimpl]
+    impl MockVerifier {
+        pub fn verify(
+            env: Env,
+            journal: Bytes,
+            _image_id: BytesN<32>,
+            seal: Bytes,
+        ) {
+            let expected_hash: Bytes = env.crypto().keccak256(&journal).into();
+            let seal_hash = seal.slice(0..32);
+            if seal_hash != expected_hash {
+                panic!("invalid proof");
+            }
+        }
+    }
+}
+use mock_verifier_impl::MockVerifier;
+
+#[test]
+fn test_verifier_integration() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _, _) = deploy(&env);
+
+    let player = Address::generate(&env);
+    let level_id = 1;
+    let score = 9000u64;
+    let perfect_hits = 25;
+    let pizzas_completed = 5;
+
+    let verifier_id = env.register(MockVerifier, ());
+    let image_id = BytesN::from_array(&env, &[1u8; 32]);
+
+    client.set_verifier(&verifier_id, &image_id);
+
+    assert_eq!(client.get_verifier(), Some(verifier_id.clone()));
+    assert_eq!(client.get_image_id(), Some(image_id.clone()));
+
+    // Submit with a valid receipt (matches mock verifier's keccak256 check)
+    let valid_receipt = make_receipt(&env, &player, level_id, score, perfect_hits, pizzas_completed);
+    let rank = client.submit_score(
+        &player,
+        &player,
+        &level_id,
+        &score,
+        &perfect_hits,
+        &pizzas_completed,
+        &valid_receipt,
+    );
+    assert_eq!(rank, 1);
+
+    // Submit with an invalid receipt (which the mock verifier will reject)
+    let mut bad_receipt = make_receipt(&env, &player, level_id, score, perfect_hits, pizzas_completed);
+    bad_receipt.set(100, 0); // corrupt seal
+    
+    let result = client.try_submit_score(
+        &player,
+        &player,
+        &level_id,
+        &score,
+        &perfect_hits,
+        &pizzas_completed,
+        &bad_receipt,
+    );
+    assert!(result.is_err());
+}

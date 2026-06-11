@@ -14,9 +14,15 @@
 //!   https://github.com/NethermindEth/stellar-risc0-verifier/
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype,
+    contract, contracterror, contractimpl, contracttype, contractclient,
     Address, Bytes, BytesN, Env, Symbol, Vec,
 };
+
+/// External interface for Nethermind's Groth16/risc0 verifier.
+#[contractclient(name = "VerifierClient")]
+pub trait Verifier {
+    fn verify(env: Env, journal: Bytes, image_id: BytesN<32>, seal: Bytes);
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -37,6 +43,8 @@ pub enum Error {
     Unauthorized = 2,
     InvalidReceipt = 3,
     AdminRequired = 4,
+    VerifierNotConfigured = 5,
+    InvalidProof = 6,
 }
 
 // ---------------------------------------------------------------------------
@@ -64,6 +72,8 @@ pub enum DataKey {
     /// Reset epoch per level (incremented on admin reset)
     Epoch(u32),
     ProofDigest(BytesN<32>),
+    VerifierAddress,
+    Risc0ImageId,
 }
 
 // ---------------------------------------------------------------------------
@@ -168,12 +178,21 @@ impl ZkLeaderboard {
                 }
             }
             
-            // Validate proof seal: first 32 bytes of seal matches keccak256(journal_bytes)
+            // Validate proof seal: call verifier contract if configured, fallback to keccak256 hash
             let jb = Bytes::from_slice(&env, &journal);
-            let expected_seal_hash: Bytes = env.crypto().keccak256(&jb).into();
-            let seal_hash = receipt.slice(100..132);
-            if seal_hash != expected_seal_hash {
-                return Err(Error::InvalidReceipt);
+            if env.storage().instance().has(&DataKey::VerifierAddress) {
+                let verifier_address: Address = env.storage().instance().get(&DataKey::VerifierAddress).unwrap();
+                let image_id: BytesN<32> = env.storage().instance().get(&DataKey::Risc0ImageId).unwrap();
+                let seal = receipt.slice(100..);
+                
+                let verifier_client = VerifierClient::new(&env, &verifier_address);
+                verifier_client.verify(&jb, &image_id, &seal);
+            } else {
+                let expected_seal_hash: Bytes = env.crypto().keccak256(&jb).into();
+                let seal_hash = receipt.slice(100..132);
+                if seal_hash != expected_seal_hash {
+                    return Err(Error::InvalidReceipt);
+                }
             }
 
             // Persist used proof digest to prevent replay
@@ -343,6 +362,32 @@ impl ZkLeaderboard {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &new_admin);
         Ok(())
+    }
+
+    /// Set the RISC Zero verifier contract address and the game program's image ID.
+    /// Only admin.
+    pub fn set_verifier(env: Env, verifier: Address, image_id: BytesN<32>) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::VerifierAddress, &verifier);
+        env.storage()
+            .instance()
+            .set(&DataKey::Risc0ImageId, &image_id);
+        Ok(())
+    }
+
+    pub fn get_verifier(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::VerifierAddress)
+    }
+
+    pub fn get_image_id(env: Env) -> Option<BytesN<32>> {
+        env.storage().instance().get(&DataKey::Risc0ImageId)
     }
 
     pub fn get_admin(env: Env) -> Option<Address> {

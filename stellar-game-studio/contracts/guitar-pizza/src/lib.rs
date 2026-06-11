@@ -65,6 +65,12 @@ pub trait SliceToken {
     fn mint(env: Env, to: Address, amount_slice: i128);
 }
 
+/// External interface for Nethermind's Groth16/risc0 verifier.
+#[contractclient(name = "VerifierClient")]
+pub trait Verifier {
+    fn verify(env: Env, journal: Bytes, image_id: BytesN<32>, seal: Bytes);
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -82,6 +88,8 @@ pub enum Error {
     Unauthorized = 11,
     NoRewardPending = 12,
     SliceNotConfigured = 13,
+    VerifierNotConfigured = 14,
+    InvalidProof = 15,
 }
 
 #[contracttype]
@@ -121,6 +129,8 @@ pub enum DataKey {
     SliceToken,           // Address of the $SLICE token contract
     SliceConfig,          // SliceConfig — reward rules
     PendingReward(u32),   // i128 whole SLICE — unclaimed reward for session_id
+    VerifierAddress,
+    Risc0ImageId,
 }
 
 #[contract]
@@ -412,6 +422,32 @@ impl GuitarPizzaContract {
         Ok(())
     }
 
+    /// Set the RISC Zero verifier contract address and the game program's image ID.
+    /// Only admin.
+    pub fn set_verifier(env: Env, verifier: Address, image_id: BytesN<32>) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("Admin not set");
+        admin.require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::VerifierAddress, &verifier);
+        env.storage()
+            .instance()
+            .set(&DataKey::Risc0ImageId, &image_id);
+        Ok(())
+    }
+
+    pub fn get_verifier(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::VerifierAddress)
+    }
+
+    pub fn get_image_id(env: Env) -> Option<BytesN<32>> {
+        env.storage().instance().get(&DataKey::Risc0ImageId)
+    }
+
     /// Claim the SLICE reward for a winning session.
     ///
     /// The player calls this after `submit_score` returns `true`.
@@ -505,12 +541,21 @@ impl GuitarPizzaContract {
         }
         let jb = Bytes::from_slice(env, &journal);
         
-        // Validate proof seal: first 32 bytes of seal (starting from index 100)
-        // must match the keccak256 of the journal bytes.
-        let expected_seal_hash: Bytes = env.crypto().keccak256(&jb).into();
-        let seal_hash = receipt.slice(100..132);
-        if seal_hash != expected_seal_hash {
-            return Err(Error::InvalidReceipt);
+        if env.storage().instance().has(&DataKey::VerifierAddress) {
+            let verifier_address: Address = env.storage().instance().get(&DataKey::VerifierAddress).unwrap();
+            let image_id: BytesN<32> = env.storage().instance().get(&DataKey::Risc0ImageId).unwrap();
+            let seal = receipt.slice(100..);
+            
+            let verifier_client = VerifierClient::new(env, &verifier_address);
+            verifier_client.verify(&jb, &image_id, &seal);
+        } else {
+            // Validate proof seal: first 32 bytes of seal (starting from index 100)
+            // must match the keccak256 of the journal bytes.
+            let expected_seal_hash: Bytes = env.crypto().keccak256(&jb).into();
+            let seal_hash = receipt.slice(100..132);
+            if seal_hash != expected_seal_hash {
+                return Err(Error::InvalidReceipt);
+            }
         }
         
         Ok(journal)
@@ -760,5 +805,60 @@ mod test {
         let na = Address::generate(&env);
         c.set_admin(&na);
         assert_eq!(c.get_admin(), na);
+    }
+
+    mod mock_verifier_impl {
+        use soroban_sdk::{contract, contractimpl, Bytes, BytesN, Env};
+        #[contract]
+        pub struct MockVerifier;
+        #[contractimpl]
+        impl MockVerifier {
+            pub fn verify(
+                env: Env,
+                journal: Bytes,
+                _image_id: BytesN<32>,
+                seal: Bytes,
+            ) {
+                let expected_hash: Bytes = env.crypto().keccak256(&journal).into();
+                let seal_hash = seal.slice(0..32);
+                if seal_hash != expected_hash {
+                    panic!("invalid proof");
+                }
+            }
+        }
+    }
+    use mock_verifier_impl::MockVerifier;
+
+    #[test]
+    fn test_verifier_integration() {
+        let env = Env::default(); env.mock_all_auths();
+        let (c, _) = deploy(&env);
+        let p = Address::generate(&env);
+        
+        let verifier_id = env.register(MockVerifier, ());
+        let image_id = BytesN::from_array(&env, &[1u8; 32]);
+        
+        c.set_verifier(&verifier_id, &image_id);
+        
+        assert_eq!(c.get_verifier(), Some(verifier_id.clone()));
+        assert_eq!(c.get_image_id(), Some(image_id.clone()));
+        
+        c.start_game(&1u32, &p, &1u32, &5000u32);
+        
+        // Make receipt with valid seal
+        let r = make_receipt(&env, 1, &p, 1, 6000, 5, 10, 3, 5, 10, 2);
+        
+        // This should pass because the mock verifier will check the seal
+        let player_won = c.submit_score(&1u32, &p, &r);
+        assert!(player_won);
+        
+        // Test with invalid seal (which mock verifier will reject)
+        c.start_game(&2u32, &p, &1u32, &5000u32);
+        let mut bad = make_receipt(&env, 2, &p, 1, 6000, 5, 10, 3, 5, 10, 2);
+        // corrupt the seal bytes
+        bad.set(100, 0);
+        
+        let res = c.try_submit_score(&2u32, &p, &bad);
+        assert!(res.is_err());
     }
 }
