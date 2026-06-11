@@ -2,7 +2,7 @@ import { Keypair } from '@stellar/stellar-sdk';
 import { execSync } from 'child_process';
 import fs from 'fs';
 
-console.log("🚀 Running Sprint 19 Deployment & Configuration Script...\n");
+console.log("🚀 Running Sprint 19 Deployment & Configuration Script (v2)...\n");
 
 const NETWORK = 'testnet';
 const RPC_URL = 'https://soroban-testnet.stellar.org';
@@ -71,6 +71,28 @@ try {
   run(`stellar contract invoke --id ${pvpEscrowId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --admin ${adminAddress} --slice_token ${sliceTokenId}`);
   console.log('PvP Escrow initialized successfully!');
 
+  // 8.5. Deploy Refrigerator Vault
+  console.log('\n--- 8.5. Deploying Refrigerator Vault ---');
+  const refrigeratorVaultId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\refrigerator_vault.wasm --source-account ${adminSecret} --network ${NETWORK}`);
+  console.log(`refrigerator-vault ID: ${refrigeratorVaultId}`);
+
+  // 8.6. Initialize Refrigerator Vault
+  console.log('\n--- 8.6. Initializing Refrigerator Vault ---');
+  run(`stellar contract invoke --id ${refrigeratorVaultId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --admin ${adminAddress} --slice_token ${sliceTokenId}`);
+  console.log('Refrigerator Vault initialized successfully!');
+
+  // 8.7. Deploy Tournaments
+  console.log('\n--- 8.7. Deploying Tournaments ---');
+  const tournamentsId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\tournaments.wasm --source-account ${adminSecret} --network ${NETWORK}`);
+  console.log(`tournaments ID: ${tournamentsId}`);
+
+  // 8.8. Initialize Tournaments
+  console.log('\n--- 8.8. Initializing Tournaments ---');
+  // Wager fee: 10 SLICE = 100_000_000 raw. Duration: 7 days = 604800 sec.
+  run(`stellar contract invoke --id ${tournamentsId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --admin ${adminAddress} --slice_token ${sliceTokenId} --wager_fee 100000000 --duration 604800`);
+  run(`stellar contract invoke --id ${tournamentsId} --source-account ${adminSecret} --network ${NETWORK} -- set_staking_vault --address ${stakingVaultId}`);
+  console.log('Tournaments contract initialized and linked successfully!');
+
   // 9. Configure Guitar Pizza to link to $SLICE
   console.log('\n--- 9. Configuring Guitar Pizza to link to $SLICE ---');
   run(`stellar contract invoke --id ${guitarPizzaId} --source-account ${adminSecret} --network ${NETWORK} -- set_slice_token --slice_token ${sliceTokenId}`);
@@ -87,7 +109,9 @@ try {
       "zk-leaderboard": zkLeaderboardId,
       "slice-token": sliceTokenId,
       "staking-vault": stakingVaultId,
-      "pvp-escrow": pvpEscrowId
+      "pvp-escrow": pvpEscrowId,
+      "refrigerator-vault": refrigeratorVaultId,
+      "tournaments": tournamentsId
     },
     network: NETWORK,
     rpcUrl: RPC_URL,
@@ -113,6 +137,8 @@ VITE_ZK_LEADERBOARD_CONTRACT_ID=${zkLeaderboardId}
 VITE_SLICE_TOKEN_CONTRACT_ID=${sliceTokenId}
 VITE_STAKING_VAULT_CONTRACT_ID=${stakingVaultId}
 VITE_PVP_ESCROW_CONTRACT_ID=${pvpEscrowId}
+VITE_REFRIGERATOR_VAULT_CONTRACT_ID=${refrigeratorVaultId}
+VITE_TOURNAMENTS_CONTRACT_ID=${tournamentsId}
 
 # Dev wallet addresses for testing
 VITE_DEV_ADMIN_ADDRESS=${adminAddress}
@@ -138,6 +164,8 @@ VITE_DEV_PLAYER2_SECRET=${player2Secret}
   constants = constants.replace(/'staking-vault':\s*'.*?',?/, `'staking-vault':      '${stakingVaultId}',`);
   constants = constants.replace(/'pvp-escrow':\s*'.*?',?/, `'pvp-escrow':         '${pvpEscrowId}',`);
   constants = constants.replace(/'mock-game-hub':\s*'.*?',?/, `'mock-game-hub':     '${mockHubId}',`);
+  constants = constants.replace(/'refrigerator-vault':\s*'.*?',?/, `'refrigerator-vault': '${refrigeratorVaultId}',`);
+  constants = constants.replace(/'tournaments':\s*'.*?',?/, `'tournaments':        '${tournamentsId}',`);
 
   fs.writeFileSync(constantsPath, constants);
   console.log("constants.ts updated.");
