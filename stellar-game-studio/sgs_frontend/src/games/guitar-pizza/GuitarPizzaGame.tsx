@@ -19,6 +19,7 @@ import { Buffer } from 'buffer';
 import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 
 import { CollectionTab } from '../../components/CollectionTab';
+import { WalletStandalone } from '../../components/WalletStandalone';
 
 
 
@@ -3257,11 +3258,15 @@ Ganador: ${payload.winnerAddress}`);
 
                 </div>
 
-                <button onClick={() => setShowSettings(true)}>
-
-                    <Settings size={24} />
-
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="hidden md:flex items-center gap-3">
+                        <span className="rs-network-pill">● TESTNET</span>
+                        <WalletStandalone />
+                    </div>
+                    <button onClick={() => setShowSettings(true)} className="settings-btn" title="Settings">
+                        <Settings size={24} />
+                    </button>
+                </div>
 
             </div>
             )}
