@@ -654,7 +654,7 @@ button {
 
 /* ===== NEW MODAL SYSTEM ===== */
 .modal-backdrop {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
@@ -931,7 +931,8 @@ button {
 }
 
 @media (max-width: 480px) {
-    .nevera-grid {
+    .nevera-grid,
+    .store-grid {
         grid-template-columns: 1fr !important;
     }
 }

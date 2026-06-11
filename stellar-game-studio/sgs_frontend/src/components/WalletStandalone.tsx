@@ -119,10 +119,8 @@ export function WalletStandalone() {
 
   return (
     <div className="wallet-standalone">
-      {/* $SLICE balance chip — visible only when wallet is connected */}
-      {/* Connected State Address button */}
       {isConnected ? (
-        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+        <div className="wallet-standalone-connected">
           {balance !== null && (
             <div className="slice-balance-chip">
               🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
@@ -225,7 +223,7 @@ export function WalletStandalone() {
           </button>
           {walletType === 'passkey' && (
             <button
-              className="wallet-standalone-button"
+              className="wallet-standalone-button backup-button"
               style={{
                 background: 'rgba(212, 175, 55, 0.15)',
                 borderColor: 'rgba(212, 175, 55, 0.4)',
@@ -242,7 +240,8 @@ export function WalletStandalone() {
               }}
               title="Backup your Passkey Smart Wallet key"
             >
-              🔑 Backup
+              <span className="backup-icon">🔑</span>
+              <span className="backup-text">Backup</span>
             </button>
           )}
         </div>

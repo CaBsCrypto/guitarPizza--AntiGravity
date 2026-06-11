@@ -294,10 +294,20 @@ async function signAndSend(tx: any, signer: SignerFn, playerAddress: string): Pr
       const innerXdr = tx.tx.toXDR();
       
       // 2. Have the player sign their inner transaction
-      const { signedTxXdr } = await signer.signTransaction(innerXdr, {
-        networkPassphrase: NETWORK_PASS,
-        address: playerAddress,
-      }) as any;
+      let signedTxXdr: string;
+      try {
+        const signRes = await signer.signTransaction(innerXdr, {
+          networkPassphrase: NETWORK_PASS,
+          address: playerAddress,
+        }) as any;
+        signedTxXdr = signRes.signedTxXdr;
+      } catch (signErr: any) {
+        const msg = signErr?.message || String(signErr);
+        if (msg.includes('reject') || msg.includes('decline') || msg.includes('cancel') || msg.includes('deny') || msg.includes('User')) {
+          throw new Error('SIGNATURE_REJECTED');
+        }
+        throw signErr;
+      }
 
       // 3. Rebuild inner transaction and wrap it in a sponsored Fee-Bump envelope
       const innerTx = TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASS);
@@ -350,16 +360,31 @@ async function signAndSend(tx: any, signer: SignerFn, playerAddress: string): Pr
       throw err;
     }
   } else {
-    const sentTx = await tx.signAndSend({
-      signTransaction: async (xdr: string) => {
-        const { signedTxXdr } = await signer.signTransaction(xdr, {
-          networkPassphrase: NETWORK_PASS,
-          address: playerAddress,
-        });
-        return { signedTxXdr };
-      },
-    });
-    return (sentTx as any)?.getTransactionResponse?.txHash as string | undefined;
+    try {
+      const sentTx = await tx.signAndSend({
+        signTransaction: async (xdr: string) => {
+          try {
+            const { signedTxXdr } = await signer.signTransaction(xdr, {
+              networkPassphrase: NETWORK_PASS,
+              address: playerAddress,
+            });
+            return { signedTxXdr };
+          } catch (signErr: any) {
+            const msg = signErr?.message || String(signErr);
+            if (msg.includes('reject') || msg.includes('decline') || msg.includes('cancel') || msg.includes('deny') || msg.includes('User')) {
+              throw new Error('SIGNATURE_REJECTED');
+            }
+            throw signErr;
+          }
+        },
+      });
+      return (sentTx as any)?.getTransactionResponse?.txHash as string | undefined;
+    } catch (err: any) {
+      if (err?.message === 'SIGNATURE_REJECTED') {
+        throw err;
+      }
+      throw err;
+    }
   }
 }
 

@@ -233,4 +233,10 @@
     text-align: center;
   }
 }
+
+@media (max-width: 480px) {
+  .rs-play-btn {
+    display: none !important;
+  }
+}
 

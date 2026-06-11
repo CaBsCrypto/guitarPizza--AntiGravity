@@ -29,6 +29,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
     const STATE = { MENU: 0, GAME: 1, RESULTS: 2, PAUSED: 3, COUNTDOWN: 4 };
     let gameState = STATE.MENU;
+    let loopRunning = true;
     let isVictory = false; // true = song ended (win), false = health=0 (defeat)
     let gameTimer = 0;
     let score = 0;
@@ -2480,9 +2481,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         lastTime = timestamp;
 
         if (gameState === STATE.MENU) {
-            // In MENU, we want TRANSPARENCY
+            // In MENU, we clear canvas once and stop the loop to conserve CPU/Battery
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            requestId = requestAnimationFrame(loop);
+            loopRunning = false;
             return;
         }
 
@@ -2522,6 +2523,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         
         gameState = STATE.COUNTDOWN;
         window._gpCountdown = 3;
+        if (!loopRunning) {
+            loopRunning = true;
+            lastTime = performance.now();
+            requestId = requestAnimationFrame(loop);
+        }
         showScreen('game'); // Hides the HTML menu overlay so the user can see the canvas
         lastTime = performance.now();
         

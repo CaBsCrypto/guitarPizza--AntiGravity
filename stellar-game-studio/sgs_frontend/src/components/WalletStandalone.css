@@ -289,3 +289,57 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ── RESPONSIVE CONNECTED HUD ── */
+.wallet-standalone-connected {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 900px) {
+  /* Collapse mint/airdrop texts to just show spinning icons */
+  .wallet-standalone-connected .mint-vinyl-button span {
+    display: none;
+  }
+  .wallet-standalone-connected .mint-vinyl-button {
+    padding: 0.3rem !important;
+    border-radius: 50% !important;
+    aspect-ratio: 1;
+    width: 28px;
+    height: 28px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  .wallet-standalone-connected .mint-vinyl-icon {
+    font-size: 0.9rem;
+    margin: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  /* Collapse Backup button text, show only 🔑 icon */
+  .wallet-standalone-connected .backup-button .backup-text {
+    display: none;
+  }
+  .wallet-standalone-connected .backup-button {
+    padding: 0.35rem 0.5rem !important;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 500px) {
+  .wallet-standalone-connected {
+    gap: 0.25rem;
+  }
+  .slice-balance-chip {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6rem;
+  }
+  .wallet-standalone-button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6rem;
+  }
+}

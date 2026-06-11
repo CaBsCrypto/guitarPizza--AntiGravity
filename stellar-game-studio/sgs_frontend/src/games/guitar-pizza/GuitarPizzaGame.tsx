@@ -935,7 +935,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         }
     });
 
-    const loadTimestamps = useCallback(() => {
+    const [ingredientTimestamps, setIngredientTimestamps] = useState<Record<string, number[]>>(() => {
         try {
             const saved = localStorage.getItem('gp_ingredient_timestamps');
             if (saved) return JSON.parse(saved);
@@ -949,59 +949,72 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             bacon: Array(2).fill(now),
             onion: Array(2).fill(now)
         };
-    }, []);
+    });
+
+    const loadTimestamps = useCallback(() => {
+        return ingredientTimestamps;
+    }, [ingredientTimestamps]);
 
     const addIngredientTimestamps = useCallback((type: string, count: number) => {
-        const ts = loadTimestamps();
-        if (!ts[type]) ts[type] = [];
-        const now = Date.now();
-        for (let i = 0; i < count; i++) {
-            ts[type].push(now);
-        }
-        localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
-    }, [loadTimestamps]);
+        setIngredientTimestamps(prev => {
+            const ts = { ...prev };
+            if (!ts[type]) ts[type] = [];
+            const now = Date.now();
+            for (let i = 0; i < count; i++) {
+                ts[type].push(now);
+            }
+            localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
+            return ts;
+        });
+    }, []);
 
     const removeIngredientTimestamps = useCallback((type: string, count: number) => {
-        const ts = loadTimestamps();
-        if (ts[type]) {
-            ts[type].sort((a: number, b: number) => a - b);
-            ts[type] = ts[type].slice(count);
-            localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
-        }
-    }, [loadTimestamps]);
+        setIngredientTimestamps(prev => {
+            const ts = { ...prev };
+            if (ts[type]) {
+                ts[type] = [...ts[type]].sort((a: number, b: number) => a - b);
+                ts[type] = ts[type].slice(count);
+                localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
+            }
+            return ts;
+        });
+    }, []);
 
     const autoExpireIngredients = useCallback(() => {
-        const ts = loadTimestamps();
-        const now = Date.now();
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-        let expiredCount = 0;
-        const expiredDetails: Record<string, number> = { cheese: 0, pepperoni: 0, bacon: 0, onion: 0 };
-        const nextIngredients = { ...ingredients };
-        let changed = false;
+        setIngredientTimestamps(prevTs => {
+            const ts = { ...prevTs };
+            const now = Date.now();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            let expiredCount = 0;
+            const expiredDetails: Record<string, number> = { cheese: 0, pepperoni: 0, bacon: 0, onion: 0 };
+            const nextIngredients = { ...ingredients };
+            let changed = false;
 
-        for (const type of ['cheese', 'pepperoni', 'bacon', 'onion']) {
-            if (ts[type] && ts[type].length > 0) {
-                const validTimestamps = ts[type].filter((t: number) => now - t < sevenDaysMs);
-                const expired = ts[type].length - validTimestamps.length;
-                if (expired > 0) {
-                    ts[type] = validTimestamps;
-                    nextIngredients[type] = Math.max(0, (nextIngredients[type] || 0) - expired);
-                    expiredCount += expired;
-                    expiredDetails[type] = expired;
-                    changed = true;
+            for (const type of ['cheese', 'pepperoni', 'bacon', 'onion']) {
+                if (ts[type] && ts[type].length > 0) {
+                    const validTimestamps = ts[type].filter((t: number) => now - t < sevenDaysMs);
+                    const expired = ts[type].length - validTimestamps.length;
+                    if (expired > 0) {
+                        ts[type] = validTimestamps;
+                        nextIngredients[type] = Math.max(0, (nextIngredients[type] || 0) - expired);
+                        expiredCount += expired;
+                        expiredDetails[type] = expired;
+                        changed = true;
+                    }
                 }
             }
-        }
 
-        if (changed) {
-            setIngredients(nextIngredients);
-            localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
-            localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
-            addLog(`🔥 Degradación: Han expirado ${expiredCount} ingredientes frescos de hace más de 7 días: ` +
-                   `${expiredDetails.cheese} Queso, ${expiredDetails.pepperoni} Pepperoni, ` +
-                   `${expiredDetails.bacon} Bacon, ${expiredDetails.onion} Onion.`);
-        }
-    }, [ingredients, loadTimestamps]);
+            if (changed) {
+                setIngredients(nextIngredients);
+                localStorage.setItem('gp_ingredients', JSON.stringify(nextIngredients));
+                localStorage.setItem('gp_ingredient_timestamps', JSON.stringify(ts));
+                addLog(`🔥 Degradación: Han expirado ${expiredCount} ingredientes frescos de hace más de 7 días: ` +
+                       `${expiredDetails.cheese} Queso, ${expiredDetails.pepperoni} Pepperoni, ` +
+                       `${expiredDetails.bacon} Bacon, ${expiredDetails.onion} Onion.`);
+            }
+            return ts;
+        });
+    }, [ingredients]);
 
     const fetchRefrigeratorData = useCallback(async () => {
         const isPlaceholder = !CONTRACT_IDS.refrigeratorVault || CONTRACT_IDS.refrigeratorVault.includes('CONTRACTID') || CONTRACT_IDS.refrigeratorVault.includes('CDREFRIGERATOR') || CONTRACT_IDS.refrigeratorVault.length !== 56;
@@ -1009,10 +1022,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             return;
         }
         try {
-            const cheeseBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.cheese);
-            const pepBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.pepperoni);
-            const baconBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.bacon);
-            const onionBal = await StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.onion);
+            const [cheeseBal, pepBal, baconBal, onionBal] = await Promise.all([
+                StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.cheese),
+                StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.pepperoni),
+                StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.bacon),
+                StellarContractService.getRefrigeratorBalance(userAddress, INGREDIENT_TOKENS.onion)
+            ]);
 
             const nextFrozen = {
                 cheese: cheeseBal,
@@ -1079,10 +1094,20 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                 addLog(`❄️ ¡Congelación exitosa en Stellar Testnet!`);
                 alert(`❄️ ¡Excelente! Ingredientes preservados de por vida on-chain.`);
             } else {
-                alert(`⚠️ Error al depositar en la Nevera: ${res.error}`);
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error al depositar en la Nevera: ${res.error}`);
+                }
             }
         } catch (e: any) {
-            alert(`⚠️ Error: ${e.message}`);
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
         }
     };
 
@@ -1136,10 +1161,20 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                 addLog(`❄️ ¡Retiro exitoso desde Stellar Testnet!`);
                 alert(`❄️ Ingredientes listos para cocinar.`);
             } else {
-                alert(`⚠️ Error al retirar de la Nevera: ${res.error}`);
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error al retirar de la Nevera: ${res.error}`);
+                }
             }
         } catch (e: any) {
-            alert(`⚠️ Error: ${e.message}`);
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
         }
     };
 
@@ -1235,25 +1270,22 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     useEffect(() => {
         if ((view === 'oven' || view === 'songpicker' || view === 'bank') && userAddress) {
             const fetchOnChainData = async () => {
+                if (document.hidden) return; // Skip if tab is inactive
                 try {
-                    const balance = await StellarContractService.getSliceBalance(userAddress);
+                    const [balance, staked, tickets, lpBal, onChainCheckIn] = await Promise.all([
+                        StellarContractService.getSliceBalance(userAddress),
+                        StellarContractService.getStakedBalance(userAddress),
+                        StellarContractService.getTournamentTickets(userAddress),
+                        view === 'bank' ? StellarContractService.getDefindexLpBalance(userAddress) : Promise.resolve(defindexLpBalance),
+                        StellarContractService.getDailyCheckIn(userAddress),
+                        fetchRefrigeratorData()
+                    ]);
+
                     setSliceBalance(balance);
-                    
-                    const staked = await StellarContractService.getStakedBalance(userAddress);
                     setStakedSlice(staked);
-
-                    const tickets = await StellarContractService.getTournamentTickets(userAddress);
                     setTicketBalance(tickets);
-
-                    // Sync Defindex LP balance
-                    const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
                     setDefindexLpBalance(lpBal);
 
-                    // Sync Refrigerator balances
-                    await fetchRefrigeratorData();
-
-                    // Sync On-Chain Daily Check-in
-                    const onChainCheckIn = await StellarContractService.getDailyCheckIn(userAddress);
                     if (onChainCheckIn) {
                         const dateStr = onChainCheckIn.lastCheckinTimestamp > 0 
                             ? new Date(onChainCheckIn.lastCheckinTimestamp * 1000).toISOString().split('T')[0]
@@ -1266,77 +1298,44 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                         localStorage.setItem('gp_check_in_streak', onChainCheckIn.streak.toString());
                     }
 
-
                     if (view === 'oven') {
-
-                        // Fetch slot states from Soroban PizzaBaking contract
-
+                        // Fetch slot states in parallel from Soroban PizzaBaking contract
                         const updatedSlots = [...ovenSlots];
-
-                        for (let i = 0; i < updatedSlots.length; i++) {
-
-                            const slot = updatedSlots[i];
-
+                        const slotPromises = updatedSlots.map(async (slot) => {
                             const onChainSlot = await StellarContractService.getBakingSlot(userAddress, slot.id);
-
                             if (onChainSlot) {
-
-                                updatedSlots[i] = {
-
+                                return {
                                     id: slot.id,
-
                                     isLocked: onChainSlot.locked,
-
-                                    status: onChainSlot.locked 
+                                    status: (onChainSlot.locked 
                                         ? 'idle' 
                                         : (onChainSlot.startTime === 0 
-
-                                        ? 'idle' 
-
-                                        : (Date.now() >= onChainSlot.startTime + onChainSlot.duration 
-
-                                            ? 'completed' 
-
-                                            : 'baking')),
-
-                                    pizzaType: onChainSlot.recipeId === 1 
-
+                                            ? 'idle' 
+                                            : (Date.now() >= onChainSlot.startTime + onChainSlot.duration 
+                                                ? 'completed' 
+                                                : 'baking'))) as 'idle' | 'baking' | 'completed',
+                                    pizzaType: (onChainSlot.recipeId === 1 
                                         ? 'margherita' 
-
-                                        : (onChainSlot.recipeId === 2 ? 'pepperoni' : (onChainSlot.recipeId === 3 ? 'special' : (onChainSlot.recipeId === 4 ? 'tartufo' : (onChainSlot.recipeId === 5 ? 'dolce' : (onChainSlot.recipeId === 6 ? 'mafia' : null))))),
-
+                                        : (onChainSlot.recipeId === 2 ? 'pepperoni' : (onChainSlot.recipeId === 3 ? 'special' : (onChainSlot.recipeId === 4 ? 'tartufo' : (onChainSlot.recipeId === 5 ? 'dolce' : (onChainSlot.recipeId === 6 ? 'mafia' : null)))))) as 'margherita' | 'pepperoni' | 'special' | 'tartufo' | 'dolce' | 'mafia' | null,
                                     startTime: onChainSlot.startTime,
-
                                     duration: onChainSlot.duration,
-
                                     ovenNftId: onChainSlot.ovenNftId,
-
                                     basePayout: onChainSlot.basePayout
-
                                 };
-
                             }
-
-                        }
-
-                        setOvenSlots(updatedSlots);
-
+                            return slot;
+                        });
+                        const slotsResults = await Promise.all(slotPromises);
+                        setOvenSlots(slotsResults);
                     }
-
                 } catch (e) {
-
                     console.error("Failed to load on-chain balances/oven data", e);
-
                 }
-
             };
 
             fetchOnChainData();
-
-            const interval = setInterval(fetchOnChainData, 10000); // refresh every 10s
-
+            const interval = setInterval(fetchOnChainData, 30000); // refresh every 30s instead of 10s
             return () => clearInterval(interval);
-
         }
 
     }, [view, userAddress, fetchRefrigeratorData]);
@@ -1374,10 +1373,20 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                 const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
                 setDefindexLpBalance(lpBal);
             } else {
-                alert(`⚠️ Error: ${res.error}`);
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error: ${res.error}`);
+                }
             }
         } catch (e: any) {
-            alert(`⚠️ Error: ${e.message}`);
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
         } finally {
             setDefindexLoading(false);
         }
@@ -1409,10 +1418,20 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                 const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
                 setDefindexLpBalance(lpBal);
             } else {
-                alert(`⚠️ Error: ${res.error}`);
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error: ${res.error}`);
+                }
             }
         } catch (e: any) {
-            alert(`⚠️ Error: ${e.message}`);
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
         } finally {
             setDefindexLoading(false);
         }
@@ -2041,9 +2060,44 @@ Ganador: ${payload.winnerAddress}`);
 
     const [proofStatus, setProofStatus] = useState<'none' | 'generating' | 'success' | 'failed'>('none');
 
+    const [zkStep, setZkStep] = useState(0);
+
+    useEffect(() => {
+        let interval: any;
+        if (proofStatus === 'generating') {
+            setZkStep(0);
+            interval = setInterval(() => {
+                setZkStep(prev => (prev < 3 ? prev + 1 : prev));
+            }, 800);
+        } else {
+            setZkStep(0);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [proofStatus]);
+
     const [txHash, setTxHash] = useState<string | null>(null);
 
     const [sliceEarned, setSliceEarned] = useState<number>(0);
+
+    const [livePing, setLivePing] = useState(24);
+
+    useEffect(() => {
+        let interval: any;
+        if (pvpState === 'waiting' || isPvp) {
+            interval = setInterval(() => {
+                setLivePing(prev => {
+                    const diff = Math.floor(Math.random() * 7) - 3;
+                    const next = prev + diff;
+                    return Math.max(12, Math.min(45, next));
+                });
+            }, 1200);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [pvpState, isPvp]);
 
 
 
@@ -3213,7 +3267,7 @@ Ganador: ${payload.winnerAddress}`);
             )}
             {/* Game Container */}
             <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
-                <div id="game-device-screen" className="game-container game-frame" ref={containerRef} style={{ width: 'auto', height: '100%', aspectRatio: '9/16', maxHeight: '100%', position: 'relative', overflow: 'hidden', border: '8px solid #000', borderRadius: '20px', boxShadow: '0 0 50px rgba(0,0,0,0.5)' }}>
+                <div id="game-device-screen" className="game-container game-frame" ref={containerRef} style={{ width: '100%', height: '100%', maxWidth: 'calc((100vh - 2rem) * 9 / 16)', maxHeight: 'calc((100vw - 2rem) * 16 / 9)', aspectRatio: '9/16', position: 'relative', overflow: 'hidden', border: '8px solid #000', borderRadius: '20px', boxShadow: '0 0 50px rgba(0,0,0,0.5)' }}>
 
 
 
@@ -4813,14 +4867,29 @@ Ganador: ${payload.winnerAddress}`);
                                                     onClick={async () => {
                                                         const signer = getContractSignerRef.current();
                                                         setStatus(language === 'es' ? 'Reclamando Staking...' : 'Claiming Staking...');
-                                                        const res = await StellarContractService.claimStakingTickets(userAddress, signer);
-                                                        setStatus('');
-                                                        if (res.success) {
-                                                            alert(language === 'es' ? '¡Tickets de Staking reclamados con éxito! 🎉' : 'Staking tickets successfully claimed! 🎉');
-                                                            const tickets = await StellarContractService.getTournamentTickets(userAddress);
-                                                            setTicketBalance(tickets);
-                                                        } else {
-                                                            alert(`Error: ${res.error}`);
+                                                        try {
+                                                            const res = await StellarContractService.claimStakingTickets(userAddress, signer);
+                                                            setStatus('');
+                                                            if (res.success) {
+                                                                alert(language === 'es' ? '¡Tickets de Staking reclamados con éxito! 🎉' : 'Staking tickets successfully claimed! 🎉');
+                                                                const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                                setTicketBalance(tickets);
+                                                            } else {
+                                                                if (res.error === 'SIGNATURE_REJECTED') {
+                                                                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                    alert(`⚠️ Firma rechazada por el usuario.`);
+                                                                } else {
+                                                                    alert(`Error: ${res.error}`);
+                                                                }
+                                                            }
+                                                        } catch (err: any) {
+                                                            setStatus('');
+                                                            if (err.message === 'SIGNATURE_REJECTED') {
+                                                                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                alert(`⚠️ Firma rechazada por el usuario.`);
+                                                            } else {
+                                                                alert(`Error: ${err.message}`);
+                                                            }
                                                         }
                                                     }}
                                                     style={{
@@ -4841,16 +4910,31 @@ Ganador: ${payload.winnerAddress}`);
                                                     onClick={async () => {
                                                         const signer = getContractSignerRef.current();
                                                         setStatus(language === 'es' ? 'Comprando Ticket...' : 'Buying Ticket...');
-                                                        const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
-                                                        setStatus('');
-                                                        if (res.success) {
-                                                            alert(language === 'es' ? '¡Ticket comprado con éxito! 🎟️' : 'Ticket bought successfully! 🎟️');
-                                                            const tickets = await StellarContractService.getTournamentTickets(userAddress);
-                                                            setTicketBalance(tickets);
-                                                            const sliceBal = await StellarContractService.getSliceBalance(userAddress);
-                                                            setSliceBalance(sliceBal);
-                                                        } else {
-                                                            alert(`Error: ${res.error}`);
+                                                        try {
+                                                            const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
+                                                            setStatus('');
+                                                            if (res.success) {
+                                                                alert(language === 'es' ? '¡Ticket comprado con éxito! 🎟️' : 'Ticket bought successfully! 🎟️');
+                                                                const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                                setTicketBalance(tickets);
+                                                                const sliceBal = await StellarContractService.getSliceBalance(userAddress);
+                                                                setSliceBalance(sliceBal);
+                                                            } else {
+                                                                if (res.error === 'SIGNATURE_REJECTED') {
+                                                                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                    alert(`⚠️ Firma rechazada por el usuario.`);
+                                                                } else {
+                                                                    alert(`Error: ${res.error}`);
+                                                                }
+                                                            }
+                                                        } catch (err: any) {
+                                                            setStatus('');
+                                                            if (err.message === 'SIGNATURE_REJECTED') {
+                                                                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                alert(`⚠️ Firma rechazada por el usuario.`);
+                                                            } else {
+                                                                alert(`Error: ${err.message}`);
+                                                            }
                                                         }
                                                     }}
                                                     style={{
@@ -5450,6 +5534,25 @@ Ganador: ${payload.winnerAddress}`);
                                         {ovenTab === 'baking' && (
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+
+                                                {/* Equipped NFT Banner */}
+                                                {localStorage.getItem('equippedOvenId') && (
+                                                    <div style={{
+                                                        background: 'linear-gradient(90deg, rgba(212,175,55,0.15), rgba(139,0,0,0.1))',
+                                                        border: '1px solid #d4af37',
+                                                        borderRadius: '6px',
+                                                        padding: '0.4rem 0.6rem',
+                                                        fontSize: '0.65rem',
+                                                        color: '#FFF8E7',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        marginBottom: '0.2rem'
+                                                    }}>
+                                                        <span>🛡️ <strong>{language === 'es' ? 'HORNO EQUIPADO:' : 'EQUIPPED OVEN NFT:'}</strong> #{localStorage.getItem('equippedOvenId')}</span>
+                                                        <span style={{ color: '#39ff14', fontWeight: 'bold' }}>+{localStorage.getItem('equippedOvenMultiplier') || '1.0'}x Boost</span>
+                                                    </div>
+                                                )}
 
                                                 {/* Selectors and Stats Bar */}
 
@@ -6578,9 +6681,9 @@ Ganador: ${payload.winnerAddress}`);
                                                                 flexDirection: 'column',
                                                                 gap: '0.5rem'
                                                             }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{emoji} {label}</span>
-                                                                    <span style={{ fontSize: '0.65rem', color: 'var(--ph-gold)', background: 'rgba(217, 180, 136, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                                                                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{emoji} {label}</span>
+                                                                    <span style={{ fontSize: '0.65rem', color: 'var(--ph-gold)', opacity: 0.9 }}>
                                                                         {oldestTimeLeftStr}
                                                                     </span>
                                                                 </div>
@@ -6994,7 +7097,7 @@ Ganador: ${payload.winnerAddress}`);
                                     {/* Balances Dashboard */}
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
                                         gap: '1rem',
                                         marginBottom: '1.5rem'
                                     }}>
@@ -7031,7 +7134,7 @@ Ganador: ${payload.winnerAddress}`);
                                     {/* Action Tabs / Two Columns */}
                                     <div style={{
                                         display: 'grid',
-                                        gridTemplateColumns: window.innerWidth > 600 ? '1fr 1fr' : '1fr',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                                         gap: '1.5rem'
                                     }}>
                                         {/* Column 1: Deposit / Liquidity Provision */}
@@ -8223,19 +8326,49 @@ Ganador: ${payload.winnerAddress}`);
                                     }}>
 
                                         {proofStatus === 'generating' ? (
-
-                                            <>
-
-                                                <p style={{ color: '#333', fontSize: '1.2rem', marginBottom: '0.5rem', animation: 'pulse 1.5s infinite' }}>
-
-                                                    {language === 'es' ? 'IMPRIMIENDO TICKET...' : 'PRINTING RECEIPT...'}
-
-                                                </p>
-
-                                                <div style={{ fontSize: '0.85rem', color: '#888' }}>{t.securing}</div>
-
-                                            </>
-
+                                            <div style={{
+                                                textAlign: 'left',
+                                                background: '#FAF6EE',
+                                                border: '1px solid #D2C2B2',
+                                                borderRadius: '6px',
+                                                padding: '0.8rem',
+                                                marginTop: '0.8rem',
+                                                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)',
+                                                fontFamily: "'Special Elite', monospace",
+                                                fontSize: '0.75rem',
+                                                lineHeight: '1.6',
+                                                color: '#333'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem', color: '#8B0000', fontWeight: 'bold' }}>
+                                                    <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#d35400', animation: 'pulse 1s infinite' }}></span>
+                                                    <span>{language === 'es' ? 'VERIFICACIÓN DE SEGURIDAD ZK' : 'ZK SECURITY VERIFICATION'}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div>
+                                                        {zkStep >= 0 ? (
+                                                            zkStep > 0 ? '✔️ 1. GENERATE WITNESS (Noir)' : '⏳ 1. GENERATING WITNESS (Noir)...'
+                                                        ) : ''}
+                                                    </div>
+                                                    <div>
+                                                        {zkStep >= 1 ? (
+                                                            zkStep > 1 ? '✔️ 2. COMPILE CONSTRAINTS' : '⏳ 2. COMPILING CONSTRAINTS...'
+                                                        ) : ''}
+                                                    </div>
+                                                    <div>
+                                                        {zkStep >= 2 ? (
+                                                            zkStep > 2 ? '✔️ 3. GENERATE SNARK PROOF' : '⏳ 3. GENERATING SNARK PROOF...'
+                                                        ) : ''}
+                                                    </div>
+                                                    <div>
+                                                        {zkStep >= 3 ? (
+                                                            '⏳ 4. SUBMITTING TO STELLAR TESTNET...'
+                                                        ) : ''}
+                                                    </div>
+                                                </div>
+                                                <div style={{ marginTop: '0.8rem', fontSize: '0.7rem', color: '#666', borderTop: '1px dotted #ccc', paddingTop: '6px', textAlign: 'center' }}>
+                                                     {t.securing}
+                                                </div>
+                                            </div>
                                         ) : proofStatus === 'success' ? (
 
                                             <div style={{ color: '#111', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px', borderTop: '2px dotted #111', borderBottom: '2px dotted #111', padding: '10px 0' }}>

@@ -292,7 +292,7 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                         justifyContent: 'center',
                         width: '100%',
                         position: 'relative',
-                        gap: '1rem'
+                        gap: cardsToShow === 1 ? '0.4rem' : '1rem'
                     }}>
                         {/* Left Arrow Button */}
                         {ownedNFTs.length > cardsToShow && (
@@ -303,9 +303,9 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                                     color: '#FFD700',
                                     border: '2px solid #FFD700',
                                     borderRadius: '50%',
-                                    width: '45px',
-                                    height: '45px',
-                                    fontSize: '1.5rem',
+                                    width: cardsToShow === 1 ? '36px' : '45px',
+                                    height: cardsToShow === 1 ? '36px' : '45px',
+                                    fontSize: cardsToShow === 1 ? '1.1rem' : '1.5rem',
                                     fontWeight: 'bold',
                                     cursor: 'pointer',
                                     display: 'flex',
@@ -344,7 +344,7 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                             overflow: 'hidden',
                             padding: '1.2rem 0.5rem',
                             minHeight: '380px',
-                            minWidth: cardsToShow === 1 ? '220px' : (cardsToShow === 2 ? '440px' : '660px'),
+                            minWidth: cardsToShow === 1 ? '200px' : (cardsToShow === 2 ? '440px' : '660px'),
                             maxWidth: '100%',
                             transition: 'all 0.3s ease'
                         }}>
@@ -502,9 +502,9 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                                     color: '#FFD700',
                                     border: '2px solid #FFD700',
                                     borderRadius: '50%',
-                                    width: '45px',
-                                    height: '45px',
-                                    fontSize: '1.5rem',
+                                    width: cardsToShow === 1 ? '36px' : '45px',
+                                    height: cardsToShow === 1 ? '36px' : '45px',
+                                    fontSize: cardsToShow === 1 ? '1.1rem' : '1.5rem',
                                     fontWeight: 'bold',
                                     cursor: 'pointer',
                                     display: 'flex',
