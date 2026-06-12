@@ -566,6 +566,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     const [showSettings, setShowSettings] = useState(false);
 
     const [isMuted, setIsMuted] = useState(false);
+    const isMutedRef = useRef(isMuted);
+    useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
     const [language, setLanguage] = useState<'es' | 'en'>(() => {
 
@@ -837,6 +839,27 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     const [pendingSliceRewards, setPendingSliceRewards] = useState<{ cheese: number; pepperoni: number; bacon: number; onion: number }>({ cheese: 0, pepperoni: 0, bacon: 0, onion: 0 });
     const [pendingLpRewards, setPendingLpRewards] = useState<{ cheese: number; pepperoni: number; bacon: number; onion: number }>({ cheese: 0, pepperoni: 0, bacon: 0, onion: 0 });
     const [defindexLoading, setDefindexLoading] = useState<boolean>(false);
+    const [friendBalances, setFriendBalances] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+        if (view !== 'pvplobby' || !friends || friends.length === 0) return;
+        
+        const fetchFriendsBalances = async () => {
+            const balances: Record<string, number> = {};
+            await Promise.all(friends.map(async (f: any) => {
+                try {
+                    const bal = await StellarContractService.getSliceBalance(f.address);
+                    balances[f.address] = bal;
+                } catch (e) {
+                    console.error("Failed to fetch balance for friend", f.address, e);
+                    balances[f.address] = 0;
+                }
+            }));
+            setFriendBalances(balances);
+        };
+        
+        fetchFriendsBalances();
+    }, [view, friends]);
 
     // --- ZK Leaderboard Level Selection ---
     const [leaderboardSongId, setLeaderboardSongId] = useState<number>(1);
@@ -1875,6 +1898,32 @@ Ganador: ${payload.winnerAddress}`);
         };
     }, [isPvp, isMultiplayer, language]);
 
+    const playSyntheticDing = () => {
+        if (isMutedRef.current) return;
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.15); // E5
+            
+            gain.gain.setValueAtTime(0.25, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+            
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.35);
+        } catch (e) {
+            console.warn('Failed to play synthetic ding:', e);
+        }
+    };
+
     // Clock tick for baking progress & offline local timers
 
     useEffect(() => {
@@ -1894,6 +1943,7 @@ Ganador: ${payload.winnerAddress}`);
                         if (elapsed >= slot.duration) {
 
                             changed = true;
+                            playSyntheticDing();
 
                             return { ...slot, status: 'completed' as const };
 
@@ -5704,6 +5754,29 @@ Ganador: ${payload.winnerAddress}`);
 
                                             }
 
+                                            @keyframes readyPulse {
+                                                0% { box-shadow: 0 0 10px rgba(57, 255, 20, 0.4), inset 0 0 10px rgba(57, 255, 20, 0.3); border-color: #39ff14; }
+                                                50% { box-shadow: 0 0 25px rgba(57, 255, 20, 0.8), inset 0 0 20px rgba(57, 255, 20, 0.5); border-color: #32cd32; }
+                                                100% { box-shadow: 0 0 10px rgba(57, 255, 20, 0.4), inset 0 0 10px rgba(57, 255, 20, 0.3); border-color: #39ff14; }
+                                            }
+
+                                            @keyframes legendarySparkle {
+                                                0% { filter: drop-shadow(0 0 2px #d4af37) brightness(1); }
+                                                50% { filter: drop-shadow(0 0 10px #ffd700) brightness(1.3); }
+                                                100% { filter: drop-shadow(0 0 2px #d4af37) brightness(1); }
+                                            }
+
+                                            .legendary-spark {
+                                                animation: legendarySparkle 2s infinite ease-in-out;
+                                                border: 2px solid #ffd700 !important;
+                                                box-shadow: 0 0 15px #ffd700, inset 0 0 10px rgba(255,215,0,0.3) !important;
+                                            }
+                                            .epic-spark {
+                                                animation: legendarySparkle 2s infinite ease-in-out;
+                                                border: 2px solid #ff00ff !important;
+                                                box-shadow: 0 0 15px #ff00ff, inset 0 0 10px rgba(255,0,255,0.3) !important;
+                                            }
+
                                         `}</style>
 
 
@@ -5965,6 +6038,16 @@ Ganador: ${payload.winnerAddress}`);
 
                                                         let borderStyle = {};
 
+                                                        let legendaryClass = '';
+                                                        const equippedMult = parseFloat(localStorage.getItem('equippedOvenMultiplier') || '1.0');
+                                                        if (localStorage.getItem('equippedOvenId')) {
+                                                            if (equippedMult >= 4.0) {
+                                                                legendaryClass = 'legendary-spark';
+                                                            } else if (equippedMult >= 2.0) {
+                                                                legendaryClass = 'epic-spark';
+                                                            }
+                                                        }
+
                                                         if (isBakingActive) {
 
                                                             if (equippedOvenStyle === 'vulcan') {
@@ -5987,6 +6070,18 @@ Ganador: ${payload.winnerAddress}`);
 
                                                             }
 
+                                                        } else if (isCompleted) {
+
+                                                            borderStyle = {
+
+                                                                animation: 'readyPulse 1.5s infinite',
+
+                                                                border: '2px solid #39ff14',
+
+                                                                boxShadow: '0 0 15px rgba(57, 255, 20, 0.4)'
+
+                                                            };
+
                                                         } else {
 
                                                             borderStyle = { border: '1px solid rgba(255, 255, 255, 0.1)' };
@@ -6001,7 +6096,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                                                 key={slot.id}
 
-                                                                className={slot.isLocked ? "lock-container" : ""}
+                                                                className={`${slot.isLocked ? "lock-container" : ""} ${legendaryClass}`}
 
                                                                 style={{
 
@@ -6435,7 +6530,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                                                         <button
 
-                                                                            onClick={() => claimPizza(slot.id)}
+                                                                            onClick={() => { claimPizza(slot.id); new Audio('/sounds/chime.mp3').play().catch(()=>{}); }}
 
                                                                             style={{
 
@@ -6524,8 +6619,6 @@ Ganador: ${payload.winnerAddress}`);
                                                         <span style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--ph-gold)' }}>{stakedSlice} $SLICE</span>
 
                                                     </div>
-
-
 
                                                     {/* Tier display */}
 
@@ -8007,7 +8100,8 @@ Ganador: ${payload.winnerAddress}`);
                                                                 return;
                                                             }
                                                             const nickname = prompt(language === 'es' ? 'Ingresa un apodo para tu amigo:' : 'Enter a nickname for your friend:') || 'Chef';
-                                                            useFriendsStore.getState().addFriend(addr.trim(), nickname.trim());
+                                                            const note = prompt(language === 'es' ? 'Ingresa una nota opcional para tu amigo:' : 'Enter an optional note for your friend:') || '';
+                                                            useFriendsStore.getState().addFriend(addr.trim(), nickname.trim(), note.trim());
                                                         }}
                                                         style={{
                                                             background: 'rgba(0,240,255,0.1)',
@@ -8042,13 +8136,45 @@ Ganador: ${payload.winnerAddress}`);
                                                                 background: 'rgba(255,255,255,0.03)',
                                                                 padding: '0.4rem 0.6rem',
                                                                 borderRadius: '8px',
-                                                                border: '1px solid rgba(255,255,255,0.05)'
+                                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                                marginBottom: '0.3rem'
                                                             }}>
-                                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                                                                     <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>🧑‍🍳 {f.alias}</span>
-                                                                    <span style={{ fontSize: '0.6rem', color: '#888' }}>{f.address.slice(0, 6)}...{f.address.slice(-6)}</span>
+                                                                    <span style={{ fontSize: '0.65rem', color: '#ffb703', fontWeight: 'bold' }}>
+                                                                        🍕 {friendBalances[f.address] !== undefined ? friendBalances[f.address].toFixed(2) : '...'} SLICE
+                                                                    </span>
+                                                                    {f.note && (
+                                                                        <span style={{ fontSize: '0.6rem', color: '#ccc', fontStyle: 'italic', background: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: '4px', alignSelf: 'flex-start' }}>
+                                                                            📝 {f.note}
+                                                                        </span>
+                                                                    )}
+                                                                    <span style={{ fontSize: '0.55rem', color: '#666' }}>{f.address.slice(0, 6)}...{f.address.slice(-6)}</span>
                                                                 </div>
-                                                                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                                <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const newNote = prompt(
+                                                                                language === 'es' ? 'Nota para tu amigo:' : 'Note for your friend:',
+                                                                                f.note || ''
+                                                                            );
+                                                                            if (newNote !== null) {
+                                                                                useFriendsStore.getState().updateFriendNote(f.address, newNote.trim());
+                                                                            }
+                                                                        }}
+                                                                        title="Edit friend note"
+                                                                        style={{
+                                                                            background: 'rgba(255,255,255,0.1)',
+                                                                            border: 'none',
+                                                                            borderRadius: '4px',
+                                                                            color: '#ccc',
+                                                                            fontSize: '0.6rem',
+                                                                            padding: '0.2rem 0.4rem',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                    >
+                                                                        📝
+                                                                    </button>
                                                                     <button
                                                                         onClick={() => {
                                                                             addLog(`[PVP] Instantly challenging friend ${f.alias} to wager room`);
