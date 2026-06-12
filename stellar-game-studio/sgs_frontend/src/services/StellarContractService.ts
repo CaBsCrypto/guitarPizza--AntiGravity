@@ -1240,6 +1240,87 @@ export class StellarContractService {
     }
   }
 
+  static async stakeLp(
+    playerAddress: string,
+    amount: number,
+    signer: SignerFn,
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const client = makeStakingVaultClient(playerAddress);
+      const tx = await client.stake_lp({
+        user: playerAddress,
+        amount: BigInt(Math.floor(amount * 1e7)),
+      });
+      const txHash = await signAndSend(tx, signer, playerAddress);
+      return { success: true, txHash };
+    } catch (err: any) {
+      console.error('[StellarContract] stakeLp failed:', err);
+      return { success: false, error: err?.message ?? String(err) };
+    }
+  }
+
+  static async unstakeLp(
+    playerAddress: string,
+    amount: number,
+    signer: SignerFn,
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const client = makeStakingVaultClient(playerAddress);
+      const tx = await client.unstake_lp({
+        user: playerAddress,
+        amount: BigInt(Math.floor(amount * 1e7)),
+      });
+      const txHash = await signAndSend(tx, signer, playerAddress);
+      return { success: true, txHash };
+    } catch (err: any) {
+      console.error('[StellarContract] unstakeLp failed:', err);
+      return { success: false, error: err?.message ?? String(err) };
+    }
+  }
+
+  static async claimLpRewards(
+    playerAddress: string,
+    signer: SignerFn,
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    try {
+      const client = makeStakingVaultClient(playerAddress);
+      const tx = await client.claim_lp_rewards({
+        user: playerAddress,
+      });
+      const txHash = await signAndSend(tx, signer, playerAddress);
+      return { success: true, txHash };
+    } catch (err: any) {
+      console.error('[StellarContract] claimLpRewards failed:', err);
+      return { success: false, error: err?.message ?? String(err) };
+    }
+  }
+
+  static async getLpStakedBalance(playerAddress: string): Promise<number> {
+    try {
+      const client = makeStakingVaultClient(simSource(playerAddress));
+      const tx = await client.get_lp_stake({
+        user: playerAddress,
+      });
+      return Number(tx.result ?? 0n) / 1e7;
+    } catch (err) {
+      console.error('[StellarContract] getLpStakedBalance failed:', err);
+      return 0;
+    }
+  }
+
+  static async getLpStakingLastHarvest(playerAddress: string): Promise<number> {
+    try {
+      const client = makeStakingVaultClient(simSource(playerAddress));
+      const tx = await client.get_lp_last_harvest({
+        user: playerAddress,
+      });
+      return Number(tx.result ?? 0n);
+    } catch (err) {
+      console.error('[StellarContract] getLpStakingLastHarvest failed:', err);
+      return 0;
+    }
+  }
+
   // ─── PvP Escrow Soroban Contract Integration ──────────────────────────────
 
   static async lockPvpWager(

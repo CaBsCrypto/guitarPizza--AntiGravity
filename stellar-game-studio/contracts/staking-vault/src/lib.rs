@@ -12,6 +12,9 @@ pub enum DataKey {
     Stake(Address),
     LastHarvest(Address),
     Initialized,
+    LPToken,
+    LPStake(Address),
+    LPLastHarvest(Address),
 }
 
 #[contract]
@@ -26,6 +29,7 @@ impl StakingVault {
         pepperoni: Address,
         bacon: Address,
         onion: Address,
+        lp_token: Address,
     ) {
         if env.storage().persistent().has(&DataKey::Initialized) {
             panic!("Already initialized");
@@ -35,6 +39,7 @@ impl StakingVault {
         env.storage().persistent().set(&DataKey::PepperoniToken, &pepperoni);
         env.storage().persistent().set(&DataKey::BaconToken, &bacon);
         env.storage().persistent().set(&DataKey::OnionToken, &onion);
+        env.storage().persistent().set(&DataKey::LPToken, &lp_token);
         env.storage().persistent().set(&DataKey::Initialized, &true);
     }
 
@@ -134,6 +139,95 @@ impl StakingVault {
             .get(&DataKey::LastHarvest(user))
             .unwrap_or(0)
     }
+
+    // ─── LP Token Staking ───────────────────────────────────────────────────
+
+    pub fn stake_lp(env: Env, user: Address, amount: i128) {
+        user.require_auth();
+        if amount <= 0 {
+            panic!("Amount must be positive");
+        }
+
+        Self::claim_lp_rewards_internal(&env, &user);
+
+        let current_stake: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LPStake(user.clone()))
+            .unwrap_or(0);
+
+        let lp_token: Address = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LPToken)
+            .unwrap();
+        let lp_client = token::Client::new(&env, &lp_token);
+        lp_client.transfer(&user, &env.current_contract_address(), &amount);
+
+        let new_stake = current_stake + amount;
+        env.storage()
+            .persistent()
+            .set(&DataKey::LPStake(user.clone()), &new_stake);
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::LPLastHarvest(user.clone()), &env.ledger().timestamp());
+    }
+
+    pub fn unstake_lp(env: Env, user: Address, amount: i128) {
+        user.require_auth();
+        if amount <= 0 {
+            panic!("Amount must be positive");
+        }
+
+        let current_stake: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LPStake(user.clone()))
+            .unwrap_or(0);
+
+        if current_stake < amount {
+            panic!("Insufficient LP stake balance");
+        }
+
+        Self::claim_lp_rewards_internal(&env, &user);
+
+        let new_stake = current_stake - amount;
+        env.storage()
+            .persistent()
+            .set(&DataKey::LPStake(user.clone()), &new_stake);
+
+        let lp_token: Address = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LPToken)
+            .unwrap();
+        let lp_client = token::Client::new(&env, &lp_token);
+        lp_client.transfer(&env.current_contract_address(), &user, &amount);
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::LPLastHarvest(user.clone()), &env.ledger().timestamp());
+    }
+
+    pub fn claim_lp_rewards(env: Env, user: Address) {
+        user.require_auth();
+        Self::claim_lp_rewards_internal(&env, &user);
+    }
+
+    pub fn get_lp_stake(env: Env, user: Address) -> i128 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::LPStake(user))
+            .unwrap_or(0)
+    }
+
+    pub fn get_lp_last_harvest(env: Env, user: Address) -> u64 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::LPLastHarvest(user))
+            .unwrap_or(0)
+    }
 }
 
 impl StakingVault {
@@ -206,6 +300,76 @@ impl StakingVault {
         env.storage()
             .persistent()
             .set(&DataKey::LastHarvest(user.clone()), &now);
+    }
+
+    fn claim_lp_rewards_internal(env: &Env, user: &Address) {
+        let stake: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LPStake(user.clone()))
+            .unwrap_or(0);
+
+        let now = env.ledger().timestamp();
+        let last_harvest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::LPLastHarvest(user.clone()))
+            .unwrap_or(now);
+
+        if stake > 0 && now > last_harvest {
+            let elapsed = (now - last_harvest) as i128;
+            // LP yields at 4.0x standard yield: 4 ingredients per minute per 100 LP tokens staked
+            // reward = (stake * elapsed * 4) / 6000
+            let reward = (stake * elapsed * 4) / 6000;
+
+            if reward > 0 {
+                let cheese_token: Address = env
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::CheeseToken)
+                    .unwrap();
+                let pepperoni_token: Address = env
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::PepperoniToken)
+                    .unwrap();
+                let bacon_token: Address = env
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::BaconToken)
+                    .unwrap();
+                let onion_token: Address = env
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::OnionToken)
+                    .unwrap();
+
+                token::Client::new(env, &cheese_token).transfer(
+                    &env.current_contract_address(),
+                    user,
+                    &reward,
+                );
+                token::Client::new(env, &pepperoni_token).transfer(
+                    &env.current_contract_address(),
+                    user,
+                    &reward,
+                );
+                token::Client::new(env, &bacon_token).transfer(
+                    &env.current_contract_address(),
+                    user,
+                    &reward,
+                );
+                token::Client::new(env, &onion_token).transfer(
+                    &env.current_contract_address(),
+                    user,
+                    &reward,
+                );
+            }
+        }
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::LPLastHarvest(user.clone()), &now);
     }
 }
 

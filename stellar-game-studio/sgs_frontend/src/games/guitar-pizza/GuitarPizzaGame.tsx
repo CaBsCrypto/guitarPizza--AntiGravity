@@ -825,9 +825,17 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     // --- Defindex LP & Staking States ---
 
     const [defindexLpBalance, setDefindexLpBalance] = useState<number>(0);
+    const [stakedLp, setStakedLp] = useState<number>(0);
+    const [bankTab, setBankTab] = useState<'amm' | 'staking'>('amm');
     const [stakeAmountSlice, setStakeAmountSlice] = useState<string>('');
     const [stakeAmountXlm, setStakeAmountXlm] = useState<string>('');
     const [withdrawAmountLp, setWithdrawAmountLp] = useState<string>('');
+    const [stakeAmountLp, setStakeAmountLp] = useState<string>('');
+    const [unstakeAmountLp, setUnstakeAmountLp] = useState<string>('');
+    const [lastHarvest, setLastHarvest] = useState<number>(0);
+    const [lpLastHarvest, setLpLastHarvest] = useState<number>(0);
+    const [pendingSliceRewards, setPendingSliceRewards] = useState<{ cheese: number; pepperoni: number; bacon: number; onion: number }>({ cheese: 0, pepperoni: 0, bacon: 0, onion: 0 });
+    const [pendingLpRewards, setPendingLpRewards] = useState<{ cheese: number; pepperoni: number; bacon: number; onion: number }>({ cheese: 0, pepperoni: 0, bacon: 0, onion: 0 });
     const [defindexLoading, setDefindexLoading] = useState<boolean>(false);
 
     // --- ZK Leaderboard Level Selection ---
@@ -1273,11 +1281,12 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             const fetchOnChainData = async () => {
                 if (document.hidden) return; // Skip if tab is inactive
                 try {
-                    const [balance, staked, tickets, lpBal, onChainCheckIn] = await Promise.all([
+                    const [balance, staked, tickets, lpBal, stakedLpBal, onChainCheckIn] = await Promise.all([
                         StellarContractService.getSliceBalance(userAddress),
                         StellarContractService.getStakedBalance(userAddress),
                         StellarContractService.getTournamentTickets(userAddress),
-                        view === 'bank' ? StellarContractService.getDefindexLpBalance(userAddress) : Promise.resolve(defindexLpBalance),
+                        StellarContractService.getDefindexLpBalance(userAddress),
+                        StellarContractService.getLpStakedBalance(userAddress),
                         StellarContractService.getDailyCheckIn(userAddress),
                         fetchRefrigeratorData()
                     ]);
@@ -1286,6 +1295,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                     setStakedSlice(staked);
                     setTicketBalance(tickets);
                     setDefindexLpBalance(lpBal);
+                    setStakedLp(stakedLpBal);
 
                     if (onChainCheckIn) {
                         const dateStr = onChainCheckIn.lastCheckinTimestamp > 0 

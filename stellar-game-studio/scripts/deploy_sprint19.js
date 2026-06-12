@@ -47,6 +47,11 @@ try {
   const sliceTokenId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\slice_token.wasm --source-account ${adminSecret} --network ${NETWORK} -- --admin ${adminAddress} --minter ${guitarPizzaId}`);
   console.log(`slice-token ID: ${sliceTokenId}`);
 
+  // 4.5. Deploy mock-lp-token
+  console.log('\n--- 4.5. Deploying mock-lp-token ---');
+  const mockLpTokenId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\slice_token.wasm --source-account ${adminSecret} --network ${NETWORK} -- --admin ${adminAddress} --minter ${adminAddress}`);
+  console.log(`mock-lp-token ID: ${mockLpTokenId}`);
+
   // 5. Deploy staking-vault
   console.log('\n--- 5. Deploying staking-vault ---');
   const stakingVaultId = run(`stellar contract deploy --wasm target\\wasm32v1-none\\release\\staking_vault.wasm --source-account ${adminSecret} --network ${NETWORK}`);
@@ -58,7 +63,7 @@ try {
   const pepperoniToken = 'CBE5ZVJPGYORQYZ5ZCLBGKX2HUQVCL2HKGR2T5D4SLFGS73VJYVLPNUW';
   const baconToken = 'CB4DPSEWXQJHVLIZ3GABBAWNLMKKNZND3KIXPVGAXT6A63DPQMHDK3U5';
   const onionToken = 'CBUE7F2FEVMUH4AX5VJ777EOXN7QCIQEIDZ36622YGLYSOCE6IRXCQEU';
-  run(`stellar contract invoke --id ${stakingVaultId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --slice ${sliceTokenId} --cheese ${cheeseToken} --pepperoni ${pepperoniToken} --bacon ${baconToken} --onion ${onionToken}`);
+  run(`stellar contract invoke --id ${stakingVaultId} --source-account ${adminSecret} --network ${NETWORK} -- initialize --slice ${sliceTokenId} --cheese ${cheeseToken} --pepperoni ${pepperoniToken} --bacon ${baconToken} --onion ${onionToken} --lp_token ${mockLpTokenId}`);
   console.log('Staking Vault initialized successfully!');
 
   // 7. Deploy pvp-escrow
@@ -143,7 +148,8 @@ try {
       "refrigerator-vault": refrigeratorVaultId,
       "tournaments": tournamentsId,
       "risc0-verifier": risc0VerifierId,
-      "pizza-baking": pizzaBakingId
+      "pizza-baking": pizzaBakingId,
+      "defindex-lp-token": mockLpTokenId
     },
     network: NETWORK,
     rpcUrl: RPC_URL,
@@ -173,6 +179,7 @@ VITE_REFRIGERATOR_VAULT_CONTRACT_ID=${refrigeratorVaultId}
 VITE_TOURNAMENTS_CONTRACT_ID=${tournamentsId}
 VITE_RISC0_VERIFIER_CONTRACT_ID=${risc0VerifierId}
 VITE_PIZZA_BAKING_CONTRACT_ID=${pizzaBakingId}
+VITE_DEFINDEX_LP_TOKEN_CONTRACT_ID=${mockLpTokenId}
 
 # Dev wallet addresses for testing
 VITE_DEV_ADMIN_ADDRESS=${adminAddress}
@@ -202,6 +209,7 @@ VITE_DEV_PLAYER2_SECRET=${player2Secret}
   constants = constants.replace(/'tournaments':\s*'.*?',?/, `'tournaments':        '${tournamentsId}',`);
   constants = constants.replace(/'risc0-verifier':\s*'.*?',?/, `'risc0-verifier':    '${risc0VerifierId}',`);
   constants = constants.replace(/'pizza-baking':\s*'.*?',?/, `'pizza-baking':       '${pizzaBakingId}',`);
+  constants = constants.replace(/'defindex-lp-token':\s*'.*?',?/, `'defindex-lp-token':  '${mockLpTokenId}',`);
 
   fs.writeFileSync(constantsPath, constants);
   console.log("constants.ts updated.");
