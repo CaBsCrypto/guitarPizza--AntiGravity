@@ -1281,13 +1281,14 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             const fetchOnChainData = async () => {
                 if (document.hidden) return; // Skip if tab is inactive
                 try {
-                    const [balance, staked, tickets, lpBal, stakedLpBal, onChainCheckIn] = await Promise.all([
+                    const [balance, staked, tickets, lpBal, stakedLpBal, onChainCheckIn, lpLastHarvestVal] = await Promise.all([
                         StellarContractService.getSliceBalance(userAddress),
                         StellarContractService.getStakedBalance(userAddress),
                         StellarContractService.getTournamentTickets(userAddress),
                         StellarContractService.getDefindexLpBalance(userAddress),
                         StellarContractService.getLpStakedBalance(userAddress),
                         StellarContractService.getDailyCheckIn(userAddress),
+                        StellarContractService.getLpStakingLastHarvest(userAddress),
                         fetchRefrigeratorData()
                     ]);
 
@@ -1296,6 +1297,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
                     setTicketBalance(tickets);
                     setDefindexLpBalance(lpBal);
                     setStakedLp(stakedLpBal);
+                    setLpLastHarvest(lpLastHarvestVal);
 
                     if (onChainCheckIn) {
                         const dateStr = onChainCheckIn.lastCheckinTimestamp > 0 
@@ -1447,6 +1449,164 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             setDefindexLoading(false);
         }
     };
+
+    const handleLpStake = async () => {
+        const lpVal = parseFloat(stakeAmountLp);
+        if (isNaN(lpVal) || lpVal <= 0) {
+            alert(language === 'es' ? 'Por favor ingresa una cantidad de LP válida.' : 'Please enter a valid LP amount.');
+            return;
+        }
+        if (defindexLpBalance < lpVal) {
+            alert(language === 'es' ? 'Saldo de LP insuficiente en billetera.' : 'Insufficient LP balance in wallet.');
+            return;
+        }
+
+        setDefindexLoading(true);
+        try {
+            const signer = getContractSignerRef.current();
+            addLog(`🥩 Depositando ${lpVal} LP en Staking Vault...`);
+            const res = await StellarContractService.stakeLp(userAddress, lpVal, signer);
+            if (res.success) {
+                addLog(`🥩 LP Stake exitoso! (tx: ${res.txHash || ''})`);
+                alert(language === 'es' ? '¡Staking de LP completado exitosamente!' : 'LP Staking completed successfully!');
+                setStakeAmountLp('');
+                
+                // Refresh balances
+                const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
+                setDefindexLpBalance(lpBal);
+                const stakedLpBal = await StellarContractService.getLpStakedBalance(userAddress);
+                setStakedLp(stakedLpBal);
+                const lastH = await StellarContractService.getLpStakingLastHarvest(userAddress);
+                setLpLastHarvest(lastH);
+            } else {
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error: ${res.error}`);
+                }
+            }
+        } catch (e: any) {
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
+        } finally {
+            setDefindexLoading(false);
+        }
+    };
+
+    const handleLpUnstake = async () => {
+        const lpVal = parseFloat(unstakeAmountLp);
+        if (isNaN(lpVal) || lpVal <= 0) {
+            alert(language === 'es' ? 'Por favor ingresa una cantidad de LP válida.' : 'Please enter a valid LP amount.');
+            return;
+        }
+        if (stakedLp < lpVal) {
+            alert(language === 'es' ? 'Saldo de LP stakeado insuficiente.' : 'Insufficient staked LP balance.');
+            return;
+        }
+
+        setDefindexLoading(true);
+        try {
+            const signer = getContractSignerRef.current();
+            addLog(`🥩 Retirando ${lpVal} LP de Staking Vault...`);
+            const res = await StellarContractService.unstakeLp(userAddress, lpVal, signer);
+            if (res.success) {
+                addLog(`🥩 LP Unstake exitoso! (tx: ${res.txHash || ''})`);
+                alert(language === 'es' ? '¡Retiro de LP completado exitosamente!' : 'LP Unstake completed successfully!');
+                setUnstakeAmountLp('');
+                
+                // Refresh balances
+                const lpBal = await StellarContractService.getDefindexLpBalance(userAddress);
+                setDefindexLpBalance(lpBal);
+                const stakedLpBal = await StellarContractService.getLpStakedBalance(userAddress);
+                setStakedLp(stakedLpBal);
+                const lastH = await StellarContractService.getLpStakingLastHarvest(userAddress);
+                setLpLastHarvest(lastH);
+                await fetchRefrigeratorData();
+            } else {
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error: ${res.error}`);
+                }
+            }
+        } catch (e: any) {
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
+        } finally {
+            setDefindexLoading(false);
+        }
+    };
+
+    const handleLpClaimRewards = async () => {
+        if (stakedLp <= 0) {
+            alert(language === 'es' ? 'No tienes LP tokens stakeados.' : 'You have no LP tokens staked.');
+            return;
+        }
+
+        setDefindexLoading(true);
+        try {
+            const signer = getContractSignerRef.current();
+            addLog(`🥩 Cosechando ingredientes del LP Staking...`);
+            const res = await StellarContractService.claimLpRewards(userAddress, signer);
+            if (res.success) {
+                addLog(`🥩 Ingredientes cosechados! (tx: ${res.txHash || ''})`);
+                alert(language === 'es' ? '¡Ingredientes cosechados exitosamente!' : 'Ingredients harvested successfully!');
+                
+                const lastH = await StellarContractService.getLpStakingLastHarvest(userAddress);
+                setLpLastHarvest(lastH);
+                await fetchRefrigeratorData();
+            } else {
+                if (res.error === 'SIGNATURE_REJECTED') {
+                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                    alert(`⚠️ Firma rechazada por el usuario.`);
+                } else {
+                    alert(`⚠️ Error: ${res.error}`);
+                }
+            }
+        } catch (e: any) {
+            if (e.message === 'SIGNATURE_REJECTED') {
+                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                alert(`⚠️ Firma rechazada por el usuario.`);
+            } else {
+                alert(`⚠️ Error: ${e.message}`);
+            }
+        } finally {
+            setDefindexLoading(false);
+        }
+    };
+
+    // Real-time LP staking rewards estimation
+    useEffect(() => {
+        if (view !== 'bank' || bankTab !== 'staking' || stakedLp <= 0 || lpLastHarvest <= 0) {
+            setPendingLpRewards({ cheese: 0, pepperoni: 0, bacon: 0, onion: 0 });
+            return;
+        }
+
+        const interval = setInterval(() => {
+            const elapsed = Math.max(0, Math.floor(Date.now() / 1000) - lpLastHarvest);
+            const rawStake = Math.floor(stakedLp * 1e7);
+            const rawReward = Math.floor((rawStake * elapsed * 4) / 6000);
+            const rewardFloat = Math.max(0, rawReward / 1e7);
+            setPendingLpRewards({
+                cheese: rewardFloat,
+                pepperoni: rewardFloat,
+                bacon: rewardFloat,
+                onion: rewardFloat
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [view, bankTab, stakedLp, lpLastHarvest]);
 
     const loadLeaderboard = useCallback(async () => {
         setLeaderboardLoading(true);
@@ -7148,177 +7308,447 @@ Ganador: ${payload.winnerAddress}`);
                                                 {defindexLpBalance.toFixed(4)} LP
                                             </div>
                                         </div>
+                                        <div style={{
+                                            background: 'rgba(212, 175, 55, 0.08)',
+                                            border: '1px dashed #d4af37',
+                                            padding: '0.8rem',
+                                            borderRadius: '8px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#d4af37', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                {language === 'es' ? 'LP Staked' : 'Staked LP'}
+                                            </div>
+                                            <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#ffd700', marginTop: '0.2rem' }}>
+                                                {stakedLp.toFixed(4)} LP
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* Action Tabs / Two Columns */}
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                                        gap: '1.5rem'
-                                    }}>
-                                        {/* Column 1: Deposit / Liquidity Provision */}
+                                    {/* Tab Switcher */}
+                                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.2rem' }}>
+                                        <button 
+                                            onClick={() => setBankTab('amm')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.6rem',
+                                                border: bankTab === 'amm' ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
+                                                background: bankTab === 'amm' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(0,0,0,0.4)',
+                                                color: '#d4af37',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold',
+                                                fontFamily: 'monospace',
+                                                transition: 'all 0.3s ease',
+                                                fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            💧 {language === 'es' ? 'PROVEER LIQUIDEZ' : 'PROVIDE LIQUIDITY'}
+                                        </button>
+                                        <button 
+                                            onClick={() => setBankTab('staking')}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.6rem',
+                                                border: bankTab === 'staking' ? '1px solid #ffd700' : '1px solid rgba(255,255,255,0.1)',
+                                                background: bankTab === 'staking' ? 'rgba(255, 215, 0, 0.15)' : 'rgba(0,0,0,0.4)',
+                                                color: '#ffd700',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold',
+                                                fontFamily: 'monospace',
+                                                transition: 'all 0.3s ease',
+                                                fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            🥩 {language === 'es' ? 'STAKING DE LP (4X)' : 'LP STAKING (4X)'}
+                                        </button>
+                                    </div>
+
+                                    {bankTab === 'amm' ? (
+                                        /* AMM PANE */
                                         <div style={{
-                                            background: 'rgba(0,0,0,0.2)',
-                                            padding: '1.2rem',
-                                            borderRadius: '10px',
-                                            border: '1px solid rgba(255,255,255,0.05)',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '0.8rem'
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                            gap: '1.5rem'
                                         }}>
-                                            <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#27ae60', borderBottom: '1px solid rgba(39, 174, 96, 0.2)', paddingBottom: '0.3rem' }}>
-                                                📥 {language === 'es' ? 'Depositar Liquidez' : 'Deposit Liquidity'}
-                                            </h3>
-                                            
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>$SLICE Amount</label>
-                                                <input 
-                                                    type="number" 
-                                                    placeholder="0.0"
-                                                    value={stakeAmountSlice}
-                                                    onChange={(e) => setStakeAmountSlice(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        background: '#15151a',
-                                                        border: '1px solid rgba(255,255,255,0.15)',
-                                                        borderRadius: '6px',
-                                                        padding: '0.5rem',
-                                                        color: '#fff',
-                                                        outline: 'none',
-                                                        fontSize: '0.9rem'
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>$XLM Amount</label>
-                                                <input 
-                                                    type="number" 
-                                                    placeholder="0.0"
-                                                    value={stakeAmountXlm}
-                                                    onChange={(e) => setStakeAmountXlm(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        background: '#15151a',
-                                                        border: '1px solid rgba(255,255,255,0.15)',
-                                                        borderRadius: '6px',
-                                                        padding: '0.5rem',
-                                                        color: '#fff',
-                                                        outline: 'none',
-                                                        fontSize: '0.9rem'
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <button 
-                                                onClick={handleDefindexDeposit}
-                                                disabled={defindexLoading}
-                                                style={{
-                                                    background: '#27ae60',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    padding: '0.7rem',
-                                                    fontWeight: 'bold',
-                                                    cursor: 'pointer',
-                                                    marginTop: '0.5rem',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.5rem'
-                                                }}
-                                            >
-                                                {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-                                                {language === 'es' ? 'Lavar Dinero (Depositar)' : 'Launder Money (Deposit)'}
-                                            </button>
-                                        </div>
-
-                                        {/* Column 2: Withdraw Liquidity */}
-                                        <div style={{
-                                            background: 'rgba(0,0,0,0.2)',
-                                            padding: '1.2rem',
-                                            borderRadius: '10px',
-                                            border: '1px solid rgba(255,255,255,0.05)',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '0.8rem'
-                                        }}>
-                                            <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#ff3e3e', borderBottom: '1px solid rgba(255, 62, 62, 0.2)', paddingBottom: '0.3rem' }}>
-                                                📤 {language === 'es' ? 'Retirar LP' : 'Withdraw LP'}
-                                            </h3>
-
-                                            <div>
-                                                <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>LP Token Amount</label>
-                                                <div style={{ position: 'relative' }}>
+                                            {/* Column 1: Deposit / Liquidity Provision */}
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.2)',
+                                                padding: '1.2rem',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.8rem'
+                                            }}>
+                                                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#27ae60', borderBottom: '1px solid rgba(39, 174, 96, 0.2)', paddingBottom: '0.3rem' }}>
+                                                    📥 {language === 'es' ? 'Depositar Liquidez' : 'Deposit Liquidity'}
+                                                </h3>
+                                                
+                                                <div>
+                                                    <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>$SLICE Amount</label>
                                                     <input 
                                                         type="number" 
                                                         placeholder="0.0"
-                                                        value={withdrawAmountLp}
-                                                        onChange={(e) => setWithdrawAmountLp(e.target.value)}
+                                                        value={stakeAmountSlice}
+                                                        onChange={(e) => setStakeAmountSlice(e.target.value)}
                                                         style={{
                                                             width: '100%',
                                                             background: '#15151a',
                                                             border: '1px solid rgba(255,255,255,0.15)',
                                                             borderRadius: '6px',
                                                             padding: '0.5rem',
-                                                            paddingRight: '3.5rem',
                                                             color: '#fff',
                                                             outline: 'none',
                                                             fontSize: '0.9rem'
                                                         }}
                                                     />
-                                                    <button 
-                                                        onClick={() => setWithdrawAmountLp(defindexLpBalance.toString())}
+                                                </div>
+
+                                                <div>
+                                                    <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>$XLM Amount</label>
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="0.0"
+                                                        value={stakeAmountXlm}
+                                                        onChange={(e) => setStakeAmountXlm(e.target.value)}
                                                         style={{
-                                                            position: 'absolute',
-                                                            right: '5px',
-                                                            top: '50%',
-                                                            transform: 'translateY(-50%)',
-                                                            background: 'rgba(212, 175, 55, 0.2)',
-                                                            border: '1px solid #d4af37',
-                                                            color: '#d4af37',
-                                                            borderRadius: '4px',
-                                                            padding: '0.2rem 0.4rem',
-                                                            fontSize: '0.7rem',
+                                                            width: '100%',
+                                                            background: '#15151a',
+                                                            border: '1px solid rgba(255,255,255,0.15)',
+                                                            borderRadius: '6px',
+                                                            padding: '0.5rem',
+                                                            color: '#fff',
+                                                            outline: 'none',
+                                                            fontSize: '0.9rem'
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <button 
+                                                    onClick={handleDefindexDeposit}
+                                                    disabled={defindexLoading}
+                                                    style={{
+                                                        background: '#27ae60',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        padding: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        marginTop: '0.5rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem'
+                                                    }}
+                                                >
+                                                    {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                                    {language === 'es' ? 'Lavar Dinero (Depositar)' : 'Launder Money (Deposit)'}
+                                                </button>
+                                            </div>
+
+                                            {/* Column 2: Withdraw Liquidity */}
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.2)',
+                                                padding: '1.2rem',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.8rem'
+                                            }}>
+                                                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#ff3e3e', borderBottom: '1px solid rgba(255, 62, 62, 0.2)', paddingBottom: '0.3rem' }}>
+                                                    📤 {language === 'es' ? 'Retirar LP' : 'Withdraw LP'}
+                                                </h3>
+
+                                                <div>
+                                                    <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>LP Token Amount</label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="0.0"
+                                                            value={withdrawAmountLp}
+                                                            onChange={(e) => setWithdrawAmountLp(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                background: '#15151a',
+                                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                                borderRadius: '6px',
+                                                                padding: '0.5rem',
+                                                                paddingRight: '3.5rem',
+                                                                color: '#fff',
+                                                                outline: 'none',
+                                                                fontSize: '0.9rem'
+                                                            }}
+                                                        />
+                                                        <button 
+                                                            onClick={() => setWithdrawAmountLp(defindexLpBalance.toString())}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: '5px',
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                background: 'rgba(212, 175, 55, 0.2)',
+                                                                border: '1px solid #d4af37',
+                                                                color: '#d4af37',
+                                                                borderRadius: '4px',
+                                                                padding: '0.2rem 0.4rem',
+                                                                fontSize: '0.7rem',
+                                                                cursor: 'pointer',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        >
+                                                            MAX
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <p style={{ fontSize: '0.7rem', color: '#777', margin: '0.5rem 0' }}>
+                                                    {language === 'es'
+                                                        ? 'Retirar liquidez quemará tus tokens LP y devolverá las cantidades proporcionales de SLICE y XLM a tu billetera.'
+                                                        : 'Withdrawing liquidity will burn your LP tokens and return the proportional SLICE and XLM to your wallet.'
+                                                    }
+                                                </p>
+
+                                                <button 
+                                                    onClick={handleDefindexWithdraw}
+                                                    disabled={defindexLoading}
+                                                    style={{
+                                                        background: '#ff3e3e',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        padding: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        marginTop: 'auto',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem'
+                                                    }}
+                                                >
+                                                    {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                                    {language === 'es' ? 'Recuperar Fondos (Retirar)' : 'Retrieve Funds (Withdraw)'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* LP STAKING PANE */
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                            gap: '1.5rem'
+                                        }}>
+                                            {/* Column 1: Stake LP */}
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.2)',
+                                                padding: '1.2rem',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.8rem'
+                                            }}>
+                                                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#ffd700', borderBottom: '1px solid rgba(255, 215, 0, 0.2)', paddingBottom: '0.3rem' }}>
+                                                    🥩 {language === 'es' ? 'Hacer Stake de LP' : 'Stake LP Tokens'}
+                                                </h3>
+
+                                                <div>
+                                                    <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>LP Amount to Stake</label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="0.0"
+                                                            value={stakeAmountLp}
+                                                            onChange={(e) => setStakeAmountLp(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                background: '#15151a',
+                                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                                borderRadius: '6px',
+                                                                padding: '0.5rem',
+                                                                paddingRight: '3.5rem',
+                                                                color: '#fff',
+                                                                outline: 'none',
+                                                                fontSize: '0.9rem'
+                                                            }}
+                                                        />
+                                                        <button 
+                                                            onClick={() => setStakeAmountLp(defindexLpBalance.toString())}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: '5px',
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                background: 'rgba(255, 215, 0, 0.2)',
+                                                                border: '1px solid #ffd700',
+                                                                color: '#ffd700',
+                                                                borderRadius: '4px',
+                                                                padding: '0.2rem 0.4rem',
+                                                                fontSize: '0.7rem',
+                                                                cursor: 'pointer',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        >
+                                                            MAX
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    onClick={handleLpStake}
+                                                    disabled={defindexLoading}
+                                                    style={{
+                                                        background: 'linear-gradient(135deg, #ffd700, #b8860b)',
+                                                        color: '#1a0000',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        padding: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        marginTop: '0.5rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem'
+                                                    }}
+                                                >
+                                                    {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                                    {language === 'es' ? '🥩 Staker LP' : '🥩 Stake LP'}
+                                                </button>
+                                            </div>
+
+                                            {/* Column 2: Unstake & Harvest */}
+                                            <div style={{
+                                                background: 'rgba(0,0,0,0.2)',
+                                                padding: '1.2rem',
+                                                borderRadius: '10px',
+                                                border: '1px solid rgba(255,255,255,0.05)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.8rem'
+                                            }}>
+                                                <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '1rem', color: '#ff4d4d', borderBottom: '1px solid rgba(255, 77, 77, 0.2)', paddingBottom: '0.3rem' }}>
+                                                    📤 {language === 'es' ? 'Retirar & Cosechar' : 'Unstake & Claim'}
+                                                </h3>
+
+                                                <div>
+                                                    <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '0.3rem' }}>LP Amount to Unstake</label>
+                                                    <div style={{ position: 'relative' }}>
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="0.0"
+                                                            value={unstakeAmountLp}
+                                                            onChange={(e) => setUnstakeAmountLp(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                background: '#15151a',
+                                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                                borderRadius: '6px',
+                                                                padding: '0.5rem',
+                                                                paddingRight: '3.5rem',
+                                                                color: '#fff',
+                                                                outline: 'none',
+                                                                fontSize: '0.9rem'
+                                                            }}
+                                                        />
+                                                        <button 
+                                                            onClick={() => setUnstakeAmountLp(stakedLp.toString())}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: '5px',
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                background: 'rgba(255, 77, 77, 0.2)',
+                                                                border: '1px solid #ff4d4d',
+                                                                color: '#ff4d4d',
+                                                                borderRadius: '4px',
+                                                                padding: '0.2rem 0.4rem',
+                                                                fontSize: '0.7rem',
+                                                                cursor: 'pointer',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        >
+                                                            MAX
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <button 
+                                                    onClick={handleLpUnstake}
+                                                    disabled={defindexLoading}
+                                                    style={{
+                                                        background: '#ff4d4d',
+                                                        color: '#fff',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        padding: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '0.5rem',
+                                                        marginBottom: '0.4rem'
+                                                    }}
+                                                >
+                                                    {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                                    {language === 'es' ? 'Retirar del Staking' : 'Unstake LP'}
+                                                </button>
+
+                                                {/* Claim panel */}
+                                                <div style={{
+                                                    background: 'rgba(255, 215, 0, 0.04)',
+                                                    border: '1px dashed rgba(255, 215, 0, 0.2)',
+                                                    borderRadius: '8px',
+                                                    padding: '0.6rem',
+                                                    marginTop: '0.4rem'
+                                                }}>
+                                                    <div style={{ fontSize: '0.75rem', color: '#ffd700', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                                                        {language === 'es' ? '🎁 Recompensas LP Acumuladas' : '🎁 Accrued LP Rewards'}
+                                                    </div>
+                                                    <div style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '1fr 1fr',
+                                                        gap: '0.3rem',
+                                                        fontSize: '0.7rem',
+                                                        color: '#ccc',
+                                                        fontFamily: 'monospace',
+                                                        marginBottom: '0.5rem'
+                                                    }}>
+                                                        <div>🧀 CHE: {pendingLpRewards.cheese.toFixed(5)}</div>
+                                                        <div>🌶️ PEP: {pendingLpRewards.pepperoni.toFixed(5)}</div>
+                                                        <div>🥓 BAC: {pendingLpRewards.bacon.toFixed(5)}</div>
+                                                        <div>🧅 ONI: {pendingLpRewards.onion.toFixed(5)}</div>
+                                                    </div>
+                                                    <button
+                                                        onClick={handleLpClaimRewards}
+                                                        disabled={defindexLoading || stakedLp <= 0}
+                                                        style={{
+                                                            width: '100%',
+                                                            background: 'rgba(255, 215, 0, 0.2)',
+                                                            border: '1px solid #ffd700',
+                                                            color: '#ffd700',
+                                                            borderRadius: '6px',
+                                                            padding: '0.4rem',
+                                                            fontWeight: 'bold',
                                                             cursor: 'pointer',
-                                                            fontWeight: 'bold'
+                                                            fontSize: '0.75rem',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '0.3rem'
                                                         }}
                                                     >
-                                                        MAX
+                                                        {defindexLoading ? <Loader2 size={12} className="animate-spin" /> : null}
+                                                        {language === 'es' ? '🌾 Cosechar Ingredientes' : '🌾 Harvest Rewards'}
                                                     </button>
                                                 </div>
                                             </div>
-
-                                            <p style={{ fontSize: '0.7rem', color: '#777', margin: '0.5rem 0' }}>
-                                                {language === 'es'
-                                                    ? 'Retirar liquidez quemará tus tokens LP y devolverá las cantidades proporcionales de SLICE y XLM a tu billetera.'
-                                                    : 'Withdrawing liquidity will burn your LP tokens and return the proportional SLICE and XLM to your wallet.'
-                                                }
-                                            </p>
-
-                                            <button 
-                                                onClick={handleDefindexWithdraw}
-                                                disabled={defindexLoading}
-                                                style={{
-                                                    background: '#ff3e3e',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    padding: '0.7rem',
-                                                    fontWeight: 'bold',
-                                                    cursor: 'pointer',
-                                                    marginTop: 'auto',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.5rem'
-                                                }}
-                                            >
-                                                {defindexLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-                                                {language === 'es' ? 'Recuperar Fondos (Retirar)' : 'Retrieve Funds (Withdraw)'}
-                                            </button>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         )}
