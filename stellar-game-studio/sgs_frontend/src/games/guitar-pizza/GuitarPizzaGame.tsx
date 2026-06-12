@@ -2211,7 +2211,45 @@ Ganador: ${payload.winnerAddress}`);
 
     };
 
+    const playBakingChime = () => {
+        if (isMutedRef.current) return;
+        try {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContextClass) return;
+            const ctx = new AudioContextClass();
+            const now = ctx.currentTime;
 
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, now); // C5
+
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, now); // E5
+
+            gain1.gain.setValueAtTime(0.15, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+            gain2.gain.setValueAtTime(0.1, now);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+
+            osc1.start(now);
+            osc1.stop(now + 1.2);
+
+            osc2.start(now);
+            osc2.stop(now + 0.8);
+        } catch (e) {
+            console.error("Failed to play synthesis chime:", e);
+        }
+    };
 
     const claimPizza = async (slotId: number) => {
 
@@ -6530,7 +6568,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                                                         <button
 
-                                                                            onClick={() => { claimPizza(slot.id); new Audio('/sounds/chime.mp3').play().catch(()=>{}); }}
+                                                                            onClick={() => { claimPizza(slot.id); playBakingChime(); }}
 
                                                                             style={{
 
