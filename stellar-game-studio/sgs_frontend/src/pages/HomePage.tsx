@@ -98,28 +98,28 @@ export function HomePage({ onNavigate }: HomePageProps) {
   };
 
   return (
-    <div className="hp-active">
+    <div
+      className="hp-active"
+      style={{
+        '--mouse-x': mousePos.x,
+        '--mouse-y': mousePos.y
+      } as React.CSSProperties}
+    >
+      {/* Layer 1: Pizzeria background scene */}
+      <div className="hp-scene-bg" />
+
       {/* Cinematic Transition Overlay */}
       <div className={`hp-cinematic-overlay ${isTransitioning ? 'hp-fade-to-black' : ''}`} />
 
       {/* Global atmospheric effects */}
       <div className="hp-smoke-overlay" />
 
-      <div
-        className="hp-root"
-        style={{
-          '--mouse-x': mousePos.x,
-          '--mouse-y': mousePos.y
-        } as React.CSSProperties}
-      >
+      <div className="hp-root">
 
         {/* ══════════════════════════════════════
             HERO — Full pizzeria scene
         ══════════════════════════════════════ */}
         <section className="hp-hero">
-
-          {/* Layer 1: Pizzeria background scene */}
-          <div className="hp-scene-bg" />
 
           {/* Layer 2: Noir Spotlight Overlay */}
           <div className="hp-spotlight-over" />
@@ -172,172 +172,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </div>
 
         </section>
-
-
-
-        {/* ══════════════════════════════════════
-            LOWER PANELS — Glassmorphism Grid
-        ══════════════════════════════════════ */}
-        <div className="hp-lower-container">
-          <div className="hp-panels-grid">
-
-            {/* PANEL 1: RECIPE FILES */}
-            <section className="hp-glass-panel hp-panel-intel">
-              <div className="hp-panel-inner">
-                <div className="hp-intel-header">
-                  <span className="hp-intel-stamp">TOP SECRET</span>
-                  <h2 className="hp-intel-title">THE RECIPE FILES</h2>
-                  <p className="hp-intel-subtitle">SYNDICATE CLEARANCE REQUIRED</p>
-                </div>
-
-                <div className="hp-intel-cards">
-                  <div className="hp-intel-card">
-                    <div className="hp-intel-card-num">PHASE 01</div>
-                    <div className="hp-intel-card-content">
-                      <div className="hp-intel-card-icon">🔪</div>
-                      <div>
-                        <h3 className="hp-intel-card-title">THE HIT</h3>
-                        <p className="hp-intel-card-desc">Slice to the beat. Every perfect note is a fresh ingredient for the Family. Miss, and the Don will be displeased. Your rhythm is your weapon.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="hp-intel-card">
-                    <div className="hp-intel-card-num">PHASE 02</div>
-                    <div className="hp-intel-card-content">
-                      <div className="hp-intel-card-icon">🤫</div>
-                      <div>
-                        <h3 className="hp-intel-card-title">THE ALIBI</h3>
-                        <p className="hp-intel-card-desc">No one needs to know the family recipe. RISC Zero acts as our "Silent Witness", proving your high score is legit without exposing the secret sauce.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="hp-intel-card">
-                    <div className="hp-intel-card-num">PHASE 03</div>
-                    <div className="hp-intel-card-content">
-                      <div className="hp-intel-card-icon">💎</div>
-                      <div>
-                        <h3 className="hp-intel-card-title">THE PAYOFF</h3>
-                        <p className="hp-intel-card-desc">Your reputation is eternal. The contract is sealed and your verified score is etched onto the Stellar Ledger. Immutable, bulletproof, and served piping hot.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* PANEL 2: FAMILIES CAROUSEL (3D COVERFLOW) */}
-            <section
-              className="hp-glass-panel hp-panel-families"
-              style={{ '--active-glow': SYNDICATES[carouselIdx].color } as React.CSSProperties}
-            >
-              <div className="hp-panel-inner hp-carousel-stage">
-                <div className="hp-families-header">
-                  <h2 className="hp-families-title">THE SOVEREIGN SYNDICATES</h2>
-                  <p className="hp-families-sub">Guardians of the Seven Slices.</p>
-                </div>
-
-                <div className="hp-carousel-nav">
-                  <button onClick={prevSlide} className="hp-nav-btn hp-nav-prev"><ChevronLeft /></button>
-                  <button onClick={nextSlide} className="hp-nav-btn hp-nav-next"><ChevronRight /></button>
-                </div>
-
-                <div
-                  className="hp-carousel-track-wrap"
-                  onMouseDown={handleDragStart}
-                  onMouseMove={handleDragMove}
-                  onMouseUp={handleDragEnd}
-                  onMouseLeave={handleDragEnd}
-                  onTouchStart={handleDragStart}
-                  onTouchMove={handleDragMove}
-                  onTouchEnd={handleDragEnd}
-                  style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-                >
-                  <div className="hp-carousel-track-3d">
-                    {SYNDICATES.map((s, i) => {
-                      // Calculate shortest distance on a circle
-                      const total = SYNDICATES.length;
-                      let diff = i - carouselIdx;
-                      if (diff > total / 2) diff -= total;
-                      if (diff < -total / 2) diff += total;
-
-                      const absDiff = Math.abs(diff);
-                      const zIndex = 100 - absDiff;
-                      const isActive = diff === 0;
-
-                      // 3D positioning
-                      const cardSpacing = typeof window !== 'undefined' && window.innerWidth < 640 ? 85 : 110;
-                      const translateX = diff * cardSpacing + dragOffset * 0.5; // Spread cards horizontally
-                      const translateZ = isActive ? 0 : -absDiff * 80;
-                      const rotateY = isActive ? 0 : -Math.sign(diff) * 20;
-                      const scale = isActive ? 1.15 : 0.85;
-
-                      return (
-                        <div
-                          key={s.name}
-                          className={`hp-family-card-3d ${isActive ? 'hp-card-active' : 'hp-card-dim'}`}
-                          style={{
-                            '--syndicate-color': s.color,
-                            zIndex,
-                            transform: `translateX(calc(-50% + ${translateX}px)) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
-                            transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), filter 0.5s',
-                          } as React.CSSProperties}
-                          onClick={() => !dragMoved && setCarouselIdx(i)}
-                        >
-                          <Pin className="hp-card-pin" />
-                          <div className="hp-family-icon">{s.icon}</div>
-                          <div className="hp-family-name">{s.name}</div>
-                          {isActive && (
-                            <div className="hp-family-details">
-                              <div className="hp-family-genre">{s.genre}</div>
-                              <div className="hp-family-perk">
-                                <span className="hp-perk-label">BOOST:</span> {s.perk}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* PANEL 3: CONTRACTS FULL WIDTH */}
-            <section className="hp-glass-panel hp-panel-contracts">
-              <div className="hp-panel-inner">
-                <div className="hp-dossier-header">
-                  <span className="hp-dossier-stamp">LIVE</span>
-                  <h2 className="hp-contracts-title">CLASSIFIED / ON-CHAIN ASSETS</h2>
-                  <p className="hp-dossier-sub">Stellar Testnet · Verified by the Bureau</p>
-                </div>
-                <div className="hp-contracts-list">
-                  {[
-                    { name: 'guitar-pizza', addr: getContractId('guitar-pizza'), icon: '🍕' },
-                    { name: 'zk-leaderboard', addr: getContractId('zk-leaderboard'), icon: '🏆' },
-                    { name: 'achievement-vault', addr: getContractId('achievement-vault'), icon: '🎖️' },
-                    { name: 'daily-recipe', addr: getContractId('daily-recipe'), icon: '📋' },
-                    { name: 'game-hub', addr: getContractId('mock-game-hub'), icon: '🌐', isHub: true },
-                    { name: '$SLICE token', addr: getContractId('slice-token'), icon: '🪙' },
-                    { name: 'staking-vault', addr: getContractId('staking-vault'), icon: '🔥' },
-                    { name: 'refrigerator-vault', addr: getContractId('refrigerator-vault'), icon: '❄️' },
-                    { name: 'pvp-escrow', addr: getContractId('pvp-escrow'), icon: '⚖️' },
-                    { name: 'tournaments', addr: getContractId('tournaments'), icon: '⚔️' },
-                    { name: 'pizza-baking', addr: getContractId('pizza-baking'), icon: '⏲️' },
-                  ].map((c) => (
-                    <div key={c.name} className={`hp-contract-row${c.isHub ? ' hp-contract-hub' : ''}`}>
-                      <span className="hp-contract-icon">{c.icon}</span>
-                      <span className="hp-contract-name">{c.name}</span>
-                      <code className="hp-contract-addr">{c.addr || 'Not Deployed'}</code>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-          </div>
-        </div>
 
       </div>
     </div>

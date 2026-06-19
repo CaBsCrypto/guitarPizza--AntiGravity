@@ -1,4 +1,11 @@
 import { create } from 'zustand';
+import { NETWORK, NETWORK_PASSPHRASE } from '../utils/constants';
+
+function getWalletCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )stellar_wallet=([^;]+)'));
+  return match ? match[2] : null;
+}
 
 export interface WalletState {
   // Wallet connection
@@ -26,14 +33,16 @@ export interface WalletState {
   reset: () => void;
 }
 
+const activeAddress = getWalletCookie();
+
 const initialState = {
-  publicKey: null,
-  walletId: null,
-  walletType: null,
-  isConnected: false,
+  publicKey: activeAddress || null,
+  walletId: activeAddress ? 'shared-cookie' : null,
+  walletType: activeAddress ? 'wallet' : (null as 'dev' | 'wallet' | 'passkey' | null),
+  isConnected: !!activeAddress,
   isConnecting: false,
-  network: null,
-  networkPassphrase: null,
+  network: activeAddress ? NETWORK : null,
+  networkPassphrase: activeAddress ? NETWORK_PASSPHRASE : null,
   error: null,
 };
 

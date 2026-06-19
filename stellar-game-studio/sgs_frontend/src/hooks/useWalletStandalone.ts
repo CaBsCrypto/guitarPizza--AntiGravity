@@ -101,7 +101,12 @@ export function useWalletStandalone() {
   }, [setWallet, setNetwork]);
 
   const disconnect = useCallback(() => {
+    const isProd = window.location.hostname.endsWith('spicycrust.com');
+    const domain = isProd ? '; domain=.spicycrust.com' : '';
+    document.cookie = `stellar_wallet=; path=/; max-age=0${domain}; Secure; SameSite=Lax`;
+
     storeDisconnect();
+    window.location.reload();
   }, [storeDisconnect]);
 
   const connectDev = useCallback(async (_playerNumber?: 1 | 2) => {

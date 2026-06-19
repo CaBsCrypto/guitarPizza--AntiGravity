@@ -249,11 +249,12 @@ export function WalletStandalone() {
         <>
           {/* Main Wallet Connection Button (e.g. Freighter, Kit) */}
           <button
-            className="wallet-standalone-button"
+            className="wallet-standalone-button connect-main-btn"
             onClick={() => connect().catch(() => undefined)}
             disabled={isConnecting}
           >
-            {isConnecting && walletType === 'wallet' ? 'Connecting...' : 'Connect Wallet'}
+            <span className="btn-full-text">{isConnecting && walletType === 'wallet' ? 'Connecting...' : 'Connect Wallet'}</span>
+            <span className="btn-mobile-text">{isConnecting && walletType === 'wallet' ? 'Connecting...' : 'Connect'}</span>
           </button>
 
           {/* Passkey Biometric Smart Accounts Button */}

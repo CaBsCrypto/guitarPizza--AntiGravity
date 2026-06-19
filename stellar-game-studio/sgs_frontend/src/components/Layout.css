@@ -10,6 +10,8 @@
   flex-direction: column;
   background: var(--color-bg);
   color: var(--color-ink);
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .rs-shell.rs-game-mode {
@@ -34,10 +36,7 @@
   justify-content: space-between;
   padding: 0 2rem;
   height: 56px;
-  /* Dark glass — slightly warm */
-  background: rgba(10, 4, 2, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #0a0402;
   /* Red accent stripe at bottom */
   border-bottom: 3px solid #CC2929;
   /* Subtle inner glow so it feels alive */
@@ -212,7 +211,23 @@
 ══════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
   .rs-header {
-    padding: 0 1rem;
+    flex-direction: row;
+    padding: 0 0.75rem;
+    height: 56px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .rs-brand {
+    align-items: flex-start;
+    margin-bottom: 0;
+  }
+
+  .rs-header-right {
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
   }
 
   .rs-brand-title {
@@ -239,4 +254,5 @@
     display: none !important;
   }
 }
+
 

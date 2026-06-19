@@ -406,14 +406,28 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         if (!navigator.getGamepads) return;
         const gamepads = navigator.getGamepads();
         const currentPressed = [false, false, false, false];
+        let hasActiveInput = false;
+
+        // Button helper to handle standard vs analog triggers
+        const checkButton = (btn, isTrigger = false) => {
+            if (!btn) return false;
+            if (isTrigger) {
+                // Triggers (LT/RT) are analog and prone to drift/stretching.
+                // Apply a conservative deadzone threshold (0.15) to register as pressed.
+                const val = typeof btn.value === 'number' ? btn.value : (btn.pressed ? 1.0 : 0.0);
+                return val > 0.15;
+            }
+            return !!btn.pressed;
+        };
 
         if (gameState === STATE.PAUSED) {
             // Still poll menu buttons (Start/Select) to pause/quit, but skip play inputs
             for (let g = 0; g < gamepads.length; g++) {
                 const gp = gamepads[g];
                 if (!gp || !gp.buttons) continue;
-                const startPressed = gp.buttons[9] && gp.buttons[9].pressed;
+                const startPressed = checkButton(gp.buttons[9]);
                 if (startPressed) {
+                    hasActiveInput = true;
                     if (!lastStartPressed) {
                         lastStartPressed = true;
                         togglePause();
@@ -421,10 +435,14 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 } else {
                     lastStartPressed = false;
                 }
-                const selectPressed = gp.buttons[8] && gp.buttons[8].pressed;
+                const selectPressed = checkButton(gp.buttons[8]);
                 if (selectPressed) {
+                    hasActiveInput = true;
                     if (uiBackBtn) uiBackBtn.click();
                 }
+            }
+            if (hasActiveInput) {
+                gamepadActive = true;
             }
             return;
         }
@@ -433,12 +451,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const gp = gamepads[g];
             if (!gp || !gp.buttons) continue;
 
-            // If the gamepad exists and has buttons, mark active
-            gamepadActive = true;
-
-            // Button 9: Start (Menu button) -> Toggle Pause
-            const startPressed = gp.buttons[9] && gp.buttons[9].pressed;
+            // Check Menu buttons
+            const startPressed = checkButton(gp.buttons[9]);
             if (startPressed) {
+                hasActiveInput = true;
                 if (!lastStartPressed) {
                     lastStartPressed = true;
                     togglePause();
@@ -447,28 +463,60 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 lastStartPressed = false;
             }
 
-            // Button 8: Select (View button) -> Quit if paused
-            const selectPressed = gp.buttons[8] && gp.buttons[8].pressed;
-            if (selectPressed && gameState === STATE.PAUSED) {
-                if (uiBackBtn) uiBackBtn.click();
+            const selectPressed = checkButton(gp.buttons[8]);
+            if (selectPressed) {
+                hasActiveInput = true;
+                if (gameState === STATE.PAUSED) {
+                    if (uiBackBtn) uiBackBtn.click();
+                }
             }
 
-            // Lane 0: Button 2 (X), Button 14 (D-pad Left), or Button 6 (LT - Left Trigger)
-            if ((gp.buttons[2] && gp.buttons[2].pressed) || (gp.buttons[14] && gp.buttons[14].pressed) || (gp.buttons[6] && gp.buttons[6].pressed)) {
+            // Check gameplay inputs for the 4 lanes:
+            // Lane 0: Button 2 (X), Button 14 (D-pad Left), Button 6 (LT - Left Trigger), or Left Stick Left
+            const lane0Pressed = checkButton(gp.buttons[2]) || 
+                                 checkButton(gp.buttons[14]) || 
+                                 checkButton(gp.buttons[6], true) ||
+                                 (gp.axes && gp.axes[0] < -0.5);
+            if (lane0Pressed) {
                 currentPressed[0] = true;
+                hasActiveInput = true;
             }
-            // Lane 1: Button 0 (A), Button 13 (D-pad Down), or Button 4 (LB - Left Bumper)
-            if ((gp.buttons[0] && gp.buttons[0].pressed) || (gp.buttons[13] && gp.buttons[13].pressed) || (gp.buttons[4] && gp.buttons[4].pressed)) {
+
+            // Lane 1: Button 0 (A), Button 13 (D-pad Down), Button 4 (LB - Left Bumper), or Left Stick Down
+            const lane1Pressed = checkButton(gp.buttons[0]) || 
+                                 checkButton(gp.buttons[13]) || 
+                                 checkButton(gp.buttons[4]) ||
+                                 (gp.axes && gp.axes[1] > 0.5);
+            if (lane1Pressed) {
                 currentPressed[1] = true;
+                hasActiveInput = true;
             }
-            // Lane 2: Button 3 (Y), Button 12 (D-pad Up), or Button 5 (RB - Right Bumper)
-            if ((gp.buttons[3] && gp.buttons[3].pressed) || (gp.buttons[12] && gp.buttons[12].pressed) || (gp.buttons[5] && gp.buttons[5].pressed)) {
+
+            // Lane 2: Button 3 (Y), Button 12 (D-pad Up), Button 5 (RB - Right Bumper), or Left Stick Up
+            const lane2Pressed = checkButton(gp.buttons[3]) || 
+                                 checkButton(gp.buttons[12]) || 
+                                 checkButton(gp.buttons[5]) ||
+                                 (gp.axes && gp.axes[1] < -0.5);
+            if (lane2Pressed) {
                 currentPressed[2] = true;
+                hasActiveInput = true;
             }
-            // Lane 3: Button 1 (B), Button 15 (D-pad Right), or Button 7 (RT - Right Trigger)
-            if ((gp.buttons[1] && gp.buttons[1].pressed) || (gp.buttons[15] && gp.buttons[15].pressed) || (gp.buttons[7] && gp.buttons[7].pressed)) {
+
+            // Lane 3: Button 1 (B), Button 15 (D-pad Right), Button 7 (RT - Right Trigger), or Left Stick Right
+            const lane3Pressed = checkButton(gp.buttons[1]) || 
+                                 checkButton(gp.buttons[15]) || 
+                                 checkButton(gp.buttons[7], true) ||
+                                 (gp.axes && gp.axes[0] > 0.5);
+            if (lane3Pressed) {
                 currentPressed[3] = true;
+                hasActiveInput = true;
             }
+        }
+
+        // Only switch the active UI overlay to Gamepad mode if a real user input action was detected.
+        // This prevents phantom/virtual gamepads from taking over keyboard visual cues.
+        if (hasActiveInput) {
+            gamepadActive = true;
         }
 
         for (let lane = 0; lane < 4; lane++) {

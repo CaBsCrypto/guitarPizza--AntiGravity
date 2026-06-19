@@ -30,14 +30,18 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  background-color: #080808 !important;
 }
 
 body {
   background: var(--color-bg);
+  background-color: #080808 !important;
   color: var(--color-ink);
   font-family: var(--font-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 em {

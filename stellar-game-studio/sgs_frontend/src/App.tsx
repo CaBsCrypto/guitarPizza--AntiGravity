@@ -10,7 +10,7 @@ const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1'
 
 function App() {
   const [page, setPage] = useState<Page>(isEmbed ? 'game' : 'home');
-  const { publicKey } = useWallet();
+  const { publicKey } = useWallet(); // HMR reload trigger
 
   const navigate = (next: Page) => setPage(next);
 

@@ -8,6 +8,9 @@
   - Validación de 56 caracteres para asegurar que no se suban direcciones basura.
   - Cada tarjeta de amigo en tu lista incluye botones de acción rápida para borrar contacto (**X**) o **⚔️ RETAR**, lo cual abre el formulario de nueva orden de duelo para apuntar a esa cartera.
 
+## 📱 Sprint 23: Mobile Background Ceiling Clipping Fix
+- **Background Image White-Ceiling Clipping:** Solved the persistent white/gray header block issue on mobile portrait viewports (e.g. mobile Chrome/Safari). The original kitchen background image `FONDOJUEGO.png` contains a pure white ceiling band in its top 16% of pixels. On desktop (wide aspect ratio), `background-size: cover` naturally crops the top out. On mobile portrait (tall aspect ratio), the top is fully visible. Adjusted [HomePage.css](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/sgs_frontend/src/pages/HomePage.css) under `@media (max-width: 640px)` to shift the fixed background scene `.hp-scene-bg` upward by `-18%` and scale its height to `128%` to push the white ceiling band off-screen and hide it completely.
+
 This walkthrough details the successful implementation and deployment of the next-level Web3 game economy, tokenomics, and Defindex integration inside **Rhythm Slice (Guitar Pizza)**.
 
 ---

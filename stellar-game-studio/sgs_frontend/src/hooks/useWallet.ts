@@ -152,8 +152,23 @@ export function useWallet() {
     if (walletType === 'dev') {
       devWalletService.disconnect();
     }
+    const isProd = window.location.hostname.endsWith('spicycrust.com');
+    const domain = isProd ? '; domain=.spicycrust.com' : '';
+    document.cookie = `stellar_wallet=; path=/; max-age=0${domain}; Secure; SameSite=Lax`;
+
     storeDisconnect();
+    window.location.reload();
   }, [walletType, storeDisconnect]);
+
+  /**
+   * Handle deterministic Stellar keypair derivation on Privy login success
+   */
+  const handlePrivyLogin = useCallback(async (privyUser: any) => {
+    const address = await handlePrivyLoginSuccess(privyUser);
+    setWallet(address, 'shared-cookie', 'wallet');
+    setNetwork(NETWORK, NETWORK_PASSPHRASE);
+    return address;
+  }, [setWallet, setNetwork]);
 
   /**
    * Register a new Stellar Passkey Smart Account
@@ -368,5 +383,41 @@ export function useWallet() {
     getCurrentDevPlayer,
     registerPasskey,
     loginPasskey,
+    handlePrivyLogin,
   };
+}
+
+export async function handlePrivyLoginSuccess(privyUser: any) {
+  try {
+    // 1. Obtener el ID único del usuario de Privy (ej. 'did:privy:cld...')
+    const privyUserId = privyUser.id;
+
+    // 2. Hashear el ID junto con el salt unificado de la app para derivar la semilla
+    const encoder = new TextEncoder();
+    const data = encoder.encode(privyUserId + "_spicycrust_privy_shared_salt_2026");
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = new Uint8Array(hashBuffer);
+
+    // 3. Crear el Keypair de Stellar nativo de 32 bytes (Ed25519)
+    const keypair = Keypair.fromRawEd25519Seed(Buffer.from(hashArray));
+    const address = keypair.publicKey();
+
+    // 4. Guardar la sesión en la Cookie del dominio compartido (.spicycrust.com)
+    const isProd = window.location.hostname.endsWith('spicycrust.com');
+    const domain = isProd ? '; domain=.spicycrust.com' : '';
+    document.cookie = `stellar_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
+
+    console.log("Sesión compartida de Stellar iniciada:", address);
+    
+    // 5. Redireccionar de vuelta al lobby si venía con el parámetro `redirect=lobby`
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('redirect') === 'lobby') {
+      window.location.href = isProd ? 'https://spicycrust.com' : 'http://localhost:5173';
+    }
+
+    return address;
+  } catch (err) {
+    console.error("Error al derivar llave o configurar cookie:", err);
+    throw err;
+  }
 }

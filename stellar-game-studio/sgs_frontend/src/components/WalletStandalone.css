@@ -10,6 +10,7 @@
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 /* ── Connect Wallet / Address button ── */
@@ -296,6 +297,7 @@
   flex-direction: row;
   align-items: center;
   gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 900px) {
@@ -330,8 +332,34 @@
   }
 }
 
-@media (max-width: 500px) {
+@media (max-width: 600px) {
+  .wallet-standalone {
+    justify-content: center;
+    gap: 0.35rem;
+  }
   .wallet-standalone-connected {
+    justify-content: center;
+    gap: 0.35rem;
+  }
+}
+
+.btn-mobile-text {
+  display: none;
+}
+
+@media (max-width: 500px) {
+  .btn-full-text {
+    display: none;
+  }
+  .btn-mobile-text {
+    display: inline;
+  }
+  .wallet-standalone {
+    justify-content: center;
+    gap: 0.25rem;
+  }
+  .wallet-standalone-connected {
+    justify-content: center;
     gap: 0.25rem;
   }
   .slice-balance-chip {
