@@ -48,6 +48,8 @@
     /* Base: dark rustic wood */
     background-color: #2a1a0e;
     background-image:
+        /* Premium radial vignette overlay for retro arcade mood */
+        radial-gradient(circle, transparent 30%, rgba(10, 5, 3, 0.82) 100%),
         /* Wood grain vertical lines (overlay on top) */
         repeating-linear-gradient(178deg,
             transparent 0px,
@@ -56,8 +58,8 @@
             rgba(0, 0, 0, 0.06) 9px),
         /* Red/white checkered tablecloth — solid bold Italian style */
         conic-gradient(#c1272d 25%, #f5ede0 0 50%, #c1272d 0 75%, #f5ede0 0);
-    background-size: 100% 100%, 44px 44px;
-    background-position: 0 0, center center;
+    background-size: 100% 100%, 100% 100%, 44px 44px;
+    background-position: center center, 0 0, center center;
 
     /* Inner shadow: wood frame around the tablecloth */
     box-shadow:
@@ -200,8 +202,8 @@ button {
 #startBtn:hover {
     transform: translateY(-3px) scale(1.02);
     box-shadow:
-        0px 9px 0px #7b0000,
-        0 0 50px rgba(231, 76, 60, 0.7),
+        0px 9px 0px #043427,
+        0 0 50px rgba(39, 174, 96, 0.6),
         inset 0 1px 0 rgba(255, 255, 255, 0.25);
     filter: brightness(1.1);
 }
@@ -209,8 +211,8 @@ button {
 #startBtn:active {
     transform: translateY(5px) scale(0.98);
     box-shadow:
-        0px 1px 0px #7b0000,
-        0 0 15px rgba(192, 57, 43, 0.4);
+        0px 1px 0px #043427,
+        0 0 15px rgba(39, 174, 96, 0.3);
 }
 
 /* Lobby Navigation Buttons (The 2x2 Grid) */
@@ -373,6 +375,130 @@ button {
         0px 1px 0px #091a14,
         0 0 10px rgba(39, 174, 96, 0.2) !important;
 }
+
+/* Premium Timed Bake Oven 3D button */
+.lobby-timed-oven-btn {
+    width: 100%;
+    margin-bottom: 0.45rem;
+    background: linear-gradient(180deg, #2D0808, #180303) !important;
+    border: 2px solid var(--ph-gold) !important;
+    border-radius: 8px !important;
+    color: #FFF8DC !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    height: 42px;
+    cursor: pointer;
+    box-shadow:
+        0px 4px 0px #0e0202,
+        0 0 12px rgba(255, 69, 0, 0.4),
+        inset 0 0 8px rgba(255, 69, 0, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    animation: timedOvenPulse 2s infinite;
+}
+
+@keyframes timedOvenPulse {
+    0%, 100% {
+        box-shadow: 0px 4px 0px #0e0202, 0 0 12px rgba(255, 69, 0, 0.4), inset 0 0 8px rgba(255, 69, 0, 0.2);
+    }
+    50% {
+        box-shadow: 0px 4px 0px #0e0202, 0 0 18px rgba(255, 69, 0, 0.7), inset 0 0 12px rgba(255, 69, 0, 0.4);
+    }
+}
+
+.lobby-timed-oven-btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow:
+        0px 6px 0px #0e0202,
+        0 0 20px rgba(255, 69, 0, 0.85),
+        inset 0 0 12px rgba(255, 69, 0, 0.5) !important;
+    filter: brightness(1.1);
+}
+
+.lobby-timed-oven-btn:active {
+    transform: translateY(4px) scale(0.98) !important;
+    box-shadow:
+        0px 0px 0px #0e0202,
+        0 0 10px rgba(255, 69, 0, 0.3) !important;
+}
+
+/* Premium Song Selector 3D button */
+.lobby-song-selector-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    background: linear-gradient(180deg, #8B0000, #4A0E0E) !important;
+    border: 2px solid rgba(218, 165, 32, 0.8) !important;
+    border-radius: 30px !important;
+    padding: 0.4rem 1.2rem 0.4rem 0.4rem !important;
+    cursor: pointer;
+    box-shadow:
+        0px 4px 0px #2A0000,
+        0 0 10px rgba(178, 34, 34, 0.6),
+        inset 0 0 8px rgba(218, 165, 32, 0.3) !important;
+    width: 100% !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+.lobby-song-selector-btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    border-color: #FFD700 !important;
+    box-shadow:
+        0px 6px 0px #2A0000,
+        0 0 20px rgba(218, 165, 32, 0.85),
+        inset 0 0 12px rgba(255, 215, 0, 0.5) !important;
+    background: linear-gradient(180deg, #A52A2A, #5C0000) !important;
+}
+
+.lobby-song-selector-btn:active {
+    transform: translateY(4px) scale(0.98) !important;
+    box-shadow:
+        0px 0px 0px #2A0000,
+        0 0 8px rgba(218, 165, 32, 0.3) !important;
+}
+
+/* Premium Daily Check-in Floating Button */
+.lobby-daily-checkin-btn {
+    position: absolute;
+    right: -10px;
+    top: 180px;
+    z-index: 100;
+    background: linear-gradient(135deg, #FFD700, #DA70D6, #8B0000) !important;
+    border: 2px solid var(--ph-gold) !important;
+    border-radius: 12px 0 0 12px !important;
+    padding: 10px 8px 10px 12px !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    box-shadow:
+        -4px 4px 0px #4A0000,
+        0 4px 10px rgba(0,0,0,0.5) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+.lobby-daily-checkin-btn:hover {
+    right: 0px !important;
+    transform: scale(1.05) !important;
+    box-shadow:
+        -6px 6px 0px #4A0000,
+        0 6px 15px rgba(218, 165, 32, 0.6) !important;
+}
+
+.lobby-daily-checkin-btn:active {
+    right: -10px !important;
+    transform: scale(0.95) !important;
+    box-shadow:
+        -2px 2px 0px #4A0000,
+        0 2px 5px rgba(0,0,0,0.3) !important;
+}
+
 
 /* Close / Back Buttons */
 .close-btn,

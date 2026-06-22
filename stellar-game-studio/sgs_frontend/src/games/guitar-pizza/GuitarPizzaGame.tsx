@@ -4466,69 +4466,9 @@ Ganador: ${payload.winnerAddress}`);
                                 <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
 
                                     <button
-
                                         onClick={() => setView('songpicker')}
-
                                         title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
-
-                                        style={{
-
-                                            display: 'flex',
-
-                                            alignItems: 'center',
-
-                                            justifyContent: 'center',
-
-                                            gap: '0.8rem',
-
-                                            background: 'linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(178, 34, 34, 0.9))', // Dark Red to Crimson
-
-                                            border: '2px solid rgba(218, 165, 32, 0.8)', // Goldenrod
-
-                                            borderRadius: '30px',
-
-                                            padding: '0.4rem 1.2rem 0.4rem 0.4rem',
-
-                                            cursor: 'pointer',
-
-                                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-
-                                            opacity: 1,
-
-                                            boxShadow: '0 0 10px rgba(178, 34, 34, 0.6), inset 0 0 8px rgba(218, 165, 32, 0.3)',
-
-                                            width: '100%',
-
-                                            position: 'relative',
-
-                                            overflow: 'hidden'
-
-                                        }}
-
-                                        onMouseEnter={(e) => {
-
-                                            e.currentTarget.style.transform = 'scale(1.03)';
-
-                                            e.currentTarget.style.borderColor = '#FFD700'; // Gold
-
-                                            e.currentTarget.style.boxShadow = '0 0 20px rgba(218, 165, 32, 0.8), inset 0 0 12px rgba(255, 215, 0, 0.5)';
-
-                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(178, 34, 34, 1), rgba(205, 92, 92, 0.95))';
-
-                                        }}
-
-                                        onMouseLeave={(e) => {
-
-                                            e.currentTarget.style.transform = 'scale(1)';
-
-                                            e.currentTarget.style.borderColor = 'rgba(218, 165, 32, 0.8)';
-
-                                            e.currentTarget.style.boxShadow = '0 0 10px rgba(178, 34, 34, 0.6), inset 0 0 8px rgba(218, 165, 32, 0.3)';
-
-                                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(178, 34, 34, 0.9))';
-
-                                        }}
-
+                                        className="lobby-song-selector-btn"
                                     >
 
                                         <div style={{
@@ -4590,73 +4530,13 @@ Ganador: ${payload.winnerAddress}`);
 
 
                                 <button
-
-                                    className="secondary-btn"
-
-                                    style={{
-
-                                        width: '100%',
-
-                                        marginBottom: '0.45rem',
-
-                                        background: '#2D0808',
-                                        opacity: 1,
-                                        backdropFilter: 'none',
-
-                                        border: '2px solid var(--ph-gold)',
-
-                                        boxShadow: '0 0 12px rgba(255, 69, 0, 0.4), inset 0 0 8px rgba(255, 69, 0, 0.2)',
-
-                                        color: '#FFF8DC',
-
-                                        display: 'flex',
-
-                                        alignItems: 'center',
-
-                                        justifyContent: 'center',
-
-                                        gap: '0.6rem',
-
-                                        height: '42px',
-
-                                        borderRadius: '8px',
-
-                                        cursor: 'pointer',
-
-                                        transition: 'all 0.2s',
-
-                                        animation: 'pulse 2s infinite'
-
-                                    }}
-
+                                    className="lobby-timed-oven-btn"
                                     onClick={() => setView('oven')}
-
-                                    onMouseEnter={(e) => {
-
-                                        e.currentTarget.style.transform = 'scale(1.02)';
-
-                                        e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 69, 0, 0.7), inset 0 0 12px rgba(255, 69, 0, 0.3)';
-
-                                    }}
-
-                                    onMouseLeave={(e) => {
-
-                                        e.currentTarget.style.transform = 'scale(1)';
-
-                                        e.currentTarget.style.boxShadow = '0 0 12px rgba(255, 69, 0, 0.4), inset 0 0 8px rgba(255, 69, 0, 0.2)';
-
-                                    }}
-
                                 >
-
                                     <span style={{ fontSize: '1.2rem' }}>🔥</span>
-
                                     <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontWeight: 'bold', color: 'var(--ph-gold)' }}>
-
                                         {language === 'es' ? '🔥 HORNO TIMED-BAKE & NFT' : '🔥 TIMED-BAKE OVEN & NFT'}
-
                                     </span>
-
                                 </button>
 
 
@@ -4712,31 +4592,7 @@ Ganador: ${payload.winnerAddress}`);
                                 {/* Daily Check-in Sidebar Float Button */}
                                 <button
                                     onClick={() => setShowCheckInModal(true)}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '-10px',
-                                        top: '180px',
-                                        zIndex: 100,
-                                        background: 'linear-gradient(135deg, #FFD700, #DA70D6, #8B0000)',
-                                        border: '2px solid var(--ph-gold)',
-                                        borderRadius: '12px 0 0 12px',
-                                        padding: '10px 8px 10px 12px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '2px',
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
-                                        transition: 'all 0.3s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.right = '0px';
-                                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(218, 165, 32, 0.6)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.right = '-10px';
-                                        e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
-                                    }}
+                                    className="lobby-daily-checkin-btn"
                                 >
                                     <span style={{ fontSize: '1.4rem' }}>📅</span>
                                     <span style={{ fontSize: '0.62rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff', writingMode: 'vertical-lr', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
