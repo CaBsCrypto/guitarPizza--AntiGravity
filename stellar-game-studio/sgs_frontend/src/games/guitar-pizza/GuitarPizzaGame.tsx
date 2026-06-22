@@ -4301,7 +4301,13 @@ Ganador: ${payload.winnerAddress}`);
 
                             alignItems: 'center',
 
-                            justifyContent: 'center',
+                            justifyContent: 'space-between',
+
+                            paddingTop: '2.8rem',
+
+                            paddingBottom: '2.8rem',
+
+                            boxSizing: 'border-box',
 
                             position: 'relative',
 
