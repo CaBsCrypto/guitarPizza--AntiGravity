@@ -4319,136 +4319,6 @@ Ganador: ${payload.winnerAddress}`);
 
                             </div>
 
-                            {/* ── DAILY ENGAGEMENT HUD ─────────────────────────────────── */}
-                            {/* Compact quest progress + check-in streak, always visible in lobby */}
-                            <div style={{
-                                width: '87%',
-                                maxWidth: '300px',
-                                marginTop: '0.3rem',
-                                marginBottom: '-0.3rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.4rem',
-                                background: 'rgba(15, 8, 8, 0.9)',
-                                border: '1.5px solid rgba(212, 175, 55, 0.45)',
-                                borderRadius: '12px',
-                                padding: '0.5rem 0.6rem 0.6rem',
-                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.75)',
-                                backdropFilter: 'blur(6px)',
-                            }}>
-                                {/* ── Streak Row ──────────────────────────────────── */}
-                                <div
-                                    onClick={() => setShowCheckInModal(true)}
-                                    style={{
-                                        background: canCheckIn
-                                            ? 'linear-gradient(90deg, rgba(139,0,0,0.5), rgba(212,175,55,0.15))'
-                                            : 'rgba(255,255,255,0.03)',
-                                        border: canCheckIn ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '8px',
-                                        padding: '0.3rem 0.6rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <span style={{ fontSize: '1rem' }}>🔥</span>
-                                        <div>
-                                            <div style={{ fontSize: '0.62rem', color: '#d4af37', fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 'bold' }}>
-                                                {language === 'es' ? 'Racha del Don' : "Don's Streak"}
-                                            </div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fff', fontFamily: 'var(--font-display)' }}>
-                                                {checkInStreak} {checkInStreak === 1 ? (language === 'es' ? 'día' : 'day') : (language === 'es' ? 'días' : 'days')}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        {canCheckIn ? (
-                                            <div style={{
-                                                background: '#d4af37',
-                                                color: '#1a0000',
-                                                fontSize: '0.58rem',
-                                                fontWeight: 'bold',
-                                                fontFamily: 'monospace',
-                                                padding: '2px 7px',
-                                                borderRadius: '8px',
-                                                letterSpacing: '0.05em',
-                                                animation: 'pulse 1.5s infinite',
-                                            }}>
-                                                {language === 'es' ? '✍ FIRMAR YA' : '✍ SIGN NOW'}
-                                            </div>
-                                        ) : (
-                                            <div style={{ fontSize: '0.62rem', color: '#2ecc71', fontFamily: 'monospace', fontWeight: 'bold' }}>
-                                                {language === 'es' ? '✓ firmado hoy' : '✓ signed today'}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* ── Quest Bars Row ──────────────────────────────── */}
-                                {(['pizzaCooked', 'scoreComplete', 'stakeComplete'] as const).map((_qKey, idx) => {
-                                    const questTargets = [2, 1, 1];
-                                    const questLabels = language === 'es'
-                                        ? ['🍕 Hornear 2 pizzas', '🎵 Completar 1 canción', '🥩 Congelar ingredientes']
-                                        : ['🍕 Bake 2 pizzas', '🎵 Complete 1 song', '🥩 Freeze ingredients'];
-                                    const questRewards = ['🍄 1 Trufa', '🍇 1 Higo', '✨ 1 Oro'];
-                                    const target = questTargets[idx];
-                                    const progress = Math.min(dailyQuestProgress[idx] ?? 0, target);
-                                    const claimed = dailyQuestClaimed[idx] ?? false;
-                                    const pct = Math.round((progress / target) * 100);
-                                    const completed = progress >= target;
-
-                                    return (
-                                        <div
-                                            key={idx}
-                                            onClick={() => completed && !claimed ? claimQuestReward(idx) : undefined}
-                                            style={{
-                                                background: claimed ? 'rgba(46,204,113,0.06)' : completed ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.02)',
-                                                border: claimed ? '1px solid rgba(46,204,113,0.35)' : completed ? '1px solid rgba(212,175,55,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                                                borderRadius: '6px',
-                                                padding: '0.25rem 0.5rem',
-                                                cursor: completed && !claimed ? 'pointer' : 'default',
-                                                transition: 'all 0.2s ease',
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.1rem' }}>
-                                                <span style={{ fontSize: '0.62rem', color: claimed ? '#2ecc71' : completed ? '#d4af37' : '#ffffff', fontWeight: '500', fontFamily: 'monospace' }}>
-                                                    {questLabels[idx]}
-                                                </span>
-                                                <span style={{
-                                                    fontSize: '0.62rem',
-                                                    fontWeight: 'bold',
-                                                    color: claimed ? '#2ecc71' : completed ? '#d4af37' : '#ffffff',
-                                                    fontFamily: 'monospace'
-                                                }}>
-                                                    {claimed ? '✓ ' + (language === 'es' ? 'RECLAMADO' : 'CLAIMED')
-                                                        : completed ? (language === 'es' ? 'TAP RECLAMAR' : 'TAP CLAIM')
-                                                        : `${progress}/${target}`}
-                                                </span>
-                                            </div>
-                                            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
-                                                <div style={{
-                                                    height: '100%',
-                                                    width: `${pct}%`,
-                                                    background: claimed ? '#27ae60' : completed ? '#d4af37' : 'linear-gradient(90deg, #8B0000, #e74c3c)',
-                                                    borderRadius: '4px',
-                                                    transition: 'width 0.5s ease',
-                                                }} />
-                                            </div>
-                                            {completed && !claimed && (
-                                                <div style={{ fontSize: '0.58rem', color: '#d4af37', textAlign: 'right', marginTop: '0.1rem', fontFamily: 'monospace', fontWeight: 'bold' }}>
-                                                    🎁 {questRewards[idx]}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                 })}
-                             </div>
-
                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.6rem', width: '80%', maxWidth: '300px' }}>
 
                                  <button id="startBtn"
@@ -8511,6 +8381,80 @@ Ganador: ${payload.winnerAddress}`);
                                                     background: 'linear-gradient(90deg, #FFD700, #ff8c00)',
                                                     transition: 'width 0.3s ease'
                                                 }} />
+                                            </div>
+                                        </div>
+
+                                        {/* DAILY QUESTS SECTION */}
+                                        <div style={{
+                                            background: 'rgba(139, 0, 0, 0.03)',
+                                            border: '1.5px solid rgba(139, 0, 0, 0.15)',
+                                            borderRadius: '10px',
+                                            padding: '0.65rem 0.8rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.4rem'
+                                        }}>
+                                            <div style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#8B0000', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                📋 {language === 'es' ? 'Misiones de Hoy' : "Today's Quests"}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                                {((['pizzaCooked', 'scoreComplete', 'stakeComplete'] as const).map((_qKey, idx) => {
+                                                    const questTargets = [2, 1, 1];
+                                                    const questLabels = language === 'es'
+                                                        ? ['🍕 Hornear 2 pizzas', '🎵 Completar 1 canción', '🥩 Congelar ingredientes']
+                                                        : ['🍕 Bake 2 pizzas', '🎵 Complete 1 song', '🥩 Freeze ingredients'];
+                                                    const questRewards = ['🍄 1 Trufa', '🍇 1 Higo', '✨ 1 Oro'];
+                                                    const target = questTargets[idx];
+                                                    const progress = Math.min(dailyQuestProgress[idx] ?? 0, target);
+                                                    const claimed = dailyQuestClaimed[idx] ?? false;
+                                                    const pct = Math.round((progress / target) * 100);
+                                                    const completed = progress >= target;
+
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            onClick={() => completed && !claimed ? claimQuestReward(idx) : undefined}
+                                                            style={{
+                                                                background: claimed ? 'rgba(39, 174, 96, 0.06)' : completed ? 'rgba(212, 175, 55, 0.08)' : 'rgba(0,0,0,0.02)',
+                                                                border: claimed ? '1px solid rgba(39, 174, 96, 0.35)' : completed ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid rgba(139, 0, 0, 0.1)',
+                                                                borderRadius: '6px',
+                                                                padding: '0.25rem 0.5rem',
+                                                                cursor: completed && !claimed ? 'pointer' : 'default',
+                                                                transition: 'all 0.2s ease',
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.1rem' }}>
+                                                                <span style={{ fontSize: '0.62rem', color: claimed ? '#27ae60' : completed ? '#8B0000' : '#333', fontWeight: '500', fontFamily: 'monospace' }}>
+                                                                    {questLabels[idx]}
+                                                                </span>
+                                                                <span style={{
+                                                                    fontSize: '0.62rem',
+                                                                    fontWeight: 'bold',
+                                                                    color: claimed ? '#27ae60' : completed ? '#b8860b' : '#666',
+                                                                    fontFamily: 'monospace'
+                                                                }}>
+                                                                    {claimed ? '✓ ' + (language === 'es' ? 'RECLAMADO' : 'CLAIMED')
+                                                                        : completed ? (language === 'es' ? 'TAP RECLAMAR' : 'TAP CLAIM')
+                                                                        : `${progress}/${target}`}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ background: 'rgba(0,0,0,0.06)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
+                                                                <div style={{
+                                                                    height: '100%',
+                                                                    width: `${pct}%`,
+                                                                    background: claimed ? '#27ae60' : completed ? '#d4af37' : 'linear-gradient(90deg, #8B0000, #c0392b)',
+                                                                    borderRadius: '4px',
+                                                                    transition: 'width 0.5s ease',
+                                                                }} />
+                                                            </div>
+                                                            {completed && !claimed && (
+                                                                <div style={{ fontSize: '0.58rem', color: '#b8860b', textAlign: 'right', marginTop: '0.1rem', fontFamily: 'monospace', fontWeight: 'bold' }}>
+                                                                    🎁 {questRewards[idx]}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }))}
                                             </div>
                                         </div>
 
