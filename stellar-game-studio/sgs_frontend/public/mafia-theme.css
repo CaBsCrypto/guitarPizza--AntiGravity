@@ -48,8 +48,6 @@
     /* Base: dark rustic wood */
     background-color: #2a1a0e;
     background-image:
-        /* Premium radial vignette overlay for retro arcade mood */
-        radial-gradient(circle, transparent 30%, rgba(10, 5, 3, 0.82) 100%),
         /* Wood grain vertical lines (overlay on top) */
         repeating-linear-gradient(178deg,
             transparent 0px,
@@ -58,8 +56,8 @@
             rgba(0, 0, 0, 0.06) 9px),
         /* Red/white checkered tablecloth — solid bold Italian style */
         conic-gradient(#c1272d 25%, #f5ede0 0 50%, #c1272d 0 75%, #f5ede0 0);
-    background-size: 100% 100%, 100% 100%, 44px 44px;
-    background-position: center center, 0 0, center center;
+    background-size: 100% 100%, 44px 44px;
+    background-position: 0 0, center center;
 
     /* Inner shadow: wood frame around the tablecloth */
     box-shadow:

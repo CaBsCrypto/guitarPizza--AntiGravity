@@ -661,13 +661,9 @@ In this sprint, we refined the visual experience of the primary Lobby interface:
 3. **3D Interactive Feedback:**
    - Applied physical translation effects on hover (`translateY(-2px)`) and click (`translateY(4px)`) to simulate tactile arcade button compressions across all modified controls.
 
-4. **Radial Vignette Backdrop Overlay:**
-   - Implemented a premium dark radial gradient overlay (`radial-gradient(circle, transparent 30%, rgba(10, 5, 3, 0.82) 100%)`) on `#game-device-screen` inside [mafia-theme.css](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/sgs_frontend/public/mafia-theme.css).
-   - This adds a moody, high-end retro arcade shadows/vignette frame over the red/white checkered tablecloth background, emphasizing the central lobby UI.
-
-5. **Solo Mode Direct Bypass:**
+4. **Solo Mode Direct Bypass:**
    - Modified `#startBtn` (`FIRE UP OVEN`) action to bypass the "MASA CAMPAIGNS" menu overlay during Phase 0.
    - Wire the click directly to `handleStartGame()`, starting the single-player story mode instantly to avoid loading/previewing unfinished PvP views.
 
-6. **Compilation Verification:**
+5. **Compilation Verification:**
    - Completed a full production build of the frontend package with zero warnings or typescript errors.
