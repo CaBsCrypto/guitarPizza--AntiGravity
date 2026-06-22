@@ -2715,8 +2715,6 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-            setStatus(t.loadingAssets);
-
             addLog("Status: Loading Assets...");
 
 
@@ -2728,8 +2726,6 @@ Ganador: ${payload.winnerAddress}`);
                 if (!window.initGuitarPizza) {
 
                     addLog("[GuitarPizza] initGuitarPizza undefined, loading engine...");
-
-                    setStatus(t.loadingEngine);
 
 
 
@@ -2813,33 +2809,31 @@ Ganador: ${payload.winnerAddress}`);
 
             } else {
 
-                // Start game session on-chain — AWAIT so the real sessionId is known
-
-                // before the game starts. This prevents the race condition where submit_score
-
-                // uses a different sessionId than the one stored on-chain.
-
-                // score_goal = 1 so submit_score always returns true (human always "wins").
-
-                setStatus(t.openingSession);
+                // Start game session on-chain in the background silently
 
                 try {
 
                     const signer = getContractSignerRef.current();
 
-                    const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
+                    StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1).then(startResult => {
 
-                    onChainSessionIdRef.current = startResult.sessionId;
+                        onChainSessionIdRef.current = startResult.sessionId;
 
-                    if (!startResult.success) {
+                        if (!startResult.success) {
 
-                        console.warn("[GuitarPizza] On-chain session registration failed:", startResult.error);
+                            console.warn("[GuitarPizza] On-chain session registration failed:", startResult.error);
 
-                    } else {
+                        } else {
 
-                        addLog(`[GuitarPizza] On-chain session ready: ${startResult.sessionId}`);
+                            addLog(`[GuitarPizza] On-chain session ready: ${startResult.sessionId}`);
 
-                    }
+                        }
+
+                    }).catch(err => {
+
+                        console.error("[GuitarPizza] On-chain session start error:", err);
+
+                    });
 
                 } catch {
 
@@ -2850,8 +2844,6 @@ Ganador: ${payload.winnerAddress}`);
             }
 
 
-
-            setStatus(t.startingGame);
 
             addLog("Status: Starting Game...");
 
