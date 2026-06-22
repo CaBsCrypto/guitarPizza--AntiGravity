@@ -4328,18 +4328,24 @@ Ganador: ${payload.winnerAddress}`);
                                 marginBottom: '-0.3rem',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '0.2rem',
+                                gap: '0.4rem',
+                                background: 'rgba(15, 8, 8, 0.9)',
+                                border: '1.5px solid rgba(212, 175, 55, 0.45)',
+                                borderRadius: '12px',
+                                padding: '0.5rem 0.6rem 0.6rem',
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.75)',
+                                backdropFilter: 'blur(6px)',
                             }}>
                                 {/* ── Streak Row ──────────────────────────────────── */}
                                 <div
                                     onClick={() => setShowCheckInModal(true)}
                                     style={{
                                         background: canCheckIn
-                                            ? 'linear-gradient(90deg, rgba(139,0,0,0.85), rgba(212,175,55,0.25))'
-                                            : 'rgba(0,0,0,0.3)',
-                                        border: canCheckIn ? '1.5px solid #d4af37' : '1.5px solid rgba(255,255,255,0.1)',
+                                            ? 'linear-gradient(90deg, rgba(139,0,0,0.5), rgba(212,175,55,0.15))'
+                                            : 'rgba(255,255,255,0.03)',
+                                        border: canCheckIn ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.1)',
                                         borderRadius: '8px',
-                                        padding: '0.25rem 0.6rem',
+                                        padding: '0.3rem 0.6rem',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
@@ -4352,7 +4358,7 @@ Ganador: ${payload.winnerAddress}`);
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                         <span style={{ fontSize: '1rem' }}>🔥</span>
                                         <div>
-                                            <div style={{ fontSize: '0.6rem', color: '#d4af37', fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                            <div style={{ fontSize: '0.62rem', color: '#d4af37', fontFamily: 'monospace', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 'bold' }}>
                                                 {language === 'es' ? 'Racha del Don' : "Don's Streak"}
                                             </div>
                                             <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fff', fontFamily: 'var(--font-display)' }}>
@@ -4376,7 +4382,7 @@ Ganador: ${payload.winnerAddress}`);
                                                 {language === 'es' ? '✍ FIRMAR YA' : '✍ SIGN NOW'}
                                             </div>
                                         ) : (
-                                            <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                                            <div style={{ fontSize: '0.62rem', color: '#2ecc71', fontFamily: 'monospace', fontWeight: 'bold' }}>
                                                 {language === 'es' ? '✓ firmado hoy' : '✓ signed today'}
                                             </div>
                                         )}
@@ -4401,22 +4407,22 @@ Ganador: ${payload.winnerAddress}`);
                                             key={idx}
                                             onClick={() => completed && !claimed ? claimQuestReward(idx) : undefined}
                                             style={{
-                                                background: claimed ? 'rgba(39,174,96,0.08)' : completed ? 'rgba(212,175,55,0.12)' : 'rgba(0,0,0,0.3)',
-                                                border: claimed ? '1px solid rgba(39,174,96,0.4)' : completed ? '1px solid rgba(212,175,55,0.6)' : '1px solid rgba(255,255,255,0.07)',
+                                                background: claimed ? 'rgba(46,204,113,0.06)' : completed ? 'rgba(212,175,55,0.08)' : 'rgba(255,255,255,0.02)',
+                                                border: claimed ? '1px solid rgba(46,204,113,0.35)' : completed ? '1px solid rgba(212,175,55,0.5)' : '1px solid rgba(255,255,255,0.08)',
                                                 borderRadius: '6px',
-                                                padding: '0.18rem 0.5rem',
+                                                padding: '0.25rem 0.5rem',
                                                 cursor: completed && !claimed ? 'pointer' : 'default',
                                                 transition: 'all 0.2s ease',
                                             }}
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.1rem' }}>
-                                                <span style={{ fontSize: '0.58rem', color: claimed ? '#27ae60' : completed ? '#d4af37' : 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>
+                                                <span style={{ fontSize: '0.62rem', color: claimed ? '#2ecc71' : completed ? '#d4af37' : '#ffffff', fontWeight: '500', fontFamily: 'monospace' }}>
                                                     {questLabels[idx]}
                                                 </span>
                                                 <span style={{
-                                                    fontSize: '0.58rem',
+                                                    fontSize: '0.62rem',
                                                     fontWeight: 'bold',
-                                                    color: claimed ? '#27ae60' : completed ? '#d4af37' : 'rgba(255,255,255,0.4)',
+                                                    color: claimed ? '#2ecc71' : completed ? '#d4af37' : '#ffffff',
                                                     fontFamily: 'monospace'
                                                 }}>
                                                     {claimed ? '✓ ' + (language === 'es' ? 'RECLAMADO' : 'CLAIMED')
@@ -4424,7 +4430,7 @@ Ganador: ${payload.winnerAddress}`);
                                                         : `${progress}/${target}`}
                                                 </span>
                                             </div>
-                                            <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '4px', height: '4px', overflow: 'hidden' }}>
+                                            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
                                                 <div style={{
                                                     height: '100%',
                                                     width: `${pct}%`,
@@ -4434,7 +4440,7 @@ Ganador: ${payload.winnerAddress}`);
                                                 }} />
                                             </div>
                                             {completed && !claimed && (
-                                                <div style={{ fontSize: '0.55rem', color: '#d4af37', textAlign: 'right', marginTop: '0.05rem', fontFamily: 'monospace' }}>
+                                                <div style={{ fontSize: '0.58rem', color: '#d4af37', textAlign: 'right', marginTop: '0.1rem', fontFamily: 'monospace', fontWeight: 'bold' }}>
                                                     🎁 {questRewards[idx]}
                                                 </div>
                                             )}
