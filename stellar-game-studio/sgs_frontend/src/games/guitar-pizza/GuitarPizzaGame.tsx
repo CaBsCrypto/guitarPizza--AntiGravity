@@ -4447,7 +4447,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                  <button id="startBtn"
 
-                                     onClick={() => setView('campaign')}
+                                     onClick={() => handleStartGame()}
 
                                      disabled={!engineRef.current}
 
@@ -7905,7 +7905,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                     <div className="modal-header">
 
-                                        <div className="back-btn-circle" onClick={() => setView('campaign')}>
+                                        <div className="back-btn-circle" onClick={() => handleStartGame()}>
 
                                             <ArrowLeft size={20} />
 
