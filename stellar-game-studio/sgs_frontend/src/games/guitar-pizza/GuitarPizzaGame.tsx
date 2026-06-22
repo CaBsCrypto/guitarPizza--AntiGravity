@@ -4319,7 +4319,7 @@ Ganador: ${payload.winnerAddress}`);
 
                             </div>
 
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', marginTop: '0.6rem', width: '80%', maxWidth: '300px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.8rem', width: '88%', maxWidth: '330px' }}>
 
                                  <button id="startBtn"
 
@@ -4327,7 +4327,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                      disabled={!engineRef.current}
 
-                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '0.92rem', padding: '0.55rem' }}
+                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1rem', padding: '0.62rem' }}
 
                                  >
 
@@ -4470,20 +4470,20 @@ Ganador: ${payload.winnerAddress}`);
                                     onClick={() => setShowCheckInModal(true)}
                                     className="lobby-daily-checkin-btn"
                                 >
-                                    <span style={{ fontSize: '1.4rem' }}>📅</span>
-                                    <span style={{ fontSize: '0.62rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff', writingMode: 'vertical-lr', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <span style={{ fontSize: '1.1rem' }}>📅</span>
+                                    <span style={{ fontSize: '0.54rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff', writingMode: 'vertical-lr', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                         {language === 'es' ? 'DIARIO' : 'DAILY'}
                                     </span>
                                     {canCheckIn && (
                                         <div style={{
                                             position: 'absolute',
-                                            top: '-5px',
-                                            left: '-5px',
-                                            width: '12px',
-                                            height: '12px',
+                                            top: '-3px',
+                                            left: '-3px',
+                                            width: '9px',
+                                            height: '9px',
                                             borderRadius: '50%',
                                             background: '#ff4757',
-                                            border: '2px solid #fff'
+                                            border: '1.5px solid #fff'
                                         }} />
                                     )}
                                 </button>

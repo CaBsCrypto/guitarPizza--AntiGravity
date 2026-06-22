@@ -463,21 +463,21 @@ button {
 /* Premium Daily Check-in Floating Button */
 .lobby-daily-checkin-btn {
     position: absolute;
-    right: -10px;
-    top: 180px;
+    right: -6px;
+    top: 200px;
     z-index: 100;
     background: linear-gradient(135deg, #FFD700, #DA70D6, #8B0000) !important;
-    border: 2px solid var(--ph-gold) !important;
-    border-radius: 12px 0 0 12px !important;
-    padding: 10px 8px 10px 12px !important;
+    border: 1.5px solid var(--ph-gold) !important;
+    border-radius: 8px 0 0 8px !important;
+    padding: 6px 5px 6px 8px !important;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 1px;
     box-shadow:
-        -4px 4px 0px #4A0000,
-        0 4px 10px rgba(0,0,0,0.5) !important;
+        -2px 2px 0px #4A0000,
+        0 3px 6px rgba(0,0,0,0.5) !important;
     transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
 }
 
@@ -485,16 +485,16 @@ button {
     right: 0px !important;
     transform: scale(1.05) !important;
     box-shadow:
-        -6px 6px 0px #4A0000,
-        0 6px 15px rgba(218, 165, 32, 0.6) !important;
+        -3px 3px 0px #4A0000,
+        0 4px 10px rgba(218, 165, 32, 0.6) !important;
 }
 
 .lobby-daily-checkin-btn:active {
-    right: -10px !important;
+    right: -6px !important;
     transform: scale(0.95) !important;
     box-shadow:
-        -2px 2px 0px #4A0000,
-        0 2px 5px rgba(0,0,0,0.3) !important;
+        -1px 1px 0px #4A0000,
+        0 1px 3px rgba(0,0,0,0.3) !important;
 }
 
 
