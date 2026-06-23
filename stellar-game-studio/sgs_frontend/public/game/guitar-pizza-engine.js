@@ -2462,17 +2462,92 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
 
         if (gameState === STATE.COUNTDOWN) {
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillStyle = "rgba(0,0,0,0.75)";
             ctx.fillRect(0, 0, W, H);
             
             ctx.fillStyle = "#FFD700";
-            ctx.font = "bold " + Math.min(W * 0.25, 180) + "px 'Special Elite', monospace";
+            const val = window._gpCountdown || "";
+            let fSize = Math.min(W * 0.25, 180);
+            if (typeof val === 'string') {
+                fSize = Math.min(W / (val.length * 0.7), 100);
+            }
+            ctx.font = "bold " + Math.floor(fSize) + "px 'Special Elite', monospace";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.shadowColor = "#FFD700";
             ctx.shadowBlur = 25;
-            ctx.fillText(window._gpCountdown || "", W / 2, H / 2);
+            ctx.fillText(val, W / 2, H / 2 - 40);
             ctx.shadowBlur = 0;
+
+            // --- CONTROLS EXPLANATION PANEL ---
+            const panelW = Math.min(W * 0.85, 450);
+            const panelH = 145;
+            const panelX = W / 2 - panelW / 2;
+            const panelY = H * 0.58;
+
+            ctx.save();
+            ctx.fillStyle = "rgba(20, 10, 10, 0.85)";
+            ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(panelX, panelY, panelW, panelH, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "#FFD700";
+            ctx.font = "bold 16px 'Special Elite', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(language === 'es' ? "Cómo Jugar / How to Play" : "How to Play", W / 2, panelY + 25);
+
+            ctx.strokeStyle = "rgba(255, 215, 0, 0.15)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(panelX + 20, panelY + 38);
+            ctx.lineTo(panelX + panelW - 20, panelY + 38);
+            ctx.stroke();
+
+            ctx.textAlign = "center";
+            
+            const drawKeycap = (char, x, y) => {
+                const kw = 28, kh = 28;
+                ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+                ctx.strokeStyle = "#FFD700";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(x - kw/2, y - kh/2, kw, kh, 4);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = "#FFD700";
+                ctx.font = "bold 14px monospace";
+                ctx.fillText(char.toUpperCase(), x, y + 5);
+            };
+
+            const keyY = panelY + 62;
+            const spacing = 45;
+            const startX = W / 2 - (spacing * 1.5);
+            
+            const keys = ['a', 's', 'k', 'l'];
+            keys.forEach((key, idx) => {
+                drawKeycap(key, startX + idx * spacing, keyY);
+            });
+
+            ctx.fillStyle = "#FFF8E7";
+            ctx.font = "12px sans-serif";
+            ctx.fillText(
+                language === 'es' ? "Presiona las teclas para tocar cada ingrediente" : "Press the keys to play each ingredient",
+                W / 2,
+                panelY + 102
+            );
+            ctx.fillStyle = "rgba(255, 248, 231, 0.6)";
+            ctx.font = "italic 11px sans-serif";
+            ctx.fillText(
+                language === 'es' ? "(En móvil o táctil: Toca las columnas en pantalla)" : "(On Mobile/Touch: Tap the screen columns directly)",
+                W / 2,
+                panelY + 124
+            );
+
+            ctx.restore();
         }
 
         // Reset
