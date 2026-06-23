@@ -464,7 +464,7 @@ button {
 .lobby-daily-checkin-btn {
     position: absolute;
     right: -6px;
-    top: 200px;
+    top: 140px;
     z-index: 100;
     background: linear-gradient(135deg, #FFD700, #DA70D6, #8B0000) !important;
     border: 1.5px solid var(--ph-gold) !important;
