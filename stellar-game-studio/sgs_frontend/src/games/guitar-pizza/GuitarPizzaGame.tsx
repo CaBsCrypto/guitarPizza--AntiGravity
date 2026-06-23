@@ -101,7 +101,7 @@ const TRANSLATIONS = {
 
         setup: 'AJUSTES',
 
-        fireUp: 'ENCENDER HORNO',
+        fireUp: 'JUGAR (ENCENDER HORNO)',
 
         heatingUp: 'CALENTANDO...',
 
@@ -215,7 +215,7 @@ const TRANSLATIONS = {
 
         setup: 'SETUP',
 
-        fireUp: 'FIRE UP OVEN',
+        fireUp: 'PLAY (FIRE UP OVEN)',
 
         heatingUp: 'HEATING UP...',
 
