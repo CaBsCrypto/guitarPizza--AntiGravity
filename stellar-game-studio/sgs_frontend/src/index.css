@@ -210,4 +210,45 @@ code {
   .famiglia-id-box-inner > div:last-child {
     justify-content: center;
   }
-}
+}
+
+/* ════════════════════════════════════════════════════════
+   GAME FULLSCREEN — game-device-screen en modo pantalla completa
+════════════════════════════════════════════════════════ */
+
+/* Cuando el game-device-screen toma el fullscreen,
+   lo forzamos a ocupar TODO el viewport sin restricciones */
+#game-device-screen:fullscreen,
+#game-device-screen:-webkit-full-screen,
+#game-device-screen:-moz-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  aspect-ratio: unset !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #000 !important;
+}
+
+/* El canvas dentro también se expande */
+#game-device-screen:fullscreen canvas,
+#game-device-screen:-webkit-full-screen canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* Botón de fullscreen del header del juego:
+   oculto en desktop, visible en mobile */
+.gp-fs-btn {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .gp-fs-btn {
+    display: flex !important;
+  }
+}
+

@@ -523,7 +523,27 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Cleanup ref now holds the engine interface or null
+    // ── Fullscreen ───────────────────────────────────────────────────────────
+    const [isGameFullscreen, setIsGameFullscreen] = useState(false);
+
+    useEffect(() => {
+        const handler = () => setIsGameFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handler);
+        return () => document.removeEventListener('fullscreenchange', handler);
+    }, []);
+
+    const toggleGameFullscreen = useCallback(async () => {
+        try {
+            if (!document.fullscreenElement) {
+                // Request fullscreen on the game device screen container
+                await containerRef.current?.requestFullscreen({ navigationUI: 'hide' });
+            } else {
+                await document.exitFullscreen();
+            }
+        } catch {
+            // Fullscreen API not supported or denied — silently ignore
+        }
+    }, []);
 
     const engineRef = useRef<{ cleanup: () => void, setVolume: (v: number) => void, startGame?: () => void } | null>(null);
 
@@ -3517,6 +3537,16 @@ Ganador: ${payload.winnerAddress}`);
                         <span className="rs-network-pill">● TESTNET</span>
                         <WalletStandalone />
                     </div>
+                    {/* Fullscreen button — visible en mobile, oculto en desktop */}
+                    <button
+                        onClick={toggleGameFullscreen}
+                        className="settings-btn gp-fs-btn"
+                        title={isGameFullscreen ? (language === 'es' ? 'Salir de pantalla completa' : 'Exit fullscreen') : (language === 'es' ? 'Pantalla completa' : 'Fullscreen')}
+                        aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                        style={{ fontSize: '1.2rem', lineHeight: 1 }}
+                    >
+                        {isGameFullscreen ? '⊠' : '⛶'}
+                    </button>
                     <button onClick={() => setShowSettings(true)} className="settings-btn" title="Settings">
                         <Settings size={24} />
                     </button>
@@ -3526,7 +3556,50 @@ Ganador: ${payload.winnerAddress}`);
             )}
             {/* Game Container */}
             <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
-                <div id="game-device-screen" className="game-container game-frame" ref={containerRef} style={{ width: '100%', height: '100%', maxWidth: 'calc((100vh - 2rem) * 9 / 16)', maxHeight: 'calc((100vw - 2rem) * 16 / 9)', aspectRatio: '9/16', position: 'relative', overflow: 'hidden', border: '8px solid #000', borderRadius: '20px', boxShadow: '0 0 50px rgba(0,0,0,0.5)' }}>
+                <div
+                    id="game-device-screen"
+                    className="game-container game-frame"
+                    ref={containerRef}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        maxWidth: isGameFullscreen ? '100vw' : 'calc((100vh - 2rem) * 9 / 16)',
+                        maxHeight: isGameFullscreen ? '100vh' : 'calc((100vw - 2rem) * 16 / 9)',
+                        aspectRatio: '9/16',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        border: isGameFullscreen ? 'none' : '8px solid #000',
+                        borderRadius: isGameFullscreen ? '0' : '20px',
+                        boxShadow: isGameFullscreen ? 'none' : '0 0 50px rgba(0,0,0,0.5)',
+                    }}
+                >
+                    {/* ── Floating fullscreen FAB inside the game screen ── */}
+                    <button
+                        onClick={toggleGameFullscreen}
+                        aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                        style={{
+                            position: 'absolute',
+                            top: '10px',
+                            right: '10px',
+                            zIndex: 9999,
+                            width: '36px',
+                            height: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(10, 4, 2, 0.75)',
+                            border: '1.5px solid rgba(204, 41, 41, 0.5)',
+                            borderRadius: '8px',
+                            color: '#F5EDE0',
+                            fontSize: '1.1rem',
+                            cursor: 'pointer',
+                            backdropFilter: 'blur(6px)',
+                            opacity: 0.8,
+                            lineHeight: 1,
+                        }}
+                    >
+                        {isGameFullscreen ? '⊠' : '⛶'}
+                    </button>
 
 
 

@@ -70,19 +70,6 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
 
       <main className={`rs-main ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>{children}</main>
 
-      {/* Floating fullscreen button in game mode — solo mobile */}
-      {currentPage === 'game' && (
-        <button
-          type="button"
-          className="rs-fullscreen-fab"
-          onClick={toggleFullscreen}
-          aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-          title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-        >
-          {isFullscreen ? '⊠' : '⛶'}
-        </button>
-      )}
-
       {currentPage !== 'game' && (
         <footer className="rs-footer">
           <span>Rhythm Slice · Stellar Hacks: ZK Gaming 2026</span>
