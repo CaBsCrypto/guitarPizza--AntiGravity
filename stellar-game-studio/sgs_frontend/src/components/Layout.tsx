@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from 'react';
 import { WalletStandalone } from './WalletStandalone';
 import type { Page } from '../types/navigation';
 import './Layout.css';
@@ -10,27 +9,6 @@ interface LayoutProps {
 }
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Keep state in sync with actual fullscreen changes (e.g. user presses Escape)
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
-  }, []);
-
-  const toggleFullscreen = useCallback(async () => {
-    try {
-      if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-      } else {
-        await document.exitFullscreen();
-      }
-    } catch {
-      // Fullscreen API not supported or denied — silently ignore
-    }
-  }, []);
-
   return (
     <div className={`rs-shell ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>
       {currentPage !== 'game' && (
@@ -46,16 +24,6 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
           <div className="rs-header-right">
             <span className="rs-network-pill">● TESTNET</span>
             <WalletStandalone />
-            {/* Fullscreen button — solo mobile */}
-            <button
-              type="button"
-              className="rs-fullscreen-btn"
-              onClick={toggleFullscreen}
-              aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-              title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-            >
-              {isFullscreen ? '⊠' : '⛶'}
-            </button>
             <button
               type="button"
               className="rs-play-btn"
