@@ -556,7 +556,9 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
 
 
-    const [status, setStatus] = useState<string>(TRANSLATIONS['es'].initializing); // Default to es for init
+    const [status, setStatus] = useState<string>(''); // tx/status messages only — boot has its own loader
+
+    const [booting, setBooting] = useState<boolean>(true); // true until the engine finishes init
 
     const [error, setError] = useState<string | null>(null);
 
@@ -2727,6 +2729,8 @@ Ganador: ${payload.winnerAddress}`);
 
                 setError("Canvas not found");
 
+                setBooting(false);
+
                 addLog("[ERROR] Canvas ref is null");
 
                 return;
@@ -2776,6 +2780,8 @@ Ganador: ${payload.winnerAddress}`);
                 console.error("[GuitarPizza] Failed to load game scripts:", err);
 
                 setError("Failed to load game scripts. Check console.");
+
+                setBooting(false);
 
                 addLog(`[ERROR] Failed to load scripts: ${err}`);
 
@@ -3405,6 +3411,8 @@ Ganador: ${payload.winnerAddress}`);
 
                     setStatus('');
 
+                    setBooting(false);
+
                     addLog("[GuitarPizza] Game initialized successfully.");
 
                 } catch (e) {
@@ -3412,6 +3420,8 @@ Ganador: ${payload.winnerAddress}`);
                     console.error("[GuitarPizza] Error during window.initGuitarPizza:", e);
 
                     setError("Game engine failed to start.");
+
+                    setBooting(false);
 
                     addLog(`[ERROR] Engine start failed: ${e}`);
 
@@ -3422,6 +3432,8 @@ Ganador: ${payload.winnerAddress}`);
                 console.error("[GuitarPizza] window.initGuitarPizza is still undefined after loading scripts.");
 
                 setError("Game engine not found.");
+
+                setBooting(false);
 
                 addLog("[ERROR] window.initGuitarPizza undefined");
 
@@ -3909,6 +3921,48 @@ Ganador: ${payload.winnerAddress}`);
                         </div>
                     )}
 
+                    {/* Boot Loader — single branded loading screen while the engine initializes */}
+                    {booting && !error && (
+                        <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: 2500,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '14px',
+                            background: 'radial-gradient(ellipse at center, #16100a 0%, #080808 72%)',
+                        }}>
+                            <style>{`@keyframes gpBootSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                            @keyframes gpBootPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }`}</style>
+                            <div style={{
+                                fontSize: '2.6rem',
+                                lineHeight: 1,
+                                animation: 'gpBootSpin 1.6s linear infinite',
+                                filter: 'drop-shadow(0 0 14px rgba(212,175,55,0.35))',
+                            }}>🍕</div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontWeight: 800,
+                                    letterSpacing: '0.06em',
+                                    fontSize: '1.5rem',
+                                    color: '#f0ede8',
+                                }}>RHYTHM <span style={{ color: '#b91d1d' }}>SLICE</span></div>
+                                <div style={{
+                                    marginTop: '8px',
+                                    fontFamily: 'var(--font-mono, monospace)',
+                                    fontSize: '0.7rem',
+                                    letterSpacing: '0.18em',
+                                    textTransform: 'uppercase',
+                                    color: '#d4af37',
+                                    animation: 'gpBootPulse 1.4s ease-in-out infinite',
+                                }}>{language === 'es' ? 'Encendiendo el horno…' : 'Firing up the oven…'}</div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Status & Errors Overlay */}
                     {(status || error) && (
 
@@ -3936,17 +3990,17 @@ Ganador: ${payload.winnerAddress}`);
 
                             <div style={{
 
-                                background: '#FFF8E7',
+                                background: 'rgba(10, 8, 6, 0.94)',
 
                                 backdropFilter: 'blur(10px)',
 
                                 padding: '1.5rem',
 
-                                borderRadius: '16px',
+                                borderRadius: '12px',
 
-                                border: '3px dashed #8B0000',
+                                border: '1px solid rgba(212, 175, 55, 0.55)',
 
-                                boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(139,0,0,0.2)',
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.6), inset 0 0 20px rgba(212,175,55,0.06)',
 
                                 display: 'flex',
 
@@ -3964,7 +4018,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                         fontFamily: 'var(--font-display)',
 
-                                        color: '#8B0000',
+                                        color: '#d4af37',
 
                                         fontSize: '1.4rem',
 

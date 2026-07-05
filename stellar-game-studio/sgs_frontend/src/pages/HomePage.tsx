@@ -32,11 +32,24 @@ export function HomePage({ onNavigate }: HomePageProps) {
     document.documentElement.style.setProperty('--bg-pizzeria', `url(${import.meta.env.BASE_URL}game/assets/FONDOJUEGO.png)`);
   }, []);
 
+  // Preload the game engine while the player is still on the landing page so
+  // "Enter the Kitchen" lands on an already-initialized engine (no loader stall).
+  useEffect(() => {
+    if ((window as any).initGuitarPizza) return;
+    (window as any).GP_BASE_PATH = import.meta.env.BASE_URL;
+    const src = `${import.meta.env.BASE_URL}game/guitar-pizza-engine.js?v=3`.replace('//', '/');
+    if (document.querySelector(`script[src="${src}"]`)) return;
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
   const handleEnterKitchen = () => {
     setIsTransitioning(true);
     setTimeout(() => {
       onNavigate('game');
-    }, 1200);
+    }, 350);
   };
 
   const nextSlide = () => setCarouselIdx((prev) => (prev + 1) % SYNDICATES.length);
