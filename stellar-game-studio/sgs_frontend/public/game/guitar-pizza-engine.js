@@ -32,6 +32,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     let loopRunning = true;
     let isVictory = false; // true = song ended (win), false = health=0 (defeat)
     let gameTimer = 0;
+    let _pendingSongPlay = null; // set at lead-in start; fires when gameTimer reaches 0
     let score = 0;
     let combo = 0;
     let maxCombo = 0;
@@ -164,6 +165,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         feverTime = 0; totalTraps = 0; trapsAvoided = 0; totalNotes = 0;
         notes = []; particles = []; feedbackSystem = [];
         gameTimer = 0; nextNoteTime = 0;
+        _pendingSongPlay = null;
         inputLog = []; // Reset Log
         inputLog.startTime = Date.now(); // Record session start time for anti-cheat
         isVictory = false;
@@ -254,7 +256,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const resolvedStart = CONFIG.SONG_START || 0;
             const resolvedDuration = CONFIG.SONG_DURATION || 0;
             const durationLeft = resolvedDuration - gameTimer;
-            if (durationLeft > 0) {
+            // gameTimer < 0 means we're still in the lead-in: the song hasn't
+            // started yet (_pendingSongPlay will fire it), so don't resume audio.
+            if (durationLeft > 0 && gameTimer >= 0) {
                 AudioEngine.playSong(songRate, resolvedStart + gameTimer, durationLeft);
             }
             lastTime = performance.now(); // reset time to prevent huge dt jump
@@ -1445,6 +1449,12 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         if (fireMode) feverTime += dt;  // accumulate seconds in fever/fire mode
         gameTimer += dt;
+        // Lead-in over: start the song exactly when the clock crosses zero
+        if (_pendingSongPlay && gameTimer >= 0) {
+            const _startSong = _pendingSongPlay;
+            _pendingSongPlay = null;
+            _startSong();
+        }
         rushHourTimer += dt;
 
         // ── RUSH HOUR LOGIC ──
@@ -2666,12 +2676,21 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 window._gpCountdown = null;
                 gameState = STATE.GAME;
                 lastTime = performance.now();
+                // Lead-in: start the clock negative (the time a note takes to fall
+                // from the top of the screen to the hit line, plus a small buffer)
+                // so the first notes always enter from above instead of spawning
+                // mid-screen. The song starts when the clock crosses zero.
+                const _leadMoveSpeed = (H * 0.8) * difficultyMult;
+                const _leadIn = ((HIT_Y + NOTE_SIZE) / _leadMoveSpeed) + 0.3;
+                gameTimer = -_leadIn;
                 if (songUrl) {
-                    if (AudioEngine.songBuffer) {
-                        AudioEngine.playSong(songRate, resolvedStart, resolvedDuration);
-                    } else {
-                        AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
-                    }
+                    _pendingSongPlay = () => {
+                        if (AudioEngine.songBuffer) {
+                            AudioEngine.playSong(songRate, resolvedStart, resolvedDuration);
+                        } else {
+                            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
+                        }
+                    };
                 }
             }
         }, 1000);
