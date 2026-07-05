@@ -37,7 +37,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   useEffect(() => {
     if ((window as any).initGuitarPizza) return;
     (window as any).GP_BASE_PATH = import.meta.env.BASE_URL;
-    const src = `${import.meta.env.BASE_URL}game/guitar-pizza-engine.js?v=4`.replace('//', '/');
+    const src = `${import.meta.env.BASE_URL}game/guitar-pizza-engine.js?v=5`.replace('//', '/');
     if (document.querySelector(`script[src="${src}"]`)) return;
     const script = document.createElement('script');
     script.src = src;

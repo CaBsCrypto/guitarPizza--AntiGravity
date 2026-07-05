@@ -161,6 +161,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         fireMode = false; difficultyMult = _difficultyStart; difficultyTimer = 0;
         pizzaProgress = 0; pizzasMade = 0;
         perfectStreak = 0; secretIngredients = 0;
+        rushHourActive = false; rushHourTimer = 0;
+        rushHourDuration = 0; rushHourNextTrigger = 15;
         totalPerfectHits = 0; totalHits = 0;
         feverTime = 0; totalTraps = 0; trapsAvoided = 0; totalNotes = 0;
         notes = []; particles = []; feedbackSystem = [];
