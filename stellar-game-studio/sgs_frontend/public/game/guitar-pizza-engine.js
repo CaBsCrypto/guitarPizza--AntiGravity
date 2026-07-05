@@ -33,6 +33,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     let isVictory = false; // true = song ended (win), false = health=0 (defeat)
     let gameTimer = 0;
     let _pendingSongPlay = null; // set at lead-in start; fires when gameTimer reaches 0
+    let _cdPrevVal = null;       // countdown pop-animation state
+    let _cdAnimStart = 0;
     let score = 0;
     let combo = 0;
     let maxCombo = 0;
@@ -2474,89 +2476,146 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
 
         if (gameState === STATE.COUNTDOWN) {
-            ctx.fillStyle = "rgba(0,0,0,0.75)";
+            // Warm noir vignette backdrop instead of a flat black wash
+            const vg = ctx.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H * 0.4, Math.max(W, H) * 0.8);
+            vg.addColorStop(0, "rgba(24, 14, 5, 0.82)");
+            vg.addColorStop(1, "rgba(0, 0, 0, 0.94)");
+            ctx.fillStyle = vg;
             ctx.fillRect(0, 0, W, H);
-            
-            ctx.fillStyle = "#FFD700";
-            const val = window._gpCountdown || "";
-            let fSize = Math.min(W * 0.25, 180);
-            if (typeof val === 'string') {
-                fSize = Math.min(W / (val.length * 0.7), 100);
-            }
-            ctx.font = "bold " + Math.floor(fSize) + "px 'Special Elite', monospace";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.shadowColor = "#FFD700";
-            ctx.shadowBlur = 25;
-            ctx.fillText(val, W / 2, H / 2 - 40);
-            ctx.shadowBlur = 0;
 
-            // --- CONTROLS EXPLANATION PANEL ---
-            const panelW = Math.min(W * 0.85, 450);
-            const panelH = 145;
-            const panelX = W / 2 - panelW / 2;
-            const panelY = H * 0.58;
+            const val = window._gpCountdown || "";
+            // Pop animation: re-trigger every time the displayed value changes
+            if (val !== _cdPrevVal) { _cdPrevVal = val; _cdAnimStart = performance.now(); }
+            const cdEl = (performance.now() - _cdAnimStart) / 1000;
+            const cdT = Math.min(1, cdEl / 0.4);
+            const cdEase = 1 - Math.pow(1 - cdT, 3); // ease-out cubic
+            const cdScale = 1.28 - 0.28 * cdEase;
+
+            let fSize = Math.min(W * 0.3, 200);
+            if (typeof val === 'string' && val.length > 2) {
+                fSize = Math.min(W / (val.length * 0.62), 110);
+            }
+            const numY = H * 0.32;
+
+            // Soft gold halo behind the number (brighter right after each tick)
+            const haloAlpha = 0.32 - 0.14 * cdEase;
+            const halo = ctx.createRadialGradient(W / 2, numY, 0, W / 2, numY, fSize * 1.15);
+            halo.addColorStop(0, "rgba(212, 175, 55, " + haloAlpha.toFixed(3) + ")");
+            halo.addColorStop(1, "rgba(212, 175, 55, 0)");
+            ctx.fillStyle = halo;
+            ctx.fillRect(W / 2 - fSize * 1.3, numY - fSize * 1.3, fSize * 2.6, fSize * 2.6);
 
             ctx.save();
-            ctx.fillStyle = "rgba(20, 10, 10, 0.85)";
-            ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
-            ctx.lineWidth = 2;
+            ctx.translate(W / 2, numY);
+            ctx.scale(cdScale, cdScale);
+            ctx.font = "700 " + Math.floor(fSize) + "px 'Fraunces', Georgia, serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const numGrad = ctx.createLinearGradient(0, -fSize / 2, 0, fSize / 2);
+            numGrad.addColorStop(0, "#f6e27a");
+            numGrad.addColorStop(0.55, "#d4af37");
+            numGrad.addColorStop(1, "#8a6d1f");
+            ctx.fillStyle = numGrad;
+            ctx.shadowColor = "rgba(212, 175, 55, 0.6)";
+            ctx.shadowBlur = 30;
+            ctx.fillText(String(val), 0, 0);
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = Math.max(1.5, fSize * 0.012);
+            ctx.strokeStyle = "rgba(20, 10, 0, 0.5)";
+            ctx.strokeText(String(val), 0, 0);
+            ctx.restore();
+
+            // --- CONTROLS PANEL (noir card) ---
+            const panelW = Math.min(W * 0.86, 460);
+            const panelH = 152;
+            const panelX = W / 2 - panelW / 2;
+            const panelY = H * 0.56;
+
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            ctx.fillStyle = "rgba(10, 7, 5, 0.92)";
+            ctx.strokeStyle = "rgba(212, 175, 55, 0.5)";
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.roundRect(panelX, panelY, panelW, panelH, 12);
+            ctx.roundRect(panelX, panelY, panelW, panelH, 14);
             ctx.fill();
             ctx.stroke();
 
-            ctx.fillStyle = "#FFD700";
-            ctx.font = "bold 16px 'Special Elite', monospace";
-            ctx.textAlign = "center";
-            ctx.fillText(language === 'es' ? "Cómo Jugar / How to Play" : "How to Play", W / 2, panelY + 25);
+            // Title
+            ctx.fillStyle = "#d4af37";
+            ctx.font = "700 15px 'Fraunces', Georgia, serif";
+            try { ctx.letterSpacing = "3px"; } catch (e) { }
+            ctx.fillText(language === 'es' ? "CÓMO JUGAR" : "HOW TO PLAY", W / 2, panelY + 24);
+            try { ctx.letterSpacing = "0px"; } catch (e) { }
 
-            ctx.strokeStyle = "rgba(255, 215, 0, 0.15)";
+            // Divider that fades out at the edges
+            const div = ctx.createLinearGradient(panelX + 20, 0, panelX + panelW - 20, 0);
+            div.addColorStop(0, "rgba(212, 175, 55, 0)");
+            div.addColorStop(0.5, "rgba(212, 175, 55, 0.45)");
+            div.addColorStop(1, "rgba(212, 175, 55, 0)");
+            ctx.strokeStyle = div;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(panelX + 20, panelY + 38);
-            ctx.lineTo(panelX + panelW - 20, panelY + 38);
+            ctx.moveTo(panelX + 20, panelY + 40);
+            ctx.lineTo(panelX + panelW - 20, panelY + 40);
             ctx.stroke();
 
-            ctx.textAlign = "center";
-            
-            const drawKeycap = (char, x, y) => {
-                const kw = 28, kh = 28;
-                ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-                ctx.strokeStyle = "#FFD700";
+            // Keycaps, each tinted with its lane color
+            const keyY = panelY + 68;
+            const spacing = 48;
+            const startX = W / 2 - spacing * 1.5;
+            const keys = ['A', 'S', 'K', 'L'];
+            keys.forEach((key, idx) => {
+                const x = startX + idx * spacing;
+                const kw = 32, kh = 32;
+                let laneColor = "#d4af37";
+                try { laneColor = THE_OVEN_THEME.colors.lanes[idx].note || laneColor; } catch (e) { }
+
+                const cap = ctx.createLinearGradient(0, keyY - kh / 2, 0, keyY + kh / 2);
+                cap.addColorStop(0, "rgba(48, 38, 26, 0.95)");
+                cap.addColorStop(1, "rgba(22, 16, 10, 0.95)");
+                ctx.fillStyle = cap;
+                ctx.strokeStyle = "rgba(212, 175, 55, 0.65)";
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.roundRect(x - kw/2, y - kh/2, kw, kh, 4);
+                ctx.roundRect(x - kw / 2, keyY - kh / 2, kw, kh, 7);
                 ctx.fill();
                 ctx.stroke();
-                
-                ctx.fillStyle = "#FFD700";
-                ctx.font = "bold 14px monospace";
-                ctx.fillText(char.toUpperCase(), x, y + 5);
-            };
 
-            const keyY = panelY + 62;
-            const spacing = 45;
-            const startX = W / 2 - (spacing * 1.5);
-            
-            const keys = ['a', 's', 'k', 'l'];
-            keys.forEach((key, idx) => {
-                drawKeycap(key, startX + idx * spacing, keyY);
+                // Bottom shading for a subtle 3D keycap feel
+                ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - kw / 2 + 5, keyY + kh / 2 - 3);
+                ctx.lineTo(x + kw / 2 - 5, keyY + kh / 2 - 3);
+                ctx.stroke();
+
+                ctx.fillStyle = "#f0ede8";
+                ctx.font = "700 14px 'Space Grotesk', sans-serif";
+                ctx.fillText(key, x, keyY + 1);
+
+                // Lane color dot links each key to its column
+                ctx.beginPath();
+                ctx.arc(x, keyY + kh / 2 + 8, 3, 0, Math.PI * 2);
+                ctx.fillStyle = laneColor;
+                ctx.fill();
             });
 
-            ctx.fillStyle = "#FFF8E7";
-            ctx.font = "12px sans-serif";
+            ctx.fillStyle = "#f0ede8";
+            ctx.font = "500 13px 'Space Grotesk', sans-serif";
             ctx.fillText(
                 language === 'es' ? "Presiona las teclas para tocar cada ingrediente" : "Press the keys to play each ingredient",
                 W / 2,
-                panelY + 102
+                panelY + 114
             );
-            ctx.fillStyle = "rgba(255, 248, 231, 0.6)";
-            ctx.font = "italic 11px sans-serif";
+            ctx.fillStyle = "rgba(240, 237, 232, 0.5)";
+            ctx.font = "italic 11px 'Space Grotesk', sans-serif";
             ctx.fillText(
                 language === 'es' ? "(En móvil o táctil: Toca las columnas en pantalla)" : "(On Mobile/Touch: Tap the screen columns directly)",
                 W / 2,
-                panelY + 124
+                panelY + 134
             );
 
             ctx.restore();
