@@ -101,6 +101,21 @@ Baking is amplified by equipping **Oven NFTs**. Higher rarity ovens reduce bake 
 ### 3. Daily Quests (Contratos del Día)
 *   Complete dynamic daily objectives (e.g., Bake 2 pizzas, play 1 song, use premium fuel) to earn **Prestige Ingredients** (Truffle, Fig, Caviar, Gold Flakes) and bake luxury recipes!
 
+### 4. La Famiglia (Friends List)
+*   **Zero-Gas Local Storage**: Keep your mafia crew cataloged using zero-gas localStorage via Zustand Persist. No Stellar fees or network latency to look up your rivals.
+*   **Direct Dueling Challenge**: Challenge contacts from your friend list instantly via a one-click challenge button which automatically configures a PvP duel order in the lobby.
+
+---
+
+## 📚 Documentación Adicional (Spanish & English)
+
+Para más detalles técnicos, arquitectónicos y de juego, explora las guías dedicadas en la carpeta [docs/](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/docs/):
+
+*   **[Guía del Desarrollador (Developer Guide)](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/docs/developer_guide.md)**: Comandos del SDK, compilación de Soroban, scaffolding de nuevos juegos y testing.
+*   **[Arquitectura ZK (ZK Architecture)](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/docs/zk_architecture.md)**: Explicación de los circuitos Noir, la generación del journal de RISC Zero y la verificación on-chain.
+*   **[Guía de Tokenomics Circular (Tokenomics)](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/docs/tokenomics_guide.md)**: Funcionamiento técnico de El Horno, congelamiento clásica, pools de Defindex, Neveras y decay de ingredientes.
+*   **[Manual del Jugador (Player Manual)](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/docs/player_manual_es.md)**: Manual inmersivo en español para aprender a jugar, conseguir ingredientes y progresar en el imperio de la pizza de la mafia.
+
 ---
 
 ## 🛠️ Tech Stack & Architecture
@@ -117,12 +132,22 @@ Baking is amplified by equipping **Oven NFTs**. Higher rarity ovens reduce bake 
 
 ## 📦 Smart Contract addresses (Stellar Testnet)
 
-*   **`guitar-pizza` (Core sessions & mint gating)**: `CBOKHYCJYPAIF3NQHPQGJTDJGCKBDC2FN5IXPBFI7L4UDIIFCLVED4HF`
-*   **`slice-token` (Utility token)**: `CDQQS675FAF3GXEV4Y5CQVWVHWOONDWMIM2QDVSQUHADA3XDDXSXZOFR`
-*   **`refrigerator-vault` (Ingredient preservation)**: `CDNVDFIU5YHPB4PSPMJU24K7GF6EJWAKYRQGQCRNHYB5FPJR446VJYF2`
-*   **`pizza-baking` (El Horno cooking loop)**: `CC6JCDRZE7RQF4NDX6ITDQITCII7VS5MUJRZKXGYLQS2JQX6HRIAOP7M`
-*   **`pvp-escrow` (Matchmaking escrow payouts)**: `CAG2HF4P6FWMGQXJEP5RQQSO2WTMSQSQIQCPGME263HOPP337TXQWJM6`
-*   **`nft-collectibles` (Oven NFTs)**: `CBC3AGOZTWKEII45VBRWLOGMBNGBJ6ABPP6MOFAZM2HFHP2NKPXXEWXB`
+All smart contracts are written in Rust for Soroban (SDK v25.0.2). Below are the current active addresses deployed on Stellar Testnet:
+
+| Contract | Address | Purpose / Description |
+| :--- | :--- | :--- |
+| **`guitar-pizza`** | `CCBDKEBNL3KH4FSRH6UCS72COWIP4Z7DRU74NSZMKJO2TXTKXACSZVVJ` | Core rhythm game session validation, rewards mint gating. |
+| **`slice-token`** | `CACFX6EO72DX2HC5JC7M66TDESTEQ6VOYZXKVKB6NOH52LIL4GQDRDIL` | Main utility and governance token ($SLICE) of the pizzeria economy. |
+| **`refrigerator-vault`** | `CA4HNGFAIFGLHJ4ZBEK4FWIV33FOQEEXMO4EQQOAPPOK4J6NWFP7XSB4` | Ingredient preservation vault (neveras) with flat fee burning. |
+| **`pizza-baking`** | `CAIQHGCF2374CULXFW3D3XC3GYIEMLZC4QLLKV76SM5VC33MDMGXH25B` | Timed-Baking Oven system (El Horno de la Famiglia). |
+| **`staking-vault`** | `CBX3ABOYGTTSLFXQ7FWGL2Q3QN7DZMTXWBFSU2JWC2KZEQQLUIVI7MRW` | Classic Staking system with progression tiers (Piccolino to Don). |
+| **`defindex-lp-token`** | `CDJUV7O3RKHN2SEZXHEOSJPS3OJUHD4IGMQQGIP26AJPV5XZYES5YHZC` | Defindex single-asset/LP Yield Farming integration token. |
+| **`pvp-escrow`** | `CBGL7NQJBHXKJJPYWQF3UGAGEHWH72LHBOHDGOTU242XAEH5PXOTCALD` | Real-time matchmaking duel wagers and score validation escrow. |
+| **`nft-collectibles`** | `CBC3AGOZTWKEII45VBRWLOGMBNGBJ6ABPP6MOFAZM2HFHP2NKPXXEWXB` | Oven NFTs Collection contract (Common to Legendary). |
+| **`zk-leaderboard`** | `CCGP2I2A5E7OKNHPWJVHDGQCTUIF2GLJEBOZO72LDDZ7ILY65ECEEV3S` | On-chain top-10 high score list gated by ZK receipt verification. |
+| **`mock-game-hub`** | `CC52YOVJEFKQT7GIIJ3HVRWZGEOGJZLQXR3AL6HAK6J5NWQMFS7RFMSM` | Game Studio Session Lifecycle Hub (standardized start/end triggers). |
+| **`risc0-verifier`** | `CDSM3KQPI2M7X6CWMMKVNKZKYY73JZ2YBMW5U3V4EEELH2BRYSE6KJKC` | RISC Zero zkVM receipt and proof verification contract. |
+| **`tournaments`** | `CADTV5WUWYWTBUEURYJ2MIE5UZ4HKVDNVST4KNJ34JPBBTKEWQ4QVGNM` | Bracket tournaments and multiplayer events contract. |
 
 ---
 

@@ -1,0 +1,612 @@
+/* ========================================
+   PIZZA HERO - GLOBAL PARTY THEME 🌍🍕
+   Arcade, 3D, Vibrant, High Energy
+   ======================================== */
+
+/* ===== CSS VARIABLES ===== */
+:root {
+    /* MAFIA NOIR PALETTE */
+    --ph-gold: #d4af37;
+    /* Vintage Gold */
+    --ph-red: #b91d1d;
+    /* Deep Blood Red */
+    --ph-green: #14532d;
+    /* Mafia Emerald */
+    --ph-blue: #1e3a8a;
+    /* Midnight Blue */
+    --ph-dark: #0a0a0a;
+    /* Pure Noir */
+    --ph-white: #f5f5f5;
+    /* Off-white */
+
+    --color-accent: var(--ph-gold);
+    --color-error: #ef4444;
+
+    --font-title: 'Fraunces', serif;
+    --font-body: 'Space Grotesk', sans-serif;
+    --font-display: 'Fraunces', serif;
+}
+
+/* ============================================================
+   SECTION 1: OUTER BACKGROUND (The Restaurant Table)
+   Target: <div id="restaurant-table-bg">
+   ============================================================ */
+#restaurant-table-bg {
+    background-color: #f8f8f8;
+    background-image:
+        linear-gradient(45deg, #c1272d 25%, transparent 25%, transparent 75%, #c1272d 75%, #c1272d),
+        linear-gradient(45deg, #c1272d 25%, transparent 25%, transparent 75%, #c1272d 75%, #c1272d);
+    background-size: 60px 60px;
+    background-position: 0 0, 30px 30px;
+}
+
+/* ============================================================
+   SECTION 2: INNER GAME DEVICE (The Phone Screen)
+   Target: <div id="game-device-screen">
+   UPDATED: 2026-02-18 v2 (Force Refresh)
+   ============================================================ */
+#game-device-screen {
+    /* Combined Background: Color + Pepperoni Pattern */
+    background-color: #fff8e1;
+    /* Warmer Cream */
+    background-image:
+        radial-gradient(#ff6b6b 15%, transparent 16%),
+        radial-gradient(#ff6b6b 15%, transparent 16%),
+        radial-gradient(circle, rgba(255, 165, 0, 0.1) 2px, transparent 2.5px);
+    /* Texture */
+    background-size: 60px 60px, 60px 60px, 20px 20px;
+    background-position: 0 0, 30px 30px, 0 0;
+
+    color: var(--ph-dark);
+    font-family: var(--font-body);
+    position: relative;
+    z-index: 1;
+}
+
+/* Remove pseudo-elements to avoid z-index issues */
+#game-device-screen::before,
+#game-device-screen::after {
+    display: none;
+    content: none;
+}
+
+/* Legacy class support (can remove if unused) */
+.game-container {
+    font-family: var(--font-body);
+}
+
+.game-frame {
+    border: none;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* ===== TYPOGRAPHY & LOGO ===== */
+.main-logo {
+    font-family: var(--font-title);
+    font-weight: 900;
+    font-size: 3.5rem;
+    /* Reduced from 4rem for better fit */
+    color: var(--ph-white);
+    line-height: 0.95;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 1rem;
+
+    /* Neon Glow Effect */
+    text-shadow:
+        0 0 5px rgba(255, 255, 255, 0.4),
+        0 0 10px var(--ph-gold),
+        0 0 20px var(--ph-gold),
+        0 0 40px var(--ph-red),
+        0 0 80px var(--ph-red);
+
+    animation: neonPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes neonPulse {
+    from {
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.4), 0 0 10px var(--ph-gold), 0 0 20px var(--ph-gold), 0 0 40px var(--ph-red);
+        transform: scale(1) rotate(-2deg);
+    }
+
+    to {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.6), 0 0 20px var(--ph-gold), 0 0 40px var(--ph-gold), 0 0 80px var(--ph-red), 0 0 120px var(--ph-red);
+        transform: scale(1.05) rotate(-2deg);
+    }
+}
+
+.subtitle {
+    font-family: var(--font-body);
+    font-weight: 700;
+    color: var(--ph-white);
+    background: var(--ph-red);
+    padding: 0.2rem 1rem;
+    letter-spacing: 0.3em;
+    font-size: 1rem;
+    transform: rotate(2deg);
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+    display: inline-block;
+}
+
+/* ===== 3D BUTTONS (ARCADE STYLE) ===== */
+button {
+    font-family: var(--font-body);
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.1s;
+    outline: none;
+    user-select: none;
+}
+
+/* Primary Start Button */
+#startBtn {
+    font-size: 1.5rem;
+    padding: 1rem 3rem;
+    background: var(--ph-green);
+    color: white;
+    border: 4px solid #fff;
+    border-radius: 99px;
+    /* Pill shape */
+    box-shadow:
+        0px 8px 0px #006400,
+        /* 3D Depth */
+        0px 10px 20px rgba(0, 0, 0, 0.4);
+    /* Drop Shadow */
+    margin-bottom: 1.5rem;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+}
+
+#startBtn:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0px 10px 0px #006400,
+        0px 15px 25px rgba(0, 0, 0, 0.5);
+    background: #39e639;
+}
+
+#startBtn:active {
+    transform: translateY(6px);
+    box-shadow:
+        0px 2px 0px #006400,
+        0px 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+/* Lobby Navigation Buttons (The 2x2 Grid) */
+.lobby-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #1a1a1a !important;
+    border: 3px solid #333 !important;
+    border-radius: 12px !important;
+    padding: 0.8rem 0.5rem !important;
+    /* Reduced from 1.2rem */
+    width: 100% !important;
+    box-shadow:
+        0 4px 0 #000,
+        0 10px 20px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+.lobby-nav-btn .btn-icon {
+    font-size: 1.8rem;
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+}
+
+.lobby-nav-btn .btn-text {
+    font-size: 0.7rem;
+    /* Slightly smaller to prevent clipping */
+    letter-spacing: 0.05em;
+    color: #aaa;
+    font-weight: bold;
+}
+
+.lobby-nav-btn:hover {
+    background: #222 !important;
+    border-color: var(--ph-gold) !important;
+    transform: translateY(-4px) scale(1.02) !important;
+}
+
+.lobby-nav-btn:hover .btn-text {
+    color: var(--ph-gold);
+}
+
+.lobby-nav-btn:active {
+    transform: translateY(2px) !important;
+    box-shadow: 0 2px 0 #000 !important;
+}
+
+/* Close / Back Buttons */
+.close-btn,
+#backToLobbyBtn {
+    background: var(--ph-red);
+    color: white;
+    border: 3px solid #fff;
+    border-radius: 99px;
+    padding: 0.8rem 2rem;
+    font-weight: 700;
+    box-shadow: 0px 6px 0px #8b0000;
+}
+
+.close-btn:active,
+#backToLobbyBtn:active {
+    transform: translateY(6px);
+    box-shadow: 0px 0px 0px #8b0000;
+}
+
+/* ===== OVERLAYS & MODALS ===== */
+#lobby,
+#overlay,
+#results {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.6);
+    /* See through to particles */
+    z-index: 20;
+}
+
+.info-modal {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 20px;
+    border: 4px solid var(--ph-dark);
+    box-shadow: 10px 10px 0px var(--ph-gold);
+    max-width: 500px;
+    text-align: center;
+    color: var(--ph-dark);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.info-modal h2 {
+    font-family: var(--font-title);
+    color: var(--ph-red);
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.key-box {
+    background: var(--ph-dark);
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0px 4px 0px #000;
+    font-size: 1.5rem;
+    border: 2px solid #555;
+}
+
+/* ===== ANIMATIONS & PARTICLES ===== */
+.bg-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    font-size: 2rem;
+    opacity: 0.6;
+    animation: floatUp 10s linear infinite;
+}
+
+.p1 {
+    left: 10%;
+    bottom: -10%;
+    animation-delay: 0s;
+    font-size: 3rem;
+}
+
+.p2 {
+    left: 30%;
+    bottom: -10%;
+    animation-delay: 2s;
+    font-size: 2rem;
+}
+
+.p3 {
+    left: 50%;
+    bottom: -10%;
+    animation-delay: 4s;
+    font-size: 4rem;
+}
+
+.p4 {
+    left: 70%;
+    bottom: -10%;
+    animation-delay: 1s;
+    font-size: 2.5rem;
+}
+
+.p5 {
+    left: 90%;
+    bottom: -10%;
+    animation-delay: 3s;
+    font-size: 3rem;
+}
+
+.p6 {
+    left: 20%;
+    bottom: -10%;
+    animation-delay: 5s;
+    font-size: 2rem;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translateY(110vh) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 0.8;
+    }
+
+    90% {
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: translateY(-10vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes logoFloat {
+
+    0%,
+    100% {
+        transform: rotate(-3deg) translateY(0px);
+    }
+
+    50% {
+        transform: rotate(-3deg) translateY(-15px);
+    }
+}
+
+/* ===== PIZZA RAIN (Falling Animation) ===== */
+.pizza-rain {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+    /* Behind UI but in front of bg */
+    pointer-events: none;
+}
+
+.falling-pizza {
+    position: absolute;
+    top: -10%;
+    font-size: 2rem;
+    opacity: 0.8;
+    animation: pizzaFall 6s linear infinite;
+}
+
+/* Logo Container Nudge */
+.logo-container {
+    transform: translateY(0);
+    text-align: center;
+    margin-top: 2rem;
+    /* Reduced from 3rem to save space */
+    margin-bottom: 1rem;
+    /* Reduced from 1.5rem */
+}
+
+/* Variations - One by One Progressive Fall */
+.fp1 {
+    left: 15%;
+    animation-duration: 6s;
+    animation-delay: 0s;
+}
+
+.fp2 {
+    left: 80%;
+    animation-duration: 7s;
+    animation-delay: 4s;
+    font-size: 1.8rem;
+}
+
+.fp3 {
+    left: 30%;
+    animation-duration: 6s;
+    animation-delay: 8s;
+}
+
+.fp4 {
+    left: 65%;
+    animation-duration: 8s;
+    animation-delay: 12s;
+    font-size: 2.2rem;
+}
+
+.fp5 {
+    left: 50%;
+    animation-duration: 7s;
+    animation-delay: 16s;
+}
+
+@keyframes pizzaFall {
+    0% {
+        transform: translateY(-10vh) rotate(0deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(110vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.hidden-view {
+    display: none !important;
+}
+
+/* ===== NEW MODAL SYSTEM ===== */
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 3000; /* Must be above status overlay (2000) so modals always render on top */
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    /* Mobile: slide up from bottom */
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+    background: #fff;
+    width: 100%;
+    max-width: 500px;
+    height: 85%;
+    /* Sheet style */
+    border-radius: 20px 20px 0 0;
+    border: 4px solid var(--ph-dark);
+    border-bottom: none;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 1rem;
+}
+
+.modal-title {
+    font-family: var(--font-title);
+    font-size: 1.8rem;
+    color: var(--ph-red);
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.back-btn-circle {
+    background: var(--ph-dark);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #555;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.2rem;
+    transition: transform 0.2s;
+}
+
+.back-btn-circle:active {
+    transform: scale(0.9);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Reuse Store Grid styles */
+.store-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    overflow-y: auto;
+    padding-bottom: 2rem;
+}
+
+/* Responsive */
+@media (min-width: 600px) {
+    .modal-backdrop {
+        align-items: center;
+    }
+
+    .modal-content {
+        height: auto;
+        max-height: 80%;
+        border-radius: 20px;
+        border-bottom: 4px solid var(--ph-dark);
+        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+}
+
+@media (max-width: 600px) {
+    .main-logo {
+        font-size: 3rem;
+    }
+
+    #startBtn {
+        padding: 0.8rem 2rem;
+        font-size: 1.2rem;
+    }
+}

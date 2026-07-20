@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useWallet } from '../hooks/useWallet';
 import { useSliceBalance } from '../hooks/useSliceBalance';
 import { passkeyService, type PasskeyAccount } from '../services/PasskeyService';
@@ -17,7 +18,10 @@ export function WalletStandalone() {
     disconnect,
     registerPasskey,
     loginPasskey,
+    connectPrivy,
   } = useWallet();
+
+  const { login: privyLogin } = usePrivy();
 
   const { balance, refresh: refreshBalance } = useSliceBalance();
 
@@ -267,6 +271,21 @@ export function WalletStandalone() {
               🔑 Passkey
             </button>
           )}
+
+          {/* Official Privy Login Button */}
+          <button
+            className="wallet-standalone-button"
+            style={{
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25))',
+              color: '#c4b5fd',
+              borderColor: 'rgba(139, 92, 246, 0.5)'
+            }}
+            onClick={() => connectPrivy().catch(() => undefined)}
+            disabled={isConnecting}
+            title="Login with Email, Google, Twitter, or Discord via Privy"
+          >
+            {isConnecting && walletType === 'wallet' ? 'Connecting...' : '🔐 Social Login'}
+          </button>
 
           {/* Demo Mode Button */}
           <button

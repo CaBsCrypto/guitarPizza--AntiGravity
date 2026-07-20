@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useWalletStore } from '../store/walletSlice';
 import { devWalletService, DevWalletService } from '../services/devWalletService';
 import { NETWORK, NETWORK_PASSPHRASE } from '../utils/constants';
@@ -55,6 +56,10 @@ export function useWallet() {
     setError,
     disconnect: storeDisconnect,
   } = useWalletStore();
+
+  // Official Privy hooks
+  const { login: privyLogin, logout: privyLogout, authenticated, user: privyUser } = usePrivy();
+  const { wallets } = useWallets();
 
   /**
    * Connect real wallet (e.g. Freighter, Lobstr, xBull)
@@ -152,23 +157,89 @@ export function useWallet() {
     if (walletType === 'dev') {
       devWalletService.disconnect();
     }
+    
+    // If using Privy, logout from Privy as well
+    if (walletId === 'privy') {
+      try {
+        await privyLogout();
+      } catch (err) {
+        console.error('Error logging out from Privy:', err);
+      }
+    }
+    
     const isProd = window.location.hostname.endsWith('spicycrust.com');
     const domain = isProd ? '; domain=.spicycrust.com' : '';
     document.cookie = `stellar_wallet=; path=/; max-age=0${domain}; Secure; SameSite=Lax`;
 
     storeDisconnect();
     window.location.reload();
-  }, [walletType, storeDisconnect]);
+  }, [walletType, walletId, privyLogout, storeDisconnect]);
 
   /**
-   * Handle deterministic Stellar keypair derivation on Privy login success
+   * Official Privy login integration
+   * Opens the official Privy modal and handles the connection
    */
-  const handlePrivyLogin = useCallback(async (privyUser: any) => {
-    const address = await handlePrivyLoginSuccess(privyUser);
-    setWallet(address, 'shared-cookie', 'wallet');
-    setNetwork(NETWORK, NETWORK_PASSPHRASE);
-    return address;
-  }, [setWallet, setNetwork]);
+  const connectPrivy = useCallback(async () => {
+    try {
+      setConnecting(true);
+      setError(null);
+      await privyLogin();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to connect with Privy';
+      setError(message);
+      console.error('Privy login error:', err);
+      throw err;
+    } finally {
+      setConnecting(false);
+    }
+  }, [privyLogin, setConnecting, setError]);
+
+  /**
+   * Sync Privy authentication state with wallet store
+   * This effect runs when Privy auth state changes
+   */
+  useEffect(() => {
+    const syncPrivyWallet = async () => {
+      if (authenticated && privyUser) {
+        try {
+          // Find the Stellar wallet from Privy's embedded wallets or linked wallets
+          // Privy primarily supports EVM and Solana; for Stellar we use the deterministic derivation
+          const stellarWallet = wallets.find(w => 
+            w.walletClientType === 'stellar' || 
+            w.address?.startsWith('G')
+          );
+          
+          let address: string;
+          if (stellarWallet?.address) {
+            // Use the actual Stellar wallet address from Privy
+            address = stellarWallet.address;
+          } else {
+            // Fallback: derive deterministic address from Privy user ID
+            address = await deriveStellarAddressFromPrivyId(privyUser.id);
+          }
+
+          // Set wallet in store
+          setWallet(address, 'privy', 'wallet');
+          setNetwork(NETWORK, NETWORK_PASSPHRASE);
+
+          // Set shared cookie for cross-domain compatibility
+          const isProd = window.location.hostname.endsWith('spicycrust.com');
+          const domain = isProd ? '; domain=.spicycrust.com' : '';
+          document.cookie = `stellar_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
+
+          console.log('Privy wallet connected:', address);
+        } catch (err) {
+          console.error('Error syncing Privy wallet:', err);
+          setError('Failed to sync Privy wallet');
+        }
+      } else if (!authenticated && walletId === 'privy') {
+        // Privy logged out, clear the wallet
+        storeDisconnect();
+      }
+    };
+
+    syncPrivyWallet();
+  }, [authenticated, privyUser, wallets, walletId, setWallet, setNetwork, setError, storeDisconnect]);
 
   /**
    * Register a new Stellar Passkey Smart Account
@@ -383,10 +454,30 @@ export function useWallet() {
     getCurrentDevPlayer,
     registerPasskey,
     loginPasskey,
-    handlePrivyLogin,
+    connectPrivy,
+    // Privy state
+    privyAuthenticated: authenticated,
+    privyUser,
   };
 }
 
+/**
+ * Derive a deterministic Stellar address from Privy user ID
+ * Used as fallback when no Stellar wallet is linked in Privy
+ */
+async function deriveStellarAddressFromPrivyId(privyUserId: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(privyUserId + "_spicycrust_privy_shared_salt_2026");
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = new Uint8Array(hashBuffer);
+  const keypair = Keypair.fromRawEd25519Seed(Buffer.from(hashArray));
+  return keypair.publicKey();
+}
+
+/**
+ * @deprecated Use connectPrivy() with the official SDK instead
+ * Kept for backward compatibility with existing cookie-based flow
+ */
 export async function handlePrivyLoginSuccess(privyUser: any) {
   try {
     // 1. Obtener el ID único del usuario de Privy (ej. 'did:privy:cld...')
