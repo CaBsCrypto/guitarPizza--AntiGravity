@@ -251,40 +251,22 @@ export function WalletStandalone() {
         </div>
       ) : (
         <>
-          {/* Main Wallet Connection Button (e.g. Freighter, Kit) */}
+          {/* Official Privy Login Button (Avalanche / EVM) */}
           <button
             className="wallet-standalone-button connect-main-btn"
-            onClick={() => connect().catch(() => undefined)}
-            disabled={isConnecting}
-          >
-            <span className="btn-full-text">{isConnecting && walletType === 'wallet' ? 'Connecting...' : 'Connect Wallet'}</span>
-            <span className="btn-mobile-text">{isConnecting && walletType === 'wallet' ? 'Connecting...' : 'Connect'}</span>
-          </button>
-
-          {/* Passkey Biometric Smart Accounts Button */}
-          {passkeyService.isSupported() && (
-            <button
-              className="wallet-standalone-button wallet-passkey-button"
-              onClick={handleOpenPasskey}
-              disabled={isConnecting}
-            >
-              🔑 Passkey
-            </button>
-          )}
-
-          {/* Official Privy Login Button */}
-          <button
-            className="wallet-standalone-button"
             style={{
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25))',
-              color: '#c4b5fd',
-              borderColor: 'rgba(139, 92, 246, 0.5)'
+              background: 'linear-gradient(135deg, rgba(232, 65, 66, 0.35), rgba(168, 85, 247, 0.35))',
+              color: '#ffffff',
+              borderColor: 'rgba(232, 65, 66, 0.6)',
+              fontWeight: 700,
+              boxShadow: '0 0 12px rgba(232, 65, 66, 0.3)'
             }}
             onClick={() => connectPrivy().catch(() => undefined)}
             disabled={isConnecting}
-            title="Login with Email, Google, Twitter, or Discord via Privy"
+            title="Login with Email, Google, Twitter or EVM Wallet via Privy"
           >
-            {isConnecting && walletType === 'wallet' ? 'Connecting...' : '🔐 Social Login'}
+            <span className="btn-full-text">🔴 {isConnecting ? 'CONNECTING...' : 'LOGIN WITH PRIVY'}</span>
+            <span className="btn-mobile-text">🔴 {isConnecting ? '...' : 'PRIVY'}</span>
           </button>
 
           {/* Demo Mode Button */}
@@ -296,12 +278,13 @@ export function WalletStandalone() {
               borderColor: 'rgba(180, 150, 30, 0.5)'
             }}
             onClick={() => {
-              useWalletStore.getState().setWallet('G_DEMO_USER', 'dev-demo', 'dev');
+              useWalletStore.getState().setWallet('0xDEMO_AVALANCHE_USER', 'dev-demo', 'dev');
             }}
             title="Play without connecting a real wallet"
           >
-            🎭 Demo
+            🎭 DEMO
           </button>
+
         </>
       )}
 
