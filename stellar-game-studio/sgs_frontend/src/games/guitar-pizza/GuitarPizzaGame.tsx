@@ -20,6 +20,8 @@ import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 
 import { CollectionTab } from '../../components/CollectionTab';
 import { WalletStandalone } from '../../components/WalletStandalone';
+import { SpicyCrustService } from '../../services/SpicyCrustService';
+
 
 
 
@@ -2460,9 +2462,20 @@ Ganador: ${payload.winnerAddress}`);
 
         setShowTxPopup(false);
 
+        // Registrar score automáticamente en la API central de SpicyCrust (PHP API)
+        SpicyCrustService.submitScore({
+            playerExternalId: userAddress || 'guest_player',
+            nickname: chefName || 'Chef Don',
+            score: pendingFinalScoreRef.current,
+            metadata: {
+                timestamp: Date.now()
+            }
+        });
+
         onGameComplete(pendingFinalScoreRef.current);
 
-    }, [onGameComplete]);
+    }, [onGameComplete, userAddress, chefName]);
+
 
 
 

@@ -28,3 +28,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </PrivyProvider>
   </React.StrictMode>,
 )
+
+

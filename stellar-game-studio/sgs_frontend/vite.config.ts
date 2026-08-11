@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     include: ['@stellar/stellar-sdk', '@stellar/stellar-sdk/contract', '@stellar/stellar-sdk/rpc', 'buffer'],
+    exclude: ['@solana-program/token', '@solana/kit'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
