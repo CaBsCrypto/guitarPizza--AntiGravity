@@ -15,7 +15,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      buffer: path.resolve(__dirname, './node_modules/buffer/')
+      buffer: path.resolve(__dirname, './node_modules/buffer/'),
+      '@solana-program/token': path.resolve(__dirname, './src/utils/emptyMock.ts')
     },
     dedupe: ['@stellar/stellar-sdk']
   },
@@ -32,44 +33,6 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     commonjsOptions: {
       transformMixedEsModules: true
-    },
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (
-              id.includes('@noir-lang') || 
-              id.includes('barretenberg') || 
-              id.includes('@noble') ||
-              id.includes('noirc') || 
-              id.includes('acvm') ||
-              id.includes('@aztec')
-            ) {
-              return 'zk-engine';
-            }
-            if (
-              id.includes('@stellar') || 
-              id.includes('stellar-sdk') || 
-              id.includes('freighter-api') || 
-              id.includes('@creit-tech') || 
-              id.includes('sac-sdk') || 
-              id.includes('buffer') ||
-              id.includes('tweetnacl')
-            ) {
-              return 'stellar';
-            }
-            if (
-              id.includes('react') || 
-              id.includes('react-dom') || 
-              id.includes('zustand') ||
-              id.includes('clsx') ||
-              id.includes('tailwind-merge')
-            ) {
-              return 'vendor';
-            }
-          }
-        }
-      }
     }
   },
   server: {
