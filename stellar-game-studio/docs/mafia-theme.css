@@ -32,12 +32,11 @@
    Target: <div id="restaurant-table-bg">
    ============================================================ */
 #restaurant-table-bg {
-    background-color: #f8f8f8;
-    background-image:
-        linear-gradient(45deg, #c1272d 25%, transparent 25%, transparent 75%, #c1272d 75%, #c1272d),
-        linear-gradient(45deg, #c1272d 25%, transparent 25%, transparent 75%, #c1272d 75%, #c1272d);
-    background-size: 60px 60px;
-    background-position: 0 0, 30px 30px;
+    background-color: #1a0a05;
+    background-image: url('game/assets/FONDOJUEGO.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
 }
 
 /* ============================================================
@@ -46,22 +45,32 @@
    UPDATED: 2026-02-18 v2 (Force Refresh)
    ============================================================ */
 #game-device-screen {
-    /* Combined Background: Color + Pepperoni Pattern */
-    background-color: #fff8e1;
-    /* Warmer Cream */
+    /* Base: dark rustic wood */
+    background-color: #2a1a0e;
     background-image:
-        radial-gradient(#ff6b6b 15%, transparent 16%),
-        radial-gradient(#ff6b6b 15%, transparent 16%),
-        radial-gradient(circle, rgba(255, 165, 0, 0.1) 2px, transparent 2.5px);
-    /* Texture */
-    background-size: 60px 60px, 60px 60px, 20px 20px;
-    background-position: 0 0, 30px 30px, 0 0;
+        /* Wood grain vertical lines (overlay on top) */
+        repeating-linear-gradient(178deg,
+            transparent 0px,
+            transparent 8px,
+            rgba(0, 0, 0, 0.06) 8px,
+            rgba(0, 0, 0, 0.06) 9px),
+        /* Red/white checkered tablecloth — solid bold Italian style */
+        conic-gradient(#c1272d 25%, #f5ede0 0 50%, #c1272d 0 75%, #f5ede0 0);
+    background-size: 100% 100%, 44px 44px;
+    background-position: 0 0, center center;
+
+    /* Inner shadow: wood frame around the tablecloth */
+    box-shadow:
+        inset 0 0 40px 20px rgba(30, 12, 4, 0.75),
+        inset 0 0 80px 40px rgba(20, 8, 2, 0.5);
 
     color: var(--ph-dark);
     font-family: var(--font-body);
     position: relative;
     z-index: 1;
 }
+
+
 
 /* Remove pseudo-elements to avoid z-index issues */
 #game-device-screen::before,
@@ -86,13 +95,13 @@
 .main-logo {
     font-family: var(--font-title);
     font-weight: 900;
-    font-size: 3.5rem;
-    /* Reduced from 4rem for better fit */
+    font-size: 3.2rem;
+    /* Increased from 2.3rem for extra premium presence */
     color: var(--ph-white);
     line-height: 0.95;
     text-transform: uppercase;
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.15rem;
 
     /* Neon Glow Effect */
     text-shadow:
@@ -113,7 +122,7 @@
 
     to {
         text-shadow: 0 0 10px rgba(255, 255, 255, 0.6), 0 0 20px var(--ph-gold), 0 0 40px var(--ph-gold), 0 0 80px var(--ph-red), 0 0 120px var(--ph-red);
-        transform: scale(1.05) rotate(-2deg);
+        transform: scale(1.02) rotate(-2deg);
     }
 }
 
@@ -122,56 +131,86 @@
     font-weight: 700;
     color: var(--ph-white);
     background: var(--ph-red);
-    padding: 0.2rem 1rem;
+    padding: 0.15rem 0.8rem;
     letter-spacing: 0.3em;
-    font-size: 1rem;
+    font-size: 0.85rem;
     transform: rotate(2deg);
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
     display: inline-block;
 }
 
-/* ===== 3D BUTTONS (ARCADE STYLE) ===== */
+/* ===== 3D BUTTONS (PREMIUM ARCADE STYLE) ===== */
 button {
     font-family: var(--font-body);
     font-weight: 800;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.1s;
+    transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
     outline: none;
     user-select: none;
+    letter-spacing: 0.05em;
 }
 
 /* Primary Start Button */
 #startBtn {
-    font-size: 1.5rem;
-    padding: 1rem 3rem;
-    background: var(--ph-green);
+    font-size: 1.6rem;
+    padding: 1.2rem 3.5rem;
+    background: linear-gradient(135deg, var(--ph-green) 0%, #166534 100%);
     color: white;
-    border: 4px solid #fff;
+    border: 3px solid rgba(255, 255, 255, 0.4);
     border-radius: 99px;
-    /* Pill shape */
     box-shadow:
-        0px 8px 0px #006400,
-        /* 3D Depth */
-        0px 10px 20px rgba(0, 0, 0, 0.4);
-    /* Drop Shadow */
-    margin-bottom: 1.5rem;
-    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+        0px 8px 0px #064e3b,
+        0px 15px 30px rgba(0, 0, 0, 0.6);
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+#startBtn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent);
+    border-radius: 99px 99px 0 0;
+    pointer-events: none;
+}
+
+#startBtn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    transform: rotate(45deg);
+    transition: 0.5s;
+    pointer-events: none;
+}
+
+#startBtn:hover::after {
+    left: 100%;
 }
 
 #startBtn:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px) scale(1.02);
     box-shadow:
-        0px 10px 0px #006400,
-        0px 15px 25px rgba(0, 0, 0, 0.5);
-    background: #39e639;
+        0px 9px 0px #043427,
+        0 0 50px rgba(39, 174, 96, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    filter: brightness(1.1);
 }
 
 #startBtn:active {
-    transform: translateY(6px);
+    transform: translateY(5px) scale(0.98);
     box-shadow:
-        0px 2px 0px #006400,
-        0px 2px 5px rgba(0, 0, 0, 0.4);
+        0px 1px 0px #043427,
+        0 0 15px rgba(39, 174, 96, 0.3);
 }
 
 /* Lobby Navigation Buttons (The 2x2 Grid) */
@@ -180,46 +219,284 @@ button {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    background: #1a1a1a !important;
-    border: 3px solid #333 !important;
-    border-radius: 12px !important;
-    padding: 0.8rem 0.5rem !important;
-    /* Reduced from 1.2rem */
+    gap: 0.3rem;
+    background: linear-gradient(180deg, #2d2d2d, #141414) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 2px solid rgba(212, 175, 55, 0.45) !important;
+    border-radius: 99px !important; /* Premium Pill shapes! */
+    padding: 0.3rem 0.8rem !important;
     width: 100% !important;
     box-shadow:
         0 4px 0 #000,
-        0 10px 20px rgba(0, 0, 0, 0.4) !important;
+        0 8px 15px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
     transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.lobby-nav-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), transparent);
 }
 
 .lobby-nav-btn .btn-icon {
-    font-size: 1.8rem;
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+    font-size: 1.3rem;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.3));
+    transition: transform 0.2s;
 }
 
 .lobby-nav-btn .btn-text {
-    font-size: 0.7rem;
-    /* Slightly smaller to prevent clipping */
-    letter-spacing: 0.05em;
-    color: #aaa;
-    font-weight: bold;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    color: #FFF8E7;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-shadow: 0 1px 1px #000;
 }
 
 .lobby-nav-btn:hover {
-    background: #222 !important;
-    border-color: var(--ph-gold) !important;
-    transform: translateY(-4px) scale(1.02) !important;
+    background: linear-gradient(180deg, #3a3a3a, #1c1c1c) !important;
+    border-color: rgba(255, 215, 0, 0.9) !important;
+    transform: translateY(-3px) scale(1.04) !important;
+    box-shadow:
+        0 7px 0 #000,
+        0 12px 22px rgba(212, 175, 55, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+}
+
+.lobby-nav-btn:hover .btn-icon {
+    transform: scale(1.2) rotate(-5deg);
 }
 
 .lobby-nav-btn:hover .btn-text {
-    color: var(--ph-gold);
+    color: #FFD700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
 }
 
 .lobby-nav-btn:active {
-    transform: translateY(2px) !important;
-    box-shadow: 0 2px 0 #000 !important;
+    transform: translateY(3px) scale(0.97) !important;
+    box-shadow:
+        0 1px 0 #000,
+        0 2px 5px rgba(0, 0, 0, 0.4),
+        inset 0 1px 2px rgba(0, 0, 0, 0.5) !important;
 }
+
+/* Lobby Clashes Primary Button (PvP / Duels) */
+.lobby-clashes-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: linear-gradient(180deg, #8B0000, #4A0E0E) !important;
+    border: 3px solid #DAA520 !important;
+    border-radius: 20px !important; /* Premium Rounded Card shape! */
+    padding: 0.4rem 0.5rem !important;
+    width: 100% !important;
+    font-size: 0.92rem !important;
+    font-weight: 900 !important;
+    color: #FFF8E7 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    box-shadow:
+        0px 6px 0px #500,
+        0px 12px 25px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.6) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.lobby-clashes-btn:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow:
+        0px 9px 0px #500,
+        0 0 30px rgba(218, 165, 32, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    filter: brightness(1.1) !important;
+}
+
+.lobby-clashes-btn:active {
+    transform: translateY(5px) scale(0.98) !important;
+    box-shadow:
+        0px 1px 0px #500,
+        0 0 10px rgba(218, 165, 32, 0.2) !important;
+}
+
+/* Lobby Oven Primary Button (Staking / Vault) */
+.lobby-oven-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: linear-gradient(180deg, #1b4d3e, #0e2a22) !important;
+    border: 3px solid #27ae60 !important;
+    border-radius: 20px !important; /* Premium Rounded Card shape! */
+    padding: 0.4rem 0.5rem !important;
+    width: 100% !important;
+    font-size: 0.92rem !important;
+    font-weight: 900 !important;
+    color: #FFF8DC !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    box-shadow:
+        0px 6px 0px #091a14,
+        0px 12px 25px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    text-shadow: 0 2px 2px rgba(0,0,0,0.6) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.lobby-oven-btn:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow:
+        0px 9px 0px #091a14,
+        0 0 30px rgba(39, 174, 96, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+    filter: brightness(1.1) !important;
+}
+
+.lobby-oven-btn:active {
+    transform: translateY(5px) scale(0.98) !important;
+    box-shadow:
+        0px 1px 0px #091a14,
+        0 0 10px rgba(39, 174, 96, 0.2) !important;
+}
+
+/* Premium Timed Bake Oven 3D button */
+.lobby-timed-oven-btn {
+    width: 100%;
+    margin-bottom: 0.45rem;
+    background: linear-gradient(180deg, #2D0808, #180303) !important;
+    border: 2px solid var(--ph-gold) !important;
+    border-radius: 8px !important;
+    color: #FFF8DC !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    height: 42px;
+    cursor: pointer;
+    box-shadow:
+        0px 4px 0px #0e0202,
+        0 0 12px rgba(255, 69, 0, 0.4),
+        inset 0 0 8px rgba(255, 69, 0, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    animation: timedOvenPulse 2s infinite;
+}
+
+@keyframes timedOvenPulse {
+    0%, 100% {
+        box-shadow: 0px 4px 0px #0e0202, 0 0 12px rgba(255, 69, 0, 0.4), inset 0 0 8px rgba(255, 69, 0, 0.2);
+    }
+    50% {
+        box-shadow: 0px 4px 0px #0e0202, 0 0 18px rgba(255, 69, 0, 0.7), inset 0 0 12px rgba(255, 69, 0, 0.4);
+    }
+}
+
+.lobby-timed-oven-btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow:
+        0px 6px 0px #0e0202,
+        0 0 20px rgba(255, 69, 0, 0.85),
+        inset 0 0 12px rgba(255, 69, 0, 0.5) !important;
+    filter: brightness(1.1);
+}
+
+.lobby-timed-oven-btn:active {
+    transform: translateY(4px) scale(0.98) !important;
+    box-shadow:
+        0px 0px 0px #0e0202,
+        0 0 10px rgba(255, 69, 0, 0.3) !important;
+}
+
+/* Premium Song Selector 3D button */
+.lobby-song-selector-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    background: linear-gradient(180deg, #8B0000, #4A0E0E) !important;
+    border: 2px solid rgba(218, 165, 32, 0.8) !important;
+    border-radius: 30px !important;
+    padding: 0.4rem 1.2rem 0.4rem 0.4rem !important;
+    cursor: pointer;
+    box-shadow:
+        0px 4px 0px #2A0000,
+        0 0 10px rgba(178, 34, 34, 0.6),
+        inset 0 0 8px rgba(218, 165, 32, 0.3) !important;
+    width: 100% !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+.lobby-song-selector-btn:hover {
+    transform: translateY(-2px) scale(1.02) !important;
+    border-color: #FFD700 !important;
+    box-shadow:
+        0px 6px 0px #2A0000,
+        0 0 20px rgba(218, 165, 32, 0.85),
+        inset 0 0 12px rgba(255, 215, 0, 0.5) !important;
+    background: linear-gradient(180deg, #A52A2A, #5C0000) !important;
+}
+
+.lobby-song-selector-btn:active {
+    transform: translateY(4px) scale(0.98) !important;
+    box-shadow:
+        0px 0px 0px #2A0000,
+        0 0 8px rgba(218, 165, 32, 0.3) !important;
+}
+
+/* Premium Daily Check-in Floating Button */
+.lobby-daily-checkin-btn {
+    position: absolute;
+    right: -6px;
+    top: 140px;
+    z-index: 100;
+    background: linear-gradient(135deg, #FFD700, #DA70D6, #8B0000) !important;
+    border: 1.5px solid var(--ph-gold) !important;
+    border-radius: 8px 0 0 8px !important;
+    padding: 6px 5px 6px 8px !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    box-shadow:
+        -2px 2px 0px #4A0000,
+        0 3px 6px rgba(0,0,0,0.5) !important;
+    transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+}
+
+.lobby-daily-checkin-btn:hover {
+    right: 0px !important;
+    transform: scale(1.05) !important;
+    box-shadow:
+        -3px 3px 0px #4A0000,
+        0 4px 10px rgba(218, 165, 32, 0.6) !important;
+}
+
+.lobby-daily-checkin-btn:active {
+    right: -6px !important;
+    transform: scale(0.95) !important;
+    box-shadow:
+        -1px 1px 0px #4A0000,
+        0 1px 3px rgba(0,0,0,0.3) !important;
+}
+
 
 /* Close / Back Buttons */
 .close-btn,
@@ -278,8 +555,9 @@ button {
 }
 
 .key-box {
-    background: var(--ph-dark);
-    color: white;
+    background: #FFF8E7;
+    /* Cream */
+    color: #8B0000;
     width: 60px;
     height: 60px;
     border-radius: 12px;
@@ -287,9 +565,10 @@ button {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    box-shadow: 0px 4px 0px #000;
+    box-shadow: 0px 4px 0px #5C0000;
     font-size: 1.5rem;
-    border: 2px solid #555;
+    font-weight: bold;
+    border: 2px solid #8B0000;
 }
 
 /* ===== ANIMATIONS & PARTICLES ===== */
@@ -385,6 +664,20 @@ button {
     }
 }
 
+@keyframes donBob {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(-1deg) scale(1);
+        filter: drop-shadow(0 8px 20px rgba(212, 175, 55, 0.5));
+    }
+
+    50% {
+        transform: translateY(-10px) rotate(1deg) scale(1.03);
+        filter: drop-shadow(0 15px 30px rgba(212, 175, 55, 0.8));
+    }
+}
+
 /* ===== PIZZA RAIN (Falling Animation) ===== */
 .pizza-rain {
     position: absolute;
@@ -410,10 +703,8 @@ button {
 .logo-container {
     transform: translateY(0);
     text-align: center;
-    margin-top: 2rem;
-    /* Reduced from 3rem to save space */
-    margin-bottom: 1rem;
-    /* Reduced from 1.5rem */
+    margin-top: 0.3rem;
+    margin-bottom: 0.25rem;
 }
 
 /* Variations - One by One Progressive Fall */
@@ -492,29 +783,33 @@ button {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 3000; /* Must be above status overlay (2000) so modals always render on top */
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 3000;
+    /* Must be above status overlay (2000) so modals always render on top */
     display: flex;
     justify-content: center;
     align-items: flex-end;
     /* Mobile: slide up from bottom */
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(2px);
     animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
-    background: #fff;
+    background: #FFF8E7;
+    /* Cream parchment */
     width: 100%;
     max-width: 500px;
     height: 85%;
-    /* Sheet style */
+    /* Sheet style with rounded top */
     border-radius: 20px 20px 0 0;
-    border: 4px solid var(--ph-dark);
+    border: 6px solid #8B0000;
     border-bottom: none;
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(139, 0, 0, 0.05);
+    /* Inner red shadow */
+    color: #333;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
 }
@@ -524,20 +819,22 @@ button {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    border-bottom: 2px solid #eee;
+    border-bottom: 3px dashed #8B0000;
     padding-bottom: 1rem;
 }
 
 .modal-title {
     font-family: var(--font-title);
     font-size: 1.8rem;
-    color: var(--ph-red);
+    color: #8B0000;
     text-transform: uppercase;
+    text-shadow: none;
+    /* Strip text shadows */
     margin: 0;
 }
 
 .back-btn-circle {
-    background: var(--ph-dark);
+    background: #8B0000;
     color: white;
     width: 40px;
     height: 40px;
@@ -545,7 +842,7 @@ button {
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 2px solid #555;
+    border: 2px solid #5C0000;
     cursor: pointer;
     font-weight: bold;
     font-size: 1.2rem;
@@ -566,6 +863,16 @@ button {
     }
 }
 
+@keyframes slideDown {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(100%);
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -574,6 +881,24 @@ button {
     to {
         opacity: 1;
     }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.modal-backdrop.closing {
+    animation: fadeOut 0.2s ease-in forwards;
+}
+
+.modal-backdrop.closing .modal-content {
+    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Reuse Store Grid styles */
@@ -589,14 +914,22 @@ button {
 @media (min-width: 600px) {
     .modal-backdrop {
         align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        box-sizing: border-box;
     }
 
     .modal-content {
-        height: auto;
-        max-height: 80%;
+        height: 90%;
+        max-height: 90%;
         border-radius: 20px;
         border-bottom: 4px solid var(--ph-dark);
         animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-backdrop.closing .modal-content {
+        animation: fadeOut 0.2s ease-in forwards;
+        /* Desktop just fades instead of sliding down */
     }
 }
 
@@ -610,3 +943,120 @@ button {
         font-size: 1.2rem;
     }
 }
+
+/* ===== NEW GLOBAL PIZZERIA ACTION BUTTON ===== */
+.primary-btn {
+    background: #8B0000;
+    color: white;
+    border: 2px solid #5C0000;
+    border-radius: 8px;
+    font-weight: bold;
+    box-shadow: 0 4px 0 #5C0000;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.primary-btn:active,
+.primary-btn:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 #5C0000;
+}
+
+.primary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 4px 0 #5C0000;
+    /* keep shadow for 3D look */
+}
+
+/* ============================================================
+   SECTION 9: SPRINT 4 ACCENTS & EFFECTS
+   ============================================================ */
+
+/* Fever Mode Screen Border Glow */
+.fever-border-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border: 4px solid #FF4500;
+    border-radius: 20px;
+    z-index: 8;
+    animation: feverPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes feverPulse {
+    0% {
+        box-shadow: 0 0 12px #FF4500, inset 0 0 12px #FF4500;
+        border-color: #FF4500;
+    }
+    50% {
+        box-shadow: 0 0 25px #FFD700, inset 0 0 25px #FFD700;
+        border-color: #FFD700;
+    }
+    100% {
+        box-shadow: 0 0 12px #FF4500, inset 0 0 12px #FF4500;
+        border-color: #FF4500;
+    }
+}
+
+/* Fever Multiplier Badge */
+.fever-multiplier-badge {
+    animation: multiplierBounce 0.45s ease-in-out infinite alternate;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    font-family: 'Bangers', 'Fraunces', serif;
+}
+
+@keyframes multiplierBounce {
+    from {
+        transform: scale(1) rotate(-1deg);
+    }
+    to {
+        transform: scale(1.08) rotate(1deg);
+    }
+}
+
+/* Gold Accents for Lanes */
+.gold-lane-overlay {
+    position: absolute;
+    bottom: 0;
+    width: 25%;
+    height: 70%;
+    background: linear-gradient(to top, rgba(218, 165, 32, 0.25) 0%, rgba(218, 165, 32, 0) 100%);
+    border-left: 1px dashed rgba(218, 165, 32, 0.4);
+    border-right: 1px dashed rgba(218, 165, 32, 0.4);
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Metronome Pendulum Swing container */
+.metronome-area {
+    width: 100%;
+    height: 150px;
+    background: #F9F5EB;
+    border: 2px solid #D0B488;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    margin: 1rem 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+/* Nevera Grid Responsive Utility */
+.nevera-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+}
+
+@media (max-width: 480px) {
+    .nevera-grid,
+    .store-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
