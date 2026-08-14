@@ -3619,53 +3619,29 @@ Ganador: ${payload.winnerAddress}`);
 
     return (
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
-            {/* Header — hidden in embed mode */}
-            {!embed && (
-            <div className="flex items-center justify-between p-4 border-b z-20" style={{ background: "#0a0705", borderColor: "rgba(201,162,39,0.2)" }}>
-                <div className="flex items-center gap-4">
-
-                    {onBack && (
-
-                        <button onClick={onBack} className="settings-btn" title="Exit to Library">
-
-                            <ArrowLeft size={24} />
-
-                        </button>
-
-                    )}
-
-                    <h1 className="text-xl font-bold tracking-wider" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-accent)' }}>
-
-                        RHYTHM SLICE
-
-                    </h1>
-
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="hidden md:flex items-center gap-3">
-                        <span className="rs-network-pill">● TESTNET</span>
-                        <WalletStandalone />
-                    </div>
-                    {/* Fullscreen button — visible en mobile, oculto en desktop */}
+            {/* Game Container */}
+            <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
+                {/* Floating Game Controls (Settings & Fullscreen) */}
+                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 30, display: 'flex', gap: '8px' }}>
                     <button
                         onClick={toggleGameFullscreen}
                         className="settings-btn gp-fs-btn"
                         title={isGameFullscreen ? (language === 'es' ? 'Salir de pantalla completa' : 'Exit fullscreen') : (language === 'es' ? 'Pantalla completa' : 'Fullscreen')}
                         aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                        style={{ fontSize: '1.2rem', lineHeight: 1 }}
+                        style={{ fontSize: '1.2rem', lineHeight: 1, background: 'rgba(10,7,5,0.7)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                     >
                         {isGameFullscreen ? '⊠' : '⛶'}
                     </button>
-                    <button onClick={() => setShowSettings(true)} className="settings-btn" title="Settings">
-                        <Settings size={24} />
+                    <button 
+                        onClick={() => setShowSettings(true)} 
+                        className="settings-btn" 
+                        title="Settings"
+                        style={{ background: 'rgba(10,7,5,0.7)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    >
+                        <Settings size={20} />
                     </button>
                 </div>
 
-            </div>
-            )}
-            {/* Game Container */}
-            <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
                 <div
                     id="game-device-screen"
                     className="game-container game-frame"

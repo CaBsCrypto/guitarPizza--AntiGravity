@@ -269,23 +269,6 @@ export function WalletStandalone() {
             <span className="btn-full-text">🔴 {isConnecting ? 'CONNECTING...' : 'LOGIN WITH PRIVY'}</span>
             <span className="btn-mobile-text">🔴 {isConnecting ? '...' : 'PRIVY'}</span>
           </button>
-
-          {/* Demo Mode Button */}
-          <button
-            className="wallet-standalone-button"
-            style={{
-              background: 'rgba(100, 80, 20, 0.25)',
-              color: 'rgba(245, 220, 100, 0.85)',
-              borderColor: 'rgba(180, 150, 30, 0.5)'
-            }}
-            onClick={() => {
-              useWalletStore.getState().setWallet('0xDEMO_AVALANCHE_USER', 'dev-demo', 'dev');
-            }}
-            title="Play without connecting a real wallet"
-          >
-            🎭 DEMO
-          </button>
-
         </>
       )}
 

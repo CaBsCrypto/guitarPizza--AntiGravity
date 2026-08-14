@@ -11,19 +11,19 @@ interface LayoutProps {
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   return (
     <div className={`rs-shell ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>
-      {currentPage !== 'game' && (
-        <header className="rs-header">
+      <header className="rs-header">
 
-          {/* Brand — left */}
-          <button className="rs-brand" onClick={() => onNavigate('home')} type="button">
-            <span className="rs-brand-title">RHYTHM SLICE</span>
-            <span className="rs-brand-tagline">VERIFICHIAMO. NON FIDIAMO.</span>
-          </button>
+        {/* Brand — left */}
+        <button className="rs-brand" onClick={() => onNavigate('home')} type="button" title="Volver al Inicio">
+          <span className="rs-brand-title">RHYTHM SLICE</span>
+          <span className="rs-brand-tagline">VERIFICHIAMO. NON FIDIAMO.</span>
+        </button>
 
-          {/* Right controls */}
-          <div className="rs-header-right">
-            <span className="rs-network-pill">● AVALANCHE FUJI</span>
-            <WalletStandalone />
+        {/* Right controls */}
+        <div className="rs-header-right">
+          <span className="rs-network-pill">● TESTNET</span>
+          <WalletStandalone />
+          {currentPage !== 'game' && (
             <button
               type="button"
               className="rs-play-btn"
@@ -31,10 +31,10 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
             >
               🔥 PLAY NOW
             </button>
-          </div>
+          )}
+        </div>
 
-        </header>
-      )}
+      </header>
 
       <main className={`rs-main ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>{children}</main>
 

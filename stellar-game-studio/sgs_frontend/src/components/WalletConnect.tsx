@@ -19,27 +19,6 @@ export const WalletConnect: React.FC = () => {
         <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100, display: 'flex', gap: '10px' }}>
             {!isConnected ? (
                 <>
-                    {/* Demo Button */}
-                    <button
-                        onClick={() => useWalletStore.getState().setWallet('G_DEMO_USER', 'dev-demo', 'dev')}
-                        disabled={isConnecting}
-                        style={{
-                            background: '#ccc',
-                            border: '4px solid #000',
-                            boxShadow: '4px 4px 0px #000',
-                            color: '#000',
-                            fontFamily: "'Space Grotesk', sans-serif",
-                            fontWeight: 'bold',
-                            padding: '10px 15px',
-                            fontSize: '0.9rem',
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                        }}
-                        title="Play without connecting a real wallet"
-                    >
-                        🎭 Try Demo
-                    </button>
-
                     {/* Real Wallet Button */}
                     <button
                         onClick={() => connect()}
