@@ -156,6 +156,10 @@ export function MobileController({ roomIdFromUrl }: MobileControllerProps) {
         osc.frequency.setValueAtTime(440, ctx.currentTime);
         osc.start();
         osc.stop(ctx.currentTime + 0.05);
+        
+        setTimeout(() => {
+          if (ctx && ctx.state !== 'closed') ctx.close().catch(e => console.warn(e));
+        }, 500);
       }
     } catch (err) {
       console.warn('[Mobile Controller] Web Audio unlock beep failed:', err);

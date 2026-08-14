@@ -196,38 +196,37 @@ export function useWallet() {
 
   /**
    * Sync Privy authentication state with wallet store
-   * This effect runs when Privy auth state changes
+   * Extract EVM / Avalanche wallet address from Privy
    */
   useEffect(() => {
     const syncPrivyWallet = async () => {
       if (authenticated && privyUser) {
         try {
-          // Find the Stellar wallet from Privy's embedded wallets or linked wallets
-          // Privy primarily supports EVM and Solana; for Stellar we use the deterministic derivation
-          const stellarWallet = wallets.find(w => 
-            w.walletClientType === 'stellar' || 
-            w.address?.startsWith('G')
-          );
+          // Extract EVM embedded or connected wallet address from Privy
+          const evmWallet = wallets.find(w => 
+            w.walletClientType === 'privy' || 
+            w.chainType === 'ethereum' ||
+            w.address?.startsWith('0x')
+          ) || wallets[0];
           
-          let address: string;
-          if (stellarWallet?.address) {
-            // Use the actual Stellar wallet address from Privy
-            address = stellarWallet.address;
-          } else {
-            // Fallback: derive deterministic address from Privy user ID
-            address = await deriveStellarAddressFromPrivyId(privyUser.id);
+          let address: string | undefined = evmWallet?.address || privyUser.wallet?.address;
+
+          if (!address && privyUser.id) {
+            // Fallback EVM format mock address if wallet creation is pending
+            address = `0x${privyUser.id.replace(/[^a-fA-F0-9]/g, '').padEnd(40, '0').slice(0, 40)}`;
           }
 
-          // Set wallet in store
-          setWallet(address, 'privy', 'wallet');
-          setNetwork(NETWORK, NETWORK_PASSPHRASE);
+          if (address) {
+            setWallet(address, 'privy', 'wallet');
+            setNetwork('avalanche-fuji', '');
 
-          // Set shared cookie for cross-domain compatibility
-          const isProd = window.location.hostname.endsWith('spicycrust.com');
-          const domain = isProd ? '; domain=.spicycrust.com' : '';
-          document.cookie = `stellar_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
+            // Set shared cookie for cross-domain compatibility
+            const isProd = window.location.hostname.endsWith('spicycrust.com');
+            const domain = isProd ? '; domain=.spicycrust.com' : '';
+            document.cookie = `avalanche_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
 
-          console.log('Privy wallet connected:', address);
+            console.log('Privy Avalanche wallet connected:', address);
+          }
         } catch (err) {
           console.error('Error syncing Privy wallet:', err);
           setError('Failed to sync Privy wallet');

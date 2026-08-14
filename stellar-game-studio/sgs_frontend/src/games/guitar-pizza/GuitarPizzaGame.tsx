@@ -21,6 +21,7 @@ import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 import { CollectionTab } from '../../components/CollectionTab';
 import { WalletStandalone } from '../../components/WalletStandalone';
 import { SpicyCrustService } from '../../services/SpicyCrustService';
+import { HubBridgeService } from '../../services/HubBridgeService';
 
 
 
@@ -1943,6 +1944,9 @@ Ganador: ${payload.winnerAddress}`);
             
             osc.start(ctx.currentTime);
             osc.stop(ctx.currentTime + 0.35);
+            setTimeout(() => {
+                if (ctx && ctx.state !== 'closed') ctx.close().catch(e => console.warn(e));
+            }, 1000);
         } catch (e) {
             console.warn('Failed to play synthetic ding:', e);
         }
@@ -2270,6 +2274,10 @@ Ganador: ${payload.winnerAddress}`);
 
             osc2.start(now);
             osc2.stop(now + 0.8);
+
+            setTimeout(() => {
+                if (ctx && ctx.state !== 'closed') ctx.close().catch(e => console.warn(e));
+            }, 1500);
         } catch (e) {
             console.error("Failed to play synthesis chime:", e);
         }
@@ -2340,6 +2348,61 @@ Ganador: ${payload.winnerAddress}`);
     const selectedSongRef = useRef(selectedSong);
 
     useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
+
+    // ── Audio Preview for Song Picker ──────────────────────────────────────────
+    const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+    const stopPreviewAudio = useCallback(() => {
+        if (previewAudioRef.current) {
+            try {
+                previewAudioRef.current.pause();
+                previewAudioRef.current.currentTime = 0;
+                previewAudioRef.current.src = '';
+            } catch (e) {}
+            previewAudioRef.current = null;
+        }
+    }, []);
+
+    const playSongPreview = useCallback((song: Song) => {
+        stopPreviewAudio();
+        if (isMutedRef.current || !song.available) return;
+
+        try {
+            const basePath = window.GP_BASE_PATH || '';
+            const audioSrc = basePath + songPath(song);
+            const audio = new Audio(audioSrc);
+            audio.volume = 0.45;
+            audio.currentTime = song.start || 0;
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((err) => {
+                    console.warn('[SongPicker] Audio preview autoplay prevented/failed:', err);
+                });
+            }
+            previewAudioRef.current = audio;
+        } catch (e) {
+            console.warn('[SongPicker] Failed to play preview audio:', e);
+        }
+    }, [stopPreviewAudio]);
+
+    // Play preview when opening songpicker or stop when leaving
+    useEffect(() => {
+        if (view === 'songpicker') {
+            playSongPreview(selectedSong);
+        } else {
+            stopPreviewAudio();
+        }
+        return () => {
+            stopPreviewAudio();
+        };
+    }, [view, playSongPreview, stopPreviewAudio]);
+
+    // Keep preview audio in sync with mute state
+    useEffect(() => {
+        if (previewAudioRef.current) {
+            previewAudioRef.current.muted = isMuted;
+        }
+    }, [isMuted]);
 
 
 
@@ -2454,7 +2517,7 @@ Ganador: ${payload.winnerAddress}`);
 
     // ── TX popup helpers ──────────────────────────────────────────────────────
 
-    const closeTxPopup = useCallback(() => {
+    const closeTxPopup = useCallback(async () => {
 
         if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
 
@@ -2462,17 +2525,39 @@ Ganador: ${payload.winnerAddress}`);
 
         setShowTxPopup(false);
 
-        // Registrar score automáticamente en la API central de SpicyCrust (PHP API)
-        SpicyCrustService.submitScore({
-            playerExternalId: userAddress || 'guest_player',
-            nickname: chefName || 'Chef Don',
-            score: pendingFinalScoreRef.current,
-            metadata: {
-                timestamp: Date.now()
-            }
-        });
+        const currentScore = pendingFinalScoreRef.current;
+        const activeWallet = HubBridgeService.getPlayerWallet() || userAddress || 'guest_player';
 
-        onGameComplete(pendingFinalScoreRef.current);
+        try {
+            // Intentar solicitar la firma off-chain ($0 Gas) al Hub si estamos en Iframe
+            const signedData = await HubBridgeService.requestScoreSignature(currentScore, 'rhythm-slice');
+            
+            // Enviar score verificado a SpicyCrust API
+            await SpicyCrustService.submitScore({
+                playerExternalId: activeWallet,
+                nickname: chefName || 'Chef Don',
+                score: currentScore,
+                payload: signedData.payload,
+                signature: signedData.signature,
+                metadata: {
+                    timestamp: Date.now()
+                }
+            });
+        } catch (err) {
+            console.warn('⚠️ No se obtuvo firma del Hub, enviando submit tradicional:', err);
+            
+            // Fallback a registro de score normal
+            SpicyCrustService.submitScore({
+                playerExternalId: activeWallet,
+                nickname: chefName || 'Chef Don',
+                score: currentScore,
+                metadata: {
+                    timestamp: Date.now()
+                }
+            });
+        }
+
+        onGameComplete(currentScore);
 
     }, [onGameComplete, userAddress, chefName]);
 
@@ -3586,10 +3671,8 @@ Ganador: ${payload.winnerAddress}`);
                     className="game-container game-frame"
                     ref={containerRef}
                     style={{
-                        width: '100%',
-                        height: '100%',
-                        maxWidth: isGameFullscreen ? '100vw' : 'calc((100vh - 2rem) * 9 / 16)',
-                        maxHeight: isGameFullscreen ? '100vh' : 'calc((100vw - 2rem) * 16 / 9)',
+                        width: isGameFullscreen ? '100vw' : 'min(100%, calc((100vh - 2rem) * 9 / 16))',
+                        height: isGameFullscreen ? '100vh' : 'auto',
                         aspectRatio: '9/16',
                         position: 'relative',
                         overflow: 'hidden',
@@ -4645,21 +4728,20 @@ Ganador: ${payload.winnerAddress}`);
                             <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
 
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
-
                                     background: '#FFF8E7',
-
                                     border: '6px solid #8B0000',
-
                                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
-
                                     color: '#333',
-
                                     borderRadius: '16px',
-
-                                    paddingTop: '1.5rem',
-
-                                    paddingBottom: '2rem'
-
+                                    paddingTop: '1.2rem',
+                                    paddingBottom: '1.2rem',
+                                    paddingLeft: '1.2rem',
+                                    paddingRight: '1.2rem',
+                                    height: '92%',
+                                    maxHeight: '92%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    boxSizing: 'border-box'
                                 }}>
 
                                     <div className="modal-header" style={{
@@ -4702,7 +4784,7 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', paddingRight: '0.5rem', marginTop: '1rem' }}>
+                                    <div style={{ flex: '1 1 auto', minHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem', marginTop: '0.6rem' }}>
 
                                         {SONGS.map((song) => {
 
@@ -4715,12 +4797,12 @@ Ganador: ${payload.winnerAddress}`);
                                             return (
 
                                                 <button
-
                                                     key={song.id}
-
                                                     disabled={!song.available}
-
-                                                    onClick={() => setSelectedSong(song)}
+                                                    onClick={() => {
+                                                        setSelectedSong(song);
+                                                        playSongPreview(song);
+                                                    }}
 
                                                     style={{
 
@@ -4728,11 +4810,9 @@ Ganador: ${payload.winnerAddress}`);
 
                                                         alignItems: 'flex-start',
 
-                                                        gap: '0.5rem', // reduced gap to give text more space
-
-                                                        padding: '0.7rem 0.8rem', // reduced padding from 1rem
-
-                                                        borderRadius: '10px',
+                                                        gap: '0.5rem',
+                                                        padding: '0.5rem 0.7rem',
+                                                        borderRadius: '8px',
 
                                                         border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
 
@@ -4987,11 +5067,11 @@ Ganador: ${payload.winnerAddress}`);
                                             background: '#F9F5EB',
                                             border: '1px dashed #D0B488',
                                             borderRadius: '8px',
-                                            padding: '0.8rem',
-                                            marginTop: '1rem',
+                                            padding: '0.5rem',
+                                            marginTop: '0.5rem',
                                             display: 'flex',
                                             flexDirection: 'column',
-                                            gap: '8px',
+                                            gap: '6px',
                                             width: '100%',
                                         }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -5093,11 +5173,12 @@ Ganador: ${payload.winnerAddress}`);
                                     )}
 
                                     {/* Action Buttons */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', marginTop: '1.2rem', width: '100%' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem', width: '100%' }}>
                                         <button
                                             disabled={!engineRef.current}
                                             onClick={() => {
                                                 if (engineRef.current) {
+                                                    stopPreviewAudio();
                                                     setIsPracticeMode(true);
                                                     setTimeout(() => {
                                                         closeModalWithAnimation('lobby');
@@ -5107,8 +5188,8 @@ Ganador: ${payload.winnerAddress}`);
                                             }}
                                             style={{
                                                 width: '100%',
-                                                padding: '0.9rem',
-                                                fontSize: '1rem',
+                                                padding: '0.7rem',
+                                                fontSize: '0.9rem',
                                                 background: 'linear-gradient(135deg, #2D3748, #4A5568)',
                                                 color: 'white',
                                                 border: '2px solid #1A202C',
@@ -5130,6 +5211,7 @@ Ganador: ${payload.winnerAddress}`);
                                                         alert(language === 'es' ? '⚠️ Necesitas al menos 1 Ticket para jugar en modo competitivo.' : '⚠️ You need at least 1 Ticket to play competitively.');
                                                         return;
                                                     }
+                                                    stopPreviewAudio();
                                                     setIsPracticeMode(false);
                                                     setTimeout(() => {
                                                         closeModalWithAnimation('lobby');
@@ -8658,230 +8740,123 @@ Ganador: ${payload.winnerAddress}`);
                             </div>
                         )}
 
-
-
-                        
-
-
-
                     </div>
 
-
-
                     <div id="results" style={{
-
                         display: 'none',
-
                         position: 'absolute',
-
                         top: 0,
-
                         left: 0,
-
                         width: '100%',
-
                         height: '100%',
-
+                        maxHeight: '100%',
                         zIndex: 20,
-
                         // Elegant Glassmorphism: allows the game background to be seen blurred
-
                         background: 'rgba(20, 5, 5, 0.4)',
-
                         backdropFilter: 'blur(12px)',
-
                         flexDirection: 'column',
-
                         alignItems: 'center',
-
-                        justifyContent: 'center',
-
+                        justifyContent: 'flex-start',
+                        overflowY: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        padding: '1rem 0.5rem',
+                        boxSizing: 'border-box'
                     }}>
 
                         {/* Popup Card (Receipt Theme V3) */}
-
                         <div style={{
-
-                            width: '88%',
-
+                            width: '90%',
                             maxWidth: '340px',
-
-                            minHeight: '480px',
-
+                            minHeight: 'fit-content',
+                            margin: '2rem 0',
                             background: 'transparent',
-
                             /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
-
                             backgroundImage: `
-
                                 radial-gradient(circle at 10px 0, transparent 9px, #FDFDFD 10px),
-
                                 linear-gradient(#FDFDFD, #FDFDFD),
-
                                 radial-gradient(circle at 10px 100%, transparent 9px, #FDFDFD 10px)
-
                             `,
-
                             backgroundSize: '20px 20px, 100% calc(100% - 38px), 20px 20px',
-
                             backgroundPosition: 'top left, center, bottom left',
-
                             backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
-
                             display: 'flex',
-
                             flexDirection: 'column',
-
                             alignItems: 'center',
-
                             justifyContent: 'flex-start',
-
-                            padding: '1.5rem 1.5rem',
-
+                            padding: '1rem 1.25rem',
                             color: '#111',
-
                             position: 'relative',
-
                             /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
-
                             filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.5))'
-
                         }}>
 
                             {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
-
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '15px 0', flex: 1 }}>
-
-
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '10px 0', flex: 1 }}>
 
                                 {/* Header Section */}
-
-                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '1.2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-
-                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '2rem', color: '#8B0000', margin: '0 0 0.5rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '1.6rem', color: '#8B0000', margin: '0 0 0.25rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                         LA FAMIGLIA
-
                                     </h2>
-
-                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.95rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
-
+                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.85rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                         {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
-
                                     </div>
-
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '1rem' }}></div>
-
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '0.6rem' }}></div>
                                 </div>
-
-
 
                                 {/* Score Content */}
-
                                 <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
 
-
-
-                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.25rem', marginBottom: '0.8rem', color: '#111' }}>
-
+                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.5rem', color: '#111' }}>
                                         <span>{t.score.toUpperCase()}</span>
-
-                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>0</span>
-
+                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.35rem' }}>0</span>
                                     </div>
 
-
-
-                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.8rem', color: '#444' }}>
-
+                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1rem', marginBottom: '0.5rem', color: '#444' }}>
                                         <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
-
-                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>0</span>
-
+                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.15rem' }}>0</span>
                                     </div>
 
-
-
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '1rem 0' }}></div>
-
-
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '0.6rem 0' }}></div>
 
                                     {/* Huge Grade Stamp */}
-
-                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '1rem 0 1rem 0' }}>
-
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.5rem 0' }}>
                                         <div className="grade" id="resGrade" style={{
-
-                                            fontSize: '5rem',
-
+                                            fontSize: 'clamp(3rem, 7vh, 4.2rem)',
                                             fontFamily: "'Bangers', cursive",
-
                                             fontWeight: 'bold',
-
                                             color: '#cc0000',
-
                                             opacity: 0.85,
-
                                             transform: 'rotate(-5deg)',
-
-                                            border: '5px solid #cc0000',
-
-                                            borderRadius: '12px',
-
-                                            padding: '0 1.5rem',
-
+                                            border: '4px solid #cc0000',
+                                            borderRadius: '10px',
+                                            padding: '0 1.2rem',
                                             lineHeight: 1.1,
-
-                                            boxShadow: 'inset 0 0 0 3px #FDFDFD, inset 0 0 0 5px #cc0000', // Double border effect
-
+                                            boxShadow: 'inset 0 0 0 2px #FDFDFD, inset 0 0 0 4px #cc0000', // Double border effect
                                         }}>S</div>
-
                                     </div>
 
-
-
                                     {/* On-chain verified score */}
-
                                     {onChainScore !== null && (
-
-                                        <div style={{ width: '100%', marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
-
-                                            <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '4px 0', width: '100%', letterSpacing: '1px' }}>
-
+                                        <div style={{ width: '100%', marginTop: '0.6rem', textAlign: 'center', fontSize: '0.85rem', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                            <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '3px 0', width: '100%', letterSpacing: '1px' }}>
                                                 *** {language === 'es' ? 'COPIA VERIFICADA' : 'VERIFIED COPY'} ***
-
                                             </div>
-
                                             <div>
-
                                                 {t.scoreVerified.toUpperCase()}: <strong>{onChainScore.toLocaleString()} PTS</strong>
-
                                             </div>
-
                                         </div>
-
                                     )}
-
                                 </div>
 
-
-
                                 {/* Verification Status or Actions */}
-
                                 {isVerifying ? (
-
                                     <div style={{
-
                                         width: '100%',
-
-                                        marginTop: '2rem',
-
+                                        marginTop: '1rem',
                                         textAlign: 'center',
-
                                         fontFamily: "'Special Elite', monospace"
-
                                     }}>
-
                                         {proofStatus === 'generating' ? (
                                             <div style={{
                                                 textAlign: 'left',
@@ -8889,7 +8864,7 @@ Ganador: ${payload.winnerAddress}`);
                                                 border: '1px solid #D2C2B2',
                                                 borderRadius: '6px',
                                                 padding: '0.8rem',
-                                                marginTop: '0.8rem',
+                                                marginTop: '0.5rem',
                                                 boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)',
                                                 fontFamily: "'Special Elite', monospace",
                                                 fontSize: '0.75rem',
@@ -8948,7 +8923,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                 ) : (
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginTop: 'auto' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%', marginTop: '0.8rem' }}>
 
                                         <button
 
@@ -8958,7 +8933,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                             onClick={handleCookAgain}
 
-                                            style={{ width: '100%', padding: '1.2rem', fontSize: '1.2rem', boxShadow: 'none' }}
+                                            style={{ width: '100%', padding: '0.85rem 1rem', fontSize: '1.1rem', boxShadow: 'none' }}
 
                                         >
 
@@ -8982,9 +8957,9 @@ Ganador: ${payload.winnerAddress}`);
 
                                                     width: '100%',
 
-                                                    padding: '1.2rem',
+                                                    padding: '0.85rem 1rem',
 
-                                                    fontSize: '1.2rem',
+                                                    fontSize: '1.1rem',
 
                                                     background: '#E67E22',
 
@@ -9008,7 +8983,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                                 id="nextLevelBtn"
 
-                                                style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
+                                                style={{ width: '100%', padding: '0.8rem 1rem', fontSize: '0.95rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
 
                                                 disabled
 
@@ -9034,9 +9009,9 @@ Ganador: ${payload.winnerAddress}`);
 
                                                 width: '100%',
 
-                                                padding: '1rem',
+                                                padding: '0.75rem 1rem',
 
-                                                fontSize: '1.1rem',
+                                                fontSize: '1rem',
 
                                                 fontFamily: "'Special Elite', monospace",
 

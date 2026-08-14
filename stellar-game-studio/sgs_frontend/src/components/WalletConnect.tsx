@@ -2,6 +2,8 @@ import React from 'react';
 import { useWalletStandalone } from '../hooks/useWalletStandalone';
 import { useWalletStore } from '../store/walletSlice';
 
+import { formatAddress } from '../utils/addressUtils';
+
 export const WalletConnect: React.FC = () => {
     const {
         publicKey,
@@ -11,9 +13,7 @@ export const WalletConnect: React.FC = () => {
         disconnect
     } = useWalletStandalone();
 
-    const shortAddress = publicKey
-        ? `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`
-        : '';
+    const shortAddress = formatAddress(publicKey, 6, 4);
 
     return (
         <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100, display: 'flex', gap: '10px' }}>

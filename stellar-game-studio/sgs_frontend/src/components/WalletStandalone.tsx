@@ -4,6 +4,7 @@ import { useWallet } from '../hooks/useWallet';
 import { useSliceBalance } from '../hooks/useSliceBalance';
 import { passkeyService, type PasskeyAccount } from '../services/PasskeyService';
 import { useWalletStore } from '../store/walletSlice';
+import { formatAddress } from '../utils/addressUtils';
 import './WalletStandalone.css';
 
 export function WalletStandalone() {
@@ -51,7 +52,7 @@ export function WalletStandalone() {
   }, [refreshBalance]);
 
   const address = typeof publicKey === 'string' ? publicKey : '';
-  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
+  const shortAddress = formatAddress(address, 6, 4);
 
   const handleOpenPasskey = () => {
     setPasskeyError(null);

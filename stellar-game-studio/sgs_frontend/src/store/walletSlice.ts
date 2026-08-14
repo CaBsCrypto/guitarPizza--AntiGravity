@@ -3,8 +3,8 @@ import { NETWORK, NETWORK_PASSPHRASE } from '../utils/constants';
 
 function getWalletCookie(): string | null {
   if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(new RegExp('(^| )stellar_wallet=([^;]+)'));
-  return match ? match[2] : null;
+  const match = document.cookie.match(new RegExp('(^| )(avalanche_wallet|evm_wallet|stellar_wallet)=([^;]+)'));
+  return match ? match[3] : null;
 }
 
 export interface WalletState {
@@ -41,8 +41,8 @@ const initialState = {
   walletType: activeAddress ? 'wallet' : (null as 'dev' | 'wallet' | 'passkey' | null),
   isConnected: !!activeAddress,
   isConnecting: false,
-  network: activeAddress ? NETWORK : null,
-  networkPassphrase: activeAddress ? NETWORK_PASSPHRASE : null,
+  network: activeAddress ? 'avalanche-fuji' : null,
+  networkPassphrase: null,
   error: null,
 };
 

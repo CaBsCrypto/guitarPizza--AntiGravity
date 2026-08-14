@@ -10,6 +10,8 @@ export interface SubmitScoreParams {
   playerExternalId: string;
   nickname: string;
   score: number;
+  payload?: string;
+  signature?: string;
   metadata?: {
     combo?: number;
     accuracy?: number;
@@ -34,8 +36,11 @@ export class SpicyCrustService {
         body: JSON.stringify({
           game_slug: 'rhythm-slice',
           player_external_id: params.playerExternalId,
+          playerAddress: params.playerExternalId,
           nickname: params.nickname || 'Anónimo',
           score: Math.floor(params.score),
+          payload: params.payload,
+          signature: params.signature,
           metadata: params.metadata || {}
         })
       });

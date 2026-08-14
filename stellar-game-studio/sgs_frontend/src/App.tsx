@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from './components/Layout';
 import { GuitarPizzaGame } from './games/guitar-pizza/GuitarPizzaGame';
 import { HomePage } from './pages/HomePage';
 import { MobileController } from './components/MobileController';
 import { useWallet } from './hooks/useWallet';
+import { HubBridgeService } from './services/HubBridgeService';
 import type { Page } from './types/navigation';
 
 const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1';
@@ -11,6 +12,10 @@ const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1'
 function App() {
   const [page, setPage] = useState<Page>(isEmbed ? 'game' : 'home');
   const { publicKey } = useWallet(); // HMR reload trigger
+
+  useEffect(() => {
+    HubBridgeService.initHubListener();
+  }, []);
 
   const navigate = (next: Page) => setPage(next);
 
