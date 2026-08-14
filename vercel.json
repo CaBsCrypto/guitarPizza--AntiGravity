@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd stellar-game-studio && npm install --legacy-peer-deps && cd sgs_frontend && npm install && npm run build",
+  "buildCommand": "cd stellar-game-studio/sgs_frontend && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "stellar-game-studio/sgs_frontend/dist",
   "framework": null,
   "headers": [
