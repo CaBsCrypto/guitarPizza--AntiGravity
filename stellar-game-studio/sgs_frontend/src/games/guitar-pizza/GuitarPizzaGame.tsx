@@ -8849,201 +8849,67 @@ Ganador: ${payload.winnerAddress}`);
                                     )}
                                 </div>
 
-                                {/* Verification Status or Actions */}
-                                {isVerifying ? (
-                                    <div style={{
-                                        width: '100%',
-                                        marginTop: '1rem',
-                                        textAlign: 'center',
-                                        fontFamily: "'Special Elite', monospace"
-                                    }}>
-                                        {proofStatus === 'generating' ? (
-                                            <div style={{
-                                                textAlign: 'left',
-                                                background: '#FAF6EE',
-                                                border: '1px solid #D2C2B2',
-                                                borderRadius: '6px',
-                                                padding: '0.8rem',
-                                                marginTop: '0.5rem',
-                                                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)',
-                                                fontFamily: "'Special Elite', monospace",
-                                                fontSize: '0.75rem',
-                                                lineHeight: '1.6',
-                                                color: '#333'
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem', color: '#8B0000', fontWeight: 'bold' }}>
-                                                    <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#d35400', animation: 'pulse 1s infinite' }}></span>
-                                                    <span>{language === 'es' ? 'VERIFICACIÓN DE SEGURIDAD ZK' : 'ZK SECURITY VERIFICATION'}</span>
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                    <div>
-                                                        {zkStep >= 0 ? (
-                                                            zkStep > 0 ? '✔️ 1. GENERATE WITNESS (Noir)' : '⏳ 1. GENERATING WITNESS (Noir)...'
-                                                        ) : ''}
-                                                    </div>
-                                                    <div>
-                                                        {zkStep >= 1 ? (
-                                                            zkStep > 1 ? '✔️ 2. COMPILE CONSTRAINTS' : '⏳ 2. COMPILING CONSTRAINTS...'
-                                                        ) : ''}
-                                                    </div>
-                                                    <div>
-                                                        {zkStep >= 2 ? (
-                                                            zkStep > 2 ? '✔️ 3. GENERATE SNARK PROOF' : '⏳ 3. GENERATING SNARK PROOF...'
-                                                        ) : ''}
-                                                    </div>
-                                                    <div>
-                                                        {zkStep >= 3 ? (
-                                                            '⏳ 4. SUBMITTING TO STELLAR TESTNET...'
-                                                        ) : ''}
-                                                    </div>
-                                                </div>
-                                                <div style={{ marginTop: '0.8rem', fontSize: '0.7rem', color: '#666', borderTop: '1px dotted #ccc', paddingTop: '6px', textAlign: 'center' }}>
-                                                     {t.securing}
-                                                </div>
-                                            </div>
-                                        ) : proofStatus === 'success' ? (
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%', marginTop: '0.8rem' }}>
+                                    <button
+                                        id="restartBtn"
+                                        className="primary-btn"
+                                        onClick={handleCookAgain}
+                                        style={{ width: '100%', padding: '0.85rem 1rem', fontSize: '1.1rem', boxShadow: 'none' }}
+                                    >
+                                        🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
+                                    </button>
 
-                                            <div style={{ color: '#111', fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '1px', borderTop: '2px dotted #111', borderBottom: '2px dotted #111', padding: '10px 0' }}>
-
-                                                {language === 'es' ? 'TRANSACCIÓN APROBADA' : 'TX APPROVED'}
-
-                                            </div>
-
-                                        ) : (
-
-                                            <div style={{ color: '#cc0000', fontWeight: 'bold', borderTop: '2px dashed #cc0000', borderBottom: '2px dashed #cc0000', padding: '10px 0' }}>
-
-                                                {language === 'es' ? 'PAGO RECHAZADO' : 'PAYMENT DECLINED'}
-
-                                            </div>
-
-                                        )}
-
-                                    </div>
-
-                                ) : (
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%', marginTop: '0.8rem' }}>
-
+                                    {onChainScore !== null && onChainScore >= 4000 ? (
                                         <button
-
-                                            id="restartBtn"
-
+                                            id="nextLevelBtn"
                                             className="primary-btn"
-
-                                            onClick={handleCookAgain}
-
-                                            style={{ width: '100%', padding: '0.85rem 1rem', fontSize: '1.1rem', boxShadow: 'none' }}
-
-                                        >
-
-                                            🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
-
-                                        </button>
-
-
-
-                                        {onChainScore !== null && onChainScore >= 4000 ? (
-
-                                            <button
-
-                                                id="nextLevelBtn"
-
-                                                className="primary-btn"
-
-                                                onClick={handleNextLevel}
-
-                                                style={{
-
-                                                    width: '100%',
-
-                                                    padding: '0.85rem 1rem',
-
-                                                    fontSize: '1.1rem',
-
-                                                    background: '#E67E22',
-
-                                                    borderColor: '#D35400',
-
-                                                    boxShadow: 'none',
-
-                                                    textTransform: 'uppercase'
-
-                                                }}
-
-                                            >
-
-                                                🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
-
-                                            </button>
-
-                                        ) : (
-
-                                            <button
-
-                                                id="nextLevelBtn"
-
-                                                style={{ width: '100%', padding: '0.8rem 1rem', fontSize: '0.95rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
-
-                                                disabled
-
-                                                title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
-
-                                            >
-
-                                                🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
-
-                                            </button>
-
-                                        )}
-
-
-
-                                        <button
-
-                                            id="backToLobbyBtn"
-
-                                            onClick={handleBackToLobby}
-
+                                            onClick={handleNextLevel}
                                             style={{
-
                                                 width: '100%',
-
-                                                padding: '0.75rem 1rem',
-
-                                                fontSize: '1rem',
-
-                                                fontFamily: "'Special Elite', monospace",
-
-                                                background: 'transparent',
-
-                                                border: '2px dashed #8B0000',
-
-                                                borderRadius: '12px',
-
-                                                color: '#8B0000',
-
-                                                fontWeight: 'bold',
-
-                                                cursor: 'pointer',
-
-                                                transition: 'all 0.2s ease'
-
+                                                padding: '0.85rem 1rem',
+                                                fontSize: '1.1rem',
+                                                background: '#E67E22',
+                                                borderColor: '#D35400',
+                                                boxShadow: 'none',
+                                                textTransform: 'uppercase'
                                             }}
-
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
-
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-
                                         >
-
-                                            {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
-
+                                            🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
                                         </button>
+                                    ) : (
+                                        <button
+                                            id="nextLevelBtn"
+                                            style={{ width: '100%', padding: '0.8rem 1rem', fontSize: '0.95rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
+                                            disabled
+                                            title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
+                                        >
+                                            🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
+                                        </button>
+                                    )}
 
-                                    </div>
-
-                                )}
+                                    <button
+                                        id="backToLobbyBtn"
+                                        onClick={handleBackToLobby}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 1rem',
+                                            fontSize: '1rem',
+                                            fontFamily: "'Special Elite', monospace",
+                                            background: 'transparent',
+                                            border: '2px dashed #8B0000',
+                                            borderRadius: '12px',
+                                            color: '#8B0000',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
+                                    </button>
+                                </div>
 
                             </div>
 
