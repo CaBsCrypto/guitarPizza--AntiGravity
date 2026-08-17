@@ -16,6 +16,7 @@
     "@noir-lang/backend_barretenberg": "^0.36.0",
     "@noir-lang/noir_js": "^1.0.0-beta.19",
     "@noir-lang/noir_wasm": "^1.0.0-beta.19",
+    "@privy-io/react-auth": "^3.37.1",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^14.4.2",
     "buffer": "^6.0.3",
@@ -27,6 +28,7 @@
     "react-dom": "^19.2.1",
     "sac-sdk": "^0.4.2",
     "tailwind-merge": "^3.4.0",
+    "viem": "^2.55.15",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
