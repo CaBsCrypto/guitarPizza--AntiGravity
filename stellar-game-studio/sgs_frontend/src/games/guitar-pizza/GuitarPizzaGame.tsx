@@ -3502,55 +3502,6 @@ Ganador: ${payload.winnerAddress}`);
                                 >
                                     🍕 {language === 'es' ? 'ENTRAR A LA COCINA' : 'ENTER KITCHEN'} 🍕
                                 </button>
-                                {/* Wallet Status / New Player Hint */}
-                                {userAddress ? (
-                                    <div style={{
-                                        background: 'rgba(39,174,96,0.12)',
-                                        border: '1px solid rgba(39,174,96,0.35)',
-                                        borderRadius: '10px',
-                                        padding: '0.45rem 0.85rem',
-                                        fontSize: '0.65rem',
-                                        fontFamily: 'monospace',
-                                        color: '#27ae60',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        maxWidth: '240px',
-                                    }}>
-                                        <span style={{ fontSize: '0.9rem' }}>✅</span>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', letterSpacing: '0.04em' }}>
-                                                {language === 'es' ? 'WALLET CONECTADA' : 'WALLET CONNECTED'}
-                                            </div>
-                                            <div style={{ color: '#88cc88', opacity: 0.8 }}>
-                                                {userAddress.slice(0, 6)}…{userAddress.slice(-4)}
-                                            </div>
-                                        </div>
-                                        {checkInStreak > 0 && (
-                                            <div style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#d4af37', fontSize: '0.75rem' }}>
-                                                🔥 {checkInStreak}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        background: 'rgba(212,175,55,0.1)',
-                                        border: '1px dashed rgba(212,175,55,0.5)',
-                                        borderRadius: '10px',
-                                        padding: '0.45rem 0.85rem',
-                                        fontSize: '0.65rem',
-                                        fontFamily: 'monospace',
-                                        color: '#d4af37',
-                                        maxWidth: '240px',
-                                        textAlign: 'center',
-                                        lineHeight: '1.4',
-                                    }}>
-                                        🔑 {language === 'es'
-                                            ? 'Conecta una wallet Stellar para ganar $SLICE y NFTs on-chain'
-                                            : 'Connect a Stellar wallet to earn $SLICE & on-chain NFTs'}
-                                    </div>
-                                )}
-
                                 {/* Feature Icons Row */}
                                 <div style={{
                                     display: 'flex',

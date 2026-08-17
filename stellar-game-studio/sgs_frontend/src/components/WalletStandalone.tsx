@@ -122,160 +122,164 @@ export function WalletStandalone() {
 
 
 
+  const SHOW_CRYPTO_HEADER = false;
+
   return (
     <div className="wallet-standalone">
-      {isConnected ? (
-        <div className="wallet-standalone-connected">
-          {balance !== null && (
-            <div className="slice-balance-chip">
-              🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
-            </div>
-          )}
-          <button 
-            className={`wallet-standalone-button mint-vinyl-button ${minting ? 'minting' : ''}`}
-            onClick={async () => {
-              if (minting) return;
-              setMinting(true);
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 12000);
-              try {
-                const res = await fetch('/api/drop-oven', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ playerAddress: publicKey, isDevMint: true }),
-                  signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                const responseText = await res.text();
-                let data: any = {};
+      {SHOW_CRYPTO_HEADER && (
+        isConnected ? (
+          <div className="wallet-standalone-connected">
+            {balance !== null && (
+              <div className="slice-balance-chip">
+                🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
+              </div>
+            )}
+            <button 
+              className={`wallet-standalone-button mint-vinyl-button ${minting ? 'minting' : ''}`}
+              onClick={async () => {
+                if (minting) return;
+                setMinting(true);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
                 try {
-                  data = JSON.parse(responseText);
-                } catch (e) {}
+                  const res = await fetch('/api/drop-oven', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerAddress: publicKey, isDevMint: true }),
+                    signal: controller.signal
+                  });
+                  clearTimeout(timeoutId);
+                  const responseText = await res.text();
+                  let data: any = {};
+                  try {
+                    data = JSON.parse(responseText);
+                  } catch (e) {}
 
-                if (!res.ok) {
-                  throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
+                  if (!res.ok) {
+                    throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
+                  }
+
+                  alert(
+                    "🎉 ¡HORNO ACUÑADO EXITOSAMENTE!\n\n" +
+                    "Se ha minteado tu nuevo NFT en Soroban Testnet.\n\n" +
+                    (data.txHash ? `Tx Hash: ${data.txHash}\n\n` : '') +
+                    "Dirígete a 'EL HORNO (VAULT)' -> 'Mi Colección' para equiparlo y multiplicar tus drops."
+                  );
+                  // Dispatch update to refresh lists on-screen
+                  window.dispatchEvent(new Event('collection-updated'));
+                } catch (err: any) {
+                  clearTimeout(timeoutId);
+                  const errorMsg = err.name === 'AbortError' 
+                    ? 'El servidor de Soroban o Vercel tardó demasiado en responder (Timeout). ¡Por favor intenta de nuevo!' 
+                    : (err.message || err);
+                  alert("⚠️ Error de conexión: " + errorMsg);
+                } finally {
+                  setMinting(false);
                 }
-
-                alert(
-                  "🎉 ¡HORNO ACUÑADO EXITOSAMENTE!\n\n" +
-                  "Se ha minteado tu nuevo NFT en Soroban Testnet.\n\n" +
-                  (data.txHash ? `Tx Hash: ${data.txHash}\n\n` : '') +
-                  "Dirígete a 'EL HORNO (VAULT)' -> 'Mi Colección' para equiparlo y multiplicar tus drops."
-                );
-                // Dispatch update to refresh lists on-screen
-                window.dispatchEvent(new Event('collection-updated'));
-              } catch (err: any) {
-                clearTimeout(timeoutId);
-                const errorMsg = err.name === 'AbortError' 
-                  ? 'El servidor de Soroban o Vercel tardó demasiado en responder (Timeout). ¡Por favor intenta de nuevo!' 
-                  : (err.message || err);
-                alert("⚠️ Error de conexión: " + errorMsg);
-              } finally {
-                setMinting(false);
-              }
-            }}
-            disabled={minting}
-            title="Mint a free Oven NFT on Soroban Testnet!"
-          >
-            <div className="mint-vinyl-icon">💿</div>
-            <span>{minting ? 'MINTING...' : 'MINT'}</span>
-          </button>
-          <button 
-            className="wallet-standalone-button mint-vinyl-button"
-            style={{
-              background: 'rgba(0, 240, 255, 0.15)',
-              borderColor: 'rgba(0, 240, 255, 0.4)',
-              color: '#00f0ff'
-            }}
-            onClick={async (e) => {
-              const target = e.currentTarget;
-              target.disabled = true;
-              target.textContent = 'AIRDROPPING...';
-              try {
-                const res = await fetch('/api/drop-slice', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ playerAddress: publicKey, amount: 8 }),
-                });
-                const responseText = await res.text();
-                let data: any = {};
-                try {
-                  data = JSON.parse(responseText);
-                } catch (e) {}
-
-                if (!res.ok) {
-                  throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
-                }
-
-                alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE a tu wallet.\n\nTx Hash: ${data.txHash || 'Confirmada'}`);
-                // Refresh balance chip visually using event dispatch
-                window.dispatchEvent(new Event('balance-updated'));
-              } catch (err: any) {
-                alert("⚠️ Error de conexión: " + (err.message || err));
-              } finally {
-                target.disabled = false;
-                target.innerHTML = '<span class="mint-vinyl-icon">🍕</span> <span>AIRDROP (8)</span>';
-              }
-            }}
-            title="Airdrop 8 free $SLICE on Stellar Testnet!"
-          >
-            <div className="mint-vinyl-icon">🍕</div>
-            <span>AIRDROP (8)</span>
-          </button>
-          <button className="wallet-standalone-button" onClick={disconnect}>
-            {walletType === 'passkey' ? '🧑‍🍳 ' : ''}
-            {shortAddress}
-          </button>
-          {walletType === 'passkey' && (
-            <button
-              className="wallet-standalone-button backup-button"
-              style={{
-                background: 'rgba(212, 175, 55, 0.15)',
-                borderColor: 'rgba(212, 175, 55, 0.4)',
-                color: '#DAA520',
-                padding: '0.5rem 0.6rem',
-                fontSize: '0.9rem',
-                cursor: 'pointer'
               }}
-              onClick={() => {
-                const sec = passkeyService.getSecretKey(publicKey || '');
-                setExportedSecretKey(sec);
-                setCopiedBackup(false);
-                setPasskeyModalState('backup');
-              }}
-              title="Backup your Passkey Smart Wallet key"
+              disabled={minting}
+              title="Mint a free Oven NFT on Soroban Testnet!"
             >
-              <span className="backup-icon">🔑</span>
-              <span className="backup-text">Backup</span>
+              <div className="mint-vinyl-icon">💿</div>
+              <span>{minting ? 'MINTING...' : 'MINT'}</span>
             </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Official Privy Login Button (Avalanche / EVM) */}
-          <button
-            className="wallet-standalone-button connect-main-btn"
-            style={{
-              background: 'linear-gradient(135deg, rgba(232, 65, 66, 0.35), rgba(168, 85, 247, 0.35))',
-              color: '#ffffff',
-              borderColor: 'rgba(232, 65, 66, 0.6)',
-              fontWeight: 700,
-              boxShadow: '0 0 12px rgba(232, 65, 66, 0.3)'
-            }}
-            onClick={() => connectPrivy().catch(() => undefined)}
-            disabled={isConnecting}
-            title="Login with Email, Google, Twitter or EVM Wallet via Privy"
-          >
-            <span className="btn-full-text">🔴 {isConnecting ? 'CONNECTING...' : 'LOGIN WITH PRIVY'}</span>
-            <span className="btn-mobile-text">🔴 {isConnecting ? '...' : 'PRIVY'}</span>
-          </button>
-        </>
+            <button 
+              className="wallet-standalone-button mint-vinyl-button"
+              style={{
+                background: 'rgba(0, 240, 255, 0.15)',
+                borderColor: 'rgba(0, 240, 255, 0.4)',
+                color: '#00f0ff'
+              }}
+              onClick={async (e) => {
+                const target = e.currentTarget;
+                target.disabled = true;
+                target.textContent = 'AIRDROPPING...';
+                try {
+                  const res = await fetch('/api/drop-slice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playerAddress: publicKey, amount: 8 }),
+                  });
+                  const responseText = await res.text();
+                  let data: any = {};
+                  try {
+                    data = JSON.parse(responseText);
+                  } catch (e) {}
+
+                  if (!res.ok) {
+                    throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
+                  }
+
+                  alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE a tu wallet.\n\nTx Hash: ${data.txHash || 'Confirmada'}`);
+                  // Refresh balance chip visually using event dispatch
+                  window.dispatchEvent(new Event('balance-updated'));
+                } catch (err: any) {
+                  alert("⚠️ Error de conexión: " + (err.message || err));
+                } finally {
+                  target.disabled = false;
+                  target.innerHTML = '<span class="mint-vinyl-icon">🍕</span> <span>AIRDROP (8)</span>';
+                }
+              }}
+              title="Airdrop 8 free $SLICE on Stellar Testnet!"
+            >
+              <div className="mint-vinyl-icon">🍕</div>
+              <span>AIRDROP (8)</span>
+            </button>
+            <button className="wallet-standalone-button" onClick={disconnect}>
+              {walletType === 'passkey' ? '🧑‍🍳 ' : ''}
+              {shortAddress}
+            </button>
+            {walletType === 'passkey' && (
+              <button
+                className="wallet-standalone-button backup-button"
+                style={{
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  borderColor: 'rgba(212, 175, 55, 0.4)',
+                  color: '#DAA520',
+                  padding: '0.5rem 0.6rem',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  const sec = passkeyService.getSecretKey(publicKey || '');
+                  setExportedSecretKey(sec);
+                  setCopiedBackup(false);
+                  setPasskeyModalState('backup');
+                }}
+                title="Backup your Passkey Smart Wallet key"
+              >
+                <span className="backup-icon">🔑</span>
+                <span className="backup-text">Backup</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Official Privy Login Button (Avalanche / EVM) */}
+            <button
+              className="wallet-standalone-button connect-main-btn"
+              style={{
+                background: 'linear-gradient(135deg, rgba(232, 65, 66, 0.35), rgba(168, 85, 247, 0.35))',
+                color: '#ffffff',
+                borderColor: 'rgba(232, 65, 66, 0.6)',
+                fontWeight: 700,
+                boxShadow: '0 0 12px rgba(232, 65, 66, 0.3)'
+              }}
+              onClick={() => connectPrivy().catch(() => undefined)}
+              disabled={isConnecting}
+              title="Login with Email, Google, Twitter or EVM Wallet via Privy"
+            >
+              <span className="btn-full-text">🔴 {isConnecting ? 'CONNECTING...' : 'LOGIN WITH PRIVY'}</span>
+              <span className="btn-mobile-text">🔴 {isConnecting ? '...' : 'PRIVY'}</span>
+            </button>
+          </>
+        )
       )}
 
-      {network && !network.toLowerCase().includes('avalanche') && !network.toLowerCase().includes('fuji') && (
+      {SHOW_CRYPTO_HEADER && network && !network.toLowerCase().includes('avalanche') && !network.toLowerCase().includes('fuji') && (
         <div className="wallet-standalone-network">{network}</div>
       )}
-      {error && <div className="wallet-standalone-error">{error}</div>}
+      {SHOW_CRYPTO_HEADER && error && <div className="wallet-standalone-error">{error}</div>}
 
       {/* ── Passkey Selection & Creation Modals ── */}
       {passkeyModalState === 'select' && (

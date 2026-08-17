@@ -21,7 +21,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
 
         {/* Right controls */}
         <div className="rs-header-right">
-          <span className="rs-network-pill">● TESTNET</span>
+          <span className="rs-network-pill">● EN DESARROLLO</span>
           <WalletStandalone />
           {currentPage !== 'game' && (
             <button

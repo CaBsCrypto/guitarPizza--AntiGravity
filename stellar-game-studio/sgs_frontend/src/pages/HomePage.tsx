@@ -177,11 +177,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
             >
               🔥 ENTER THE KITCHEN
             </button>
-            {!isConnected && (
-              <p className="hp-wallet-hint">
-                Connect your Freighter wallet (Testnet) to submit scores on-chain
-              </p>
-            )}
           </div>
 
         </section>
