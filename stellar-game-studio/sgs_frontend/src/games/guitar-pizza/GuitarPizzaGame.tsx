@@ -514,7 +514,7 @@ function OnboardingModal({
 
         {/* Step counter */}
         <div style={{ marginTop: '0.8rem', fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace', letterSpacing: '0.06em' }}>
-          {onboardingStep + 1} / 3 — GUITAR PIZZA • SOROBAN ZK EDITION
+          {onboardingStep + 1} / 3 — GUITAR PIZZA • ARCADE EDITION
         </div>
       </div>
     </div>
@@ -886,8 +886,54 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         fetchFriendsBalances();
     }, [view, friends]);
 
-    // --- ZK Leaderboard Level Selection ---
-    const [leaderboardSongId, setLeaderboardSongId] = useState<number>(1);
+    // --- Leaderboard States & API Fetcher ---
+    const [leaderboardSongId, setLeaderboardSongId] = useState<any>('all');
+    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player_id?: string; nickname: string; score: number; metadata?: any }>>([]);
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+    const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+    const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
+
+    // Profile & Lead Capture State
+    const [chefName, setChefName] = useState(() => {
+        try { return localStorage.getItem('gp_chef_name') || "Chef Don"; } catch { return "Chef Don"; }
+    });
+    const [xHandle, setXHandle] = useState(() => {
+        try { return localStorage.getItem('gp_x_handle') || ""; } catch { return ""; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem('gp_x_handle', xHandle); } catch {}
+    }, [xHandle]);
+    const [playerEmail, setPlayerEmail] = useState(() => {
+        try { return localStorage.getItem('gp_player_email') || ""; } catch { return ""; }
+    });
+    const [isSavingScore, setIsSavingScore] = useState(false);
+    const [isScoreSaved, setIsScoreSaved] = useState(false);
+    const [lastScore, setLastScore] = useState<number>(0);
+    const lastScoreRef = useRef<number>(0);
+    const [resultParams, setResultParams] = useState({ bgImage: '' });
+
+    const loadLeaderboard = useCallback(async (trackFilter?: string) => {
+        setLeaderboardLoading(true);
+        setLeaderboardError(null);
+        try {
+            const filter = trackFilter !== undefined ? trackFilter : (leaderboardSongId ? String(leaderboardSongId) : 'all');
+            const res = await SpicyCrustService.getLeaderboard({
+                limit: 50,
+                songFilter: filter === 'all' ? undefined : filter,
+                unique: true
+            });
+            if (res && res.data && Array.isArray(res.data.ranking)) {
+                setLeaderboard(res.data.ranking);
+            } else {
+                setLeaderboard([]);
+            }
+        } catch (e: any) {
+            console.error('[GuitarPizza] Error cargando Leaderboard:', e);
+            setLeaderboardError('No se pudo conectar con el servidor de rankings.');
+        } finally {
+            setLeaderboardLoading(false);
+        }
+    }, [leaderboardSongId]);
 
     // --- Offline Transaction Queue ---
     const [pendingTxs, setPendingTxs] = useState<any[]>(() => {
@@ -1656,30 +1702,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
         return () => clearInterval(interval);
     }, [view, bankTab, stakedLp, lpLastHarvest]);
 
-    const loadLeaderboard = useCallback(async () => {
-        setLeaderboardLoading(true);
-        setLeaderboardError(null);
-        try {
-            const entries = await StellarContractService.getLeaderboard(userAddress, leaderboardSongId);
-            const arr = entries as any[];
-            const mapped = arr.slice(0, 10).map((e: any, i: number) => {
-                const playerStr = typeof e.player === 'string'
-                    ? e.player
-                    : (e.player?.toString?.() ?? String(e.player ?? ''));
-                const scoreNum = typeof e.score === 'bigint' ? Number(e.score) : Number(e.score ?? 0);
-                return { rank: i + 1, player: playerStr, score: scoreNum };
-            });
-            setLeaderboard(mapped);
-            if (arr.length === 0) {
-                console.warn('[Leaderboard] No entries returned — board may be empty or query failed.');
-            }
-        } catch (err) {
-            console.error('[Leaderboard] Failed to load:', err);
-            setLeaderboardError('Could not load leaderboard. Check console.');
-        } finally {
-            setLeaderboardLoading(false);
-        }
-    }, [userAddress, leaderboardSongId]);
+
 
     // --- Offline Transaction Queue Processing ---
     const processPendingQueue = useCallback(async () => {
@@ -2350,6 +2373,7 @@ Ganador: ${payload.winnerAddress}`);
     useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
 
     // ── Audio Preview for Song Picker ──────────────────────────────────────────
+    const [previewingSongId, setPreviewingSongId] = useState<string | null>(null);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
     const stopPreviewAudio = useCallback(() => {
@@ -2361,6 +2385,7 @@ Ganador: ${payload.winnerAddress}`);
             } catch (e) {}
             previewAudioRef.current = null;
         }
+        setPreviewingSongId(null);
     }, []);
 
     const playSongPreview = useCallback((song: Song) => {
@@ -2368,20 +2393,46 @@ Ganador: ${payload.winnerAddress}`);
         if (isMutedRef.current || !song.available) return;
 
         try {
-            const basePath = window.GP_BASE_PATH || '';
-            const audioSrc = basePath + songPath(song);
-            const audio = new Audio(audioSrc);
-            audio.volume = 0.45;
-            audio.currentTime = song.start || 0;
+            const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+            const relative = songPath(song).replace(/^\/+/, '');
+            const audioSrc = `${base}/${relative}`.replace('//', '/');
+
+            const audio = new Audio(encodeURI(audioSrc));
+            audio.volume = 0.5;
+
+            if (song.start && song.start > 0) {
+                audio.addEventListener('loadedmetadata', () => {
+                    try {
+                        audio.currentTime = song.start;
+                    } catch (e) {}
+                }, { once: true });
+            }
+
+            audio.addEventListener('play', () => {
+                setPreviewingSongId(song.id);
+            });
+
+            audio.addEventListener('ended', () => {
+                setPreviewingSongId(null);
+            });
+
+            audio.addEventListener('pause', () => {
+                setPreviewingSongId(prev => (prev === song.id ? null : prev));
+            });
+
             const playPromise = audio.play();
             if (playPromise !== undefined) {
-                playPromise.catch((err) => {
+                playPromise.then(() => {
+                    setPreviewingSongId(song.id);
+                }).catch((err) => {
                     console.warn('[SongPicker] Audio preview autoplay prevented/failed:', err);
+                    setPreviewingSongId(null);
                 });
             }
             previewAudioRef.current = audio;
         } catch (e) {
             console.warn('[SongPicker] Failed to play preview audio:', e);
+            setPreviewingSongId(null);
         }
     }, [stopPreviewAudio]);
 
@@ -2487,42 +2538,10 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-    // Leaderboard from zk-leaderboard contract
-
-    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player: string; score: number }>>([]);
-
-    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
-
-    const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
-
-    // Status of the leaderboard submission from the last game
-
-    const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
-
-
-
-    // Profile State (Persist to local storage later)
-
-    const [chefName, setChefName] = useState("Chef Anon");
-
-    const [xHandle, setXHandle] = useState("@");
-
-
-
-    // Results Screen State
-
-    const [resultParams, setResultParams] = useState({ bgImage: '' });
-
-
-
     // ── TX popup helpers ──────────────────────────────────────────────────────
-
     const closeTxPopup = useCallback(async () => {
-
         if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
-
         if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
-
         setShowTxPopup(false);
 
         const currentScore = pendingFinalScoreRef.current;
@@ -2536,10 +2555,13 @@ Ganador: ${payload.winnerAddress}`);
             await SpicyCrustService.submitScore({
                 playerExternalId: activeWallet,
                 nickname: chefName || 'Chef Don',
+                email: playerEmail || undefined,
                 score: currentScore,
                 payload: signedData.payload,
                 signature: signedData.signature,
                 metadata: {
+                    songId: selectedSong.id,
+                    songTitle: selectedSong.title,
                     timestamp: Date.now()
                 }
             });
@@ -2550,63 +2572,25 @@ Ganador: ${payload.winnerAddress}`);
             SpicyCrustService.submitScore({
                 playerExternalId: activeWallet,
                 nickname: chefName || 'Chef Don',
+                email: playerEmail || undefined,
                 score: currentScore,
                 metadata: {
+                    songId: selectedSong.id,
+                    songTitle: selectedSong.title,
                     timestamp: Date.now()
                 }
             });
         }
 
         onGameComplete(currentScore);
-
-    }, [onGameComplete, userAddress, chefName]);
-
+    }, [onGameComplete, userAddress, chefName, playerEmail, selectedSong]);
 
 
 
-    const openTxPopup = useCallback((txs: TxRecord[], finalScore: number) => {
 
-        pendingFinalScoreRef.current = finalScore;
-
-        setPopupTxs(txs);
-
-        setPopupCountdown(8);
-
-        setShowTxPopup(true);
-
-
-
-        // Countdown every second
-
-        popupIntervalRef.current = setInterval(() => {
-
-            setPopupCountdown(prev => {
-
-                if (prev <= 1) {
-
-                    if (popupIntervalRef.current) clearInterval(popupIntervalRef.current);
-
-                    return 0;
-
-                }
-
-                return prev - 1;
-
-            });
-
-        }, 1000);
-
-
-
-        // Auto-close after 8 seconds
-
-        popupTimerRef.current = setTimeout(() => {
-
-            closeTxPopup();
-
-        }, 8000);
-
-    }, [closeTxPopup]);
+    const openTxPopup = useCallback((_txs: TxRecord[], finalScore: number) => {
+        onGameComplete(finalScore);
+    }, [onGameComplete]);
 
 
 
@@ -3030,467 +3014,79 @@ Ganador: ${payload.winnerAddress}`);
                         ];
 
                         const randomBg = defeatImages[Math.floor(Math.random() * defeatImages.length)];
-
                         setResultParams({ bgImage: randomBg });
 
-
-
-                        // Start ZK Verification
-
-                        setIsVerifying(true);
-
-                        setProofStatus('generating');
-
-                        let verifiedScore = finalScore;
-                        let sessionStats: GameSessionStats | null = null;
-
-                        try {
-
-                            // 1. ZK Circuit Simulation
-
-                            const zkResult = SimulatedZKCircuit.verifyTrace(inputLog, {}, finalScore);
-
-
-
-                            if (!zkResult.verified) {
-
-                                throw new Error(`ZK Verification Failed: ${zkResult.reason}`);
-
-                            }
-
-
-
-                            // 2. Build session stats from input log + final score
-
-                            // The engine now attaches stats to inputLog.stats (fixed)
-
-                            const engineStats = (inputLog as any)?.stats ?? {};
-
-                            const hits = engineStats.totalHits ?? 0;
-
-                            const perfects = engineStats.perfectHits ?? 0;
-
-                            const fever = engineStats.feverSeconds ?? 0;
-
-                            const pizzas = engineStats.pizzasCompleted ?? 0;
-
-
-
-                            // Use the engine's final score directly — it is the authoritative value
-
-                            // the player sees on screen. The ZK stats are kept for the receipt/proof
-
-                            // structure but the score field is taken from the engine to avoid
-
-                            // any mismatch between the recalculation formula and the actual gameplay.
-
-                            verifiedScore = finalScore;
-
-                            addLog(`[GuitarPizza] Engine score: ${finalScore} | ZK-verified score: ${verifiedScore}`);
-
-                            addLog(`[GuitarPizza] Stats — hits:${hits} perfects:${perfects} fever:${fever}s pizzas:${pizzas}`);
-
-                            // Update local balance
-
-                            setPizzaBalance(prev => prev + verifiedScore);
-
-                            sessionStats = {
-
-                                levelId: 1,
-
-                                score: verifiedScore,  // ← verified score goes on-chain
-
-                                sessionId: onChainSessionIdRef.current,
-
-                                perfectHits: perfects,
-
-                                totalHits: hits,
-
-                                totalNotes: engineStats.totalNotes ?? hits,
-
-                                trapsAvoided: engineStats.trapsAvoided ?? 0,
-
-                                totalTraps: engineStats.totalTraps ?? 0,
-
-                                feverSeconds: fever,
-
-                                pizzasCompleted: pizzas,
-
-                                comboBonus: engineStats.comboBonus ?? 0,
-
-                                playerAddress: userAddress,
-
-                            };
-
-
-
-                            // 3. Generate RISC Zero receipt (164 bytes: journal + seal)
-
-                            const { receipt } = await ProofGenerator.generateSessionReceipt(sessionStats);
-
-                            addLog(`[GuitarPizza] Receipt generated: ${receipt.length} bytes`);
-
-
-
-                            // DEMO / NO-WALLET / PRACTICE CHECK: Skip blockchain submission when in practice mode or not connected
-
-                            if (isPracticeMode || userAddress === 'G_DEMO_USER' || !isConnectedRef.current) {
-
-                                addLog(isPracticeMode
-
-                                    ? "[PRACTICE MODE] Skipping blockchain submission. Awarding local drops."
-
-                                    : "[GuitarPizza] No wallet connected — score verified locally only.");
-
-
-                                // Calculate local ingredients drops based on performance
-
-                                const cheeseReward = Math.min(3, Math.floor(finalScore / 2500) + 1);
-
-                                const pepReward = finalScore > 3000 ? Math.min(2, Math.floor((finalScore - 3000) / 3000) + 1) : 0;
-
-                                const baconReward = finalScore > 5000 ? 1 : 0;
-
-                                const onionReward = finalScore > 4000 ? 1 : 0;
-
-
-                                const newIngredients = { ...ingredients };
-
-                                newIngredients.cheese = (newIngredients.cheese || 0) + cheeseReward;
-
-                                if (pepReward > 0) newIngredients.pepperoni = (newIngredients.pepperoni || 0) + pepReward;
-
-                                if (baconReward > 0) newIngredients.bacon = (newIngredients.bacon || 0) + baconReward;
-
-                                if (onionReward > 0) newIngredients.onion = (newIngredients.onion || 0) + onionReward;
-
-
-                                setIngredients(newIngredients);
-
-                                localStorage.setItem('gp_ingredients', JSON.stringify(newIngredients));
-
-
-                                addLog(`🎁 Rewards dropped: ${cheeseReward} 🧀 Queso${pepReward ? `, ${pepReward} 🍖 Pep` : ''}${baconReward ? `, ${baconReward} 🥓 Bacon` : ''}${onionReward ? `, ${onionReward} 🧅 Onion` : ''}`);
-
-
-                                // Check and update Personal Best to award weekly tournament ticket
-
-                                const songId = selectedSong.id;
-
-                                const currentPB = personalBests[songId] || 0;
-
-                                let ticketEarned = false;
-
-
-                                if (finalScore > currentPB) {
-
-                                    const updatedPBs = { ...personalBests, [songId]: finalScore };
-
-                                    setPersonalBests(updatedPBs);
-
-                                    localStorage.setItem('gp_personal_bests', JSON.stringify(updatedPBs));
-
-                                    
-
-                                    // Award 1 ticket
-
-                                    setTicketBalance(prev => prev + 1);
-
-                                    ticketEarned = true;
-
-                                    addLog("🎟️ NEW RECORD! You earned 1 Weekly Tournament Ticket!");
-
-                                }
-
-
-                                await new Promise(resolve => setTimeout(resolve, 800));
-
-                                addLog(`SUCCESS! Score verified locally.`);
-
-                                setProofStatus('success');
-
-                                setOnChainScore(finalScore);
-
-
-                                setTimeout(async () => { 
-
-                                    setIsVerifying(false); 
-
-                                    if (isPvp) {
-                                        const rivalFinalScore = rivalData ? rivalData.score : 0;
-                                        const won = finalScore > rivalFinalScore;
-                                        setIsPvp(false); // Reset PVP state
-                                        
-                                        if (won) {
-                                            if (userAddress !== 'G_DEMO_USER' && isConnectedRef.current) {
-                                                const signer = getContractSignerRef.current();
-                                                addLog(`[PVP] Resolving match GP-XXXX on-chain. Winning address: ${userAddress}...`);
-                                                await StellarContractService.resolvePvpMatch(userAddress, 12345, signer);
-                                            }
-                                            alert(`⚔️ ¡VICTORIA DE LA MASA! 🍕\n\nTu Puntaje: ${finalScore}\nScore del Rival: ${rivalFinalScore}\n\n¡Has ganado el Duelo PVP y reclamado el pozo completo! +${selectedWager * 2} $SLICE (menos 5% de tarifa de tesorería).`);
-                                        } else {
-                                            alert(`⚠️ ¡Derrota en la Cocina! 🪵\n\nTu Puntaje: ${finalScore}\nScore del Rival: ${rivalFinalScore}\n\nEl oponente se lleva el pozo de $SLICE.`);
-                                        }
-                                    } else {
-                                        const recordLabel = ticketEarned ? `🎟️ +1 Ticket de Torneo` : '';
-                                        alert(`🎮 ¡Fin de la Práctica!\n\nPuntaje: ${finalScore}\nIngredientes ganados: +${cheeseReward} Queso${pepReward ? `, +${pepReward} Pepperoni` : ''}\n\n${recordLabel ? `🎉 ¡NUEVO RÉCORD PERSONAL! ${recordLabel}` : ''}`);
-                                    }
-
-                                    onGameComplete(finalScore);
-
-                                }, 2000);
-
-
-                                return;
-
-                            }
-
-
-
-                            // 4. Submit all contracts in sequence via StellarContractService
-
-                            addLog("Receipt ready. Submitting to Stellar contracts...");
-
-                            setStatus(t.sealed); // or just generic sending
-
-
-
-                            const signer = getContractSignerRef.current();
-
-                            const result = await StellarContractService.postGameFlow(
-
-                                userAddress,
-
-                                sessionStats,
-
-                                signer,
-
-                            );
-
-
-
-                            // Log what happened on-chain
-
-                            if (result.scoreSubmitted) addLog('✅ Score verified on guitar-pizza contract');
-
-                            if (result.leaderboardRank) addLog(`🏆 Leaderboard rank: #${result.leaderboardRank}`);
-
-                            if (result.weeklyCompleted) addLog('🍕 Weekly recipe challenge completed!');
-
-                            if (result.achievementsClaimed.length > 0) {
-
-                                const names = ['Perfect Run', 'Trap Master', 'Fever God', 'Iron Chef'];
-
-                                result.achievementsClaimed.forEach(id => addLog(`🏅 Badge earned: ${names[id] ?? id}`));
-
-                            }
-
-                            if (result.sliceClaimed) {
-
-                                addLog(`💰 +${result.sliceAmount} $SLICE earned!`);
-
-                                setSliceEarned(result.sliceAmount);
-
-                            }
-
-                            if (result.errors.length > 0) {
-
-                                result.errors.forEach(e => console.warn('[StellarContract]', e));
-
-                            }
-
-
-
-                            // Save tx hash for Stellar Explorer link
-
-                            if (result.txHash) {
-
-                                setTxHash(result.txHash);
-
-                                addLog(`🔗 TX: ${result.txHash}`);
-
-                            }
-
-
-
-                            // The score submitted is the authoritative on-chain value.
-
-                            // We skip getSession() because the sessionId used locally may differ
-
-                            // from the one the contract stored (reuse logic in startGame).
-
-                            // verifiedScore === finalScore (set above), which is what was submitted.
-
-                            const confirmedScore = verifiedScore;
-
-                            setOnChainScore(confirmedScore);
-
-                            addLog(`✅ On-chain score confirmed: ${confirmedScore}`);
-
-
-
-                            // Track leaderboard submission result for UI feedback
-
-                            setLbSubmitStatus(result.leaderboardSubmitted ? 'ok' : 'fail');
-
-
-
-                            // Refresh leaderboard at 4s, 9s, 18s after game ends —
-
-                            // multiple attempts handle eventual consistency on Stellar testnet.
-
-                            setTimeout(() => loadLeaderboard(), 4000);
-
-                            setTimeout(() => loadLeaderboard(), 9000);
-
-                            setTimeout(() => loadLeaderboard(), 18000);
-
-
-
-                            addLog(`SUCCESS! Score verified on-chain.`);
-
-
-
-                            setStatus(''); // Clear submitting overlay
-
-                            setProofStatus('success');
-
-
-
-                            setTimeout(() => {
-
-                                setIsVerifying(false); // Close verification overlay
-
-
-
-                                // Build TxRecord list for this game's popup
-
-                                const gameTxs: TxRecord[] = [];
-
-                                if (result.txHash) {
-
-                                    gameTxs.push({ hash: result.txHash, type: 'Score Submit', score: confirmedScore, timestamp: Date.now() });
-
-                                }
-
-
-
-                                if (gameTxs.length > 0) {
-
-                                    // Persist to history (max 20 entries)
-
-                                    setTxHistory(prev => {
-
-                                        const updated = [...gameTxs, ...prev].slice(0, 20);
-
-                                        localStorage.setItem('gp_tx_history', JSON.stringify(updated));
-
-                                        return updated;
-
-                                    });
-
-                                    openTxPopup(gameTxs, confirmedScore);
-
-                                } else {
-
-                                    onGameComplete(confirmedScore);
-
-                                }
-
-                            }, 2000);
-
-
-
-                        } catch (err: any) {
-                            if (!navigator.onLine || err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.message?.includes("network")) {
-                                addLog("⚠️ Network offline. Saving ZK proof locally for automatic sync.");
-                                const nextQueue = [...pendingTxs, {
-                                    sessionStats: sessionStats || {
-                                        levelId: 1,
-                                        score: verifiedScore,
-                                        sessionId: onChainSessionIdRef.current,
-                                        perfectHits: 0,
-                                        totalHits: 0,
-                                        totalNotes: 0,
-                                        trapsAvoided: 0,
-                                        totalTraps: 0,
-                                        feverSeconds: 0,
-                                        pizzasCompleted: 0,
-                                        comboBonus: 0,
-                                        playerAddress: userAddress,
-                                    },
-                                    score: verifiedScore,
-                                    timestamp: Date.now()
-                                }];
-                                setPendingTxs(nextQueue);
-                                localStorage.setItem('gp_pending_txs', JSON.stringify(nextQueue));
-                                setProofStatus('failed');
-                                setIsVerifying(false);
-                                setStatus('');
-                                alert(language === 'es' 
-                                    ? "⚠️ Sin conexión a internet. Tu récord y prueba ZK se guardaron localmente. Se sincronizarán automáticamente al reconectarte."
-                                    : "⚠️ No internet connection. Your record and ZK proof have been saved locally. They will auto-sync when you reconnect."
-                                );
-                                onGameComplete(verifiedScore);
-                                return;
-                            }
-
-                            console.error("[GuitarPizza] Verification failed:", err);
-
-                            setStatus(''); // Clear the submitting overlay on error too!
-
-                            let errorMessage = "Verification Failed";
-
-
-
-                            // Parse specific error types
-
-                            if (err.message) {
-
-                                if (err.message.includes("User declined") || err.message.includes("Rejected")) {
-
-                                    errorMessage = "Transaction Rejected by User";
-
-                                } else if (err.message.includes("HostError") || err.message.includes("UnreachableCodeReached")) {
-
-                                    errorMessage = "Contract Error: Level Not Configured?";
-
-                                } else if (err.message.includes("tx_bad_seq")) {
-
-                                    errorMessage = "Sequence Error: Refresh & Retry";
-
-                                } else {
-
-                                    // Clean up long stack traces if present
-
-                                    errorMessage = err.message.split('\n')[0];
-
-                                }
-
-                            }
-
-
-
-                            setStatus(errorMessage);
-
-                            setProofStatus('failed');
-
-                            addLog(`[ERROR] ${errorMessage}`);
-
-
-
-                            // Still show full error in console for debugging, but clean UI
-
-                            setTimeout(() => {
-
-                                setIsVerifying(false); // Close verification overlay
-
-                                setStatus(''); // Clear persistent error overlay
-
-                            }, 4000);
-
+                        // Update local balance
+                        setPizzaBalance(prev => prev + finalScore);
+
+                        // Calculate local ingredients drops based on performance
+                        const cheeseReward = Math.min(3, Math.floor(finalScore / 2500) + 1);
+                        const pepReward = finalScore > 3000 ? Math.min(2, Math.floor((finalScore - 3000) / 3000) + 1) : 0;
+                        const baconReward = finalScore > 5000 ? 1 : 0;
+                        const onionReward = finalScore > 4000 ? 1 : 0;
+
+                        const newIngredients = { ...ingredients };
+                        newIngredients.cheese = (newIngredients.cheese || 0) + cheeseReward;
+                        if (pepReward > 0) newIngredients.pepperoni = (newIngredients.pepperoni || 0) + pepReward;
+                        if (baconReward > 0) newIngredients.bacon = (newIngredients.bacon || 0) + baconReward;
+                        if (onionReward > 0) newIngredients.onion = (newIngredients.onion || 0) + onionReward;
+
+                        setIngredients(newIngredients);
+                        localStorage.setItem('gp_ingredients', JSON.stringify(newIngredients));
+
+                        // Check and update Personal Best to award weekly tournament ticket
+                        const songId = selectedSong.id;
+                        const currentPB = personalBests[songId] || 0;
+
+                        if (finalScore > currentPB) {
+                            const updatedPBs = { ...personalBests, [songId]: finalScore };
+                            setPersonalBests(updatedPBs);
+                            localStorage.setItem('gp_personal_bests', JSON.stringify(updatedPBs));
+                            setTicketBalance(prev => prev + 1);
+                            addLog("🎟️ NEW RECORD! You earned 1 Weekly Tournament Ticket!");
                         }
 
+                        lastScoreRef.current = finalScore;
+                        setLastScore(finalScore);
+                        setOnChainScore(finalScore);
+                        setStatus('');
+                        setIsVerifying(false);
+                        setProofStatus('none');
+
+                        // Enviar score automáticamente en segundo plano a la API
+                        const engineStats = (inputLog as any)?.stats ?? {};
+                        const hits = engineStats.totalHits ?? 0;
+                        const perfects = engineStats.perfectHits ?? 0;
+                        const pizzas = engineStats.pizzasCompleted ?? 0;
+
+                        try {
+                            SpicyCrustService.submitScore({
+                                playerExternalId: userAddress || 'guest_player',
+                                nickname: chefName || localStorage.getItem('gp_chef_name') || 'Chef Don',
+                                email: playerEmail || localStorage.getItem('gp_player_email') || undefined,
+                                score: finalScore,
+                                metadata: {
+                                    songId: selectedSong.id,
+                                    songTitle: selectedSong.title,
+                                    difficulty: selectedSong.difficulty === 3 ? 'Hard' : (selectedSong.difficulty === 2 ? 'Medium' : 'Easy'),
+                                    hits: hits,
+                                    perfectHits: perfects,
+                                    pizzas: pizzas
+                                }
+                            }).then(() => {
+                                setIsScoreSaved(true);
+                                loadLeaderboard();
+                            });
+                        } catch (e) {
+                            console.warn('[GuitarPizza] Background submit score error:', e);
+                        }
+
+                        if (isPvp) {
+                            setIsPvp(false); // Reset PVP state
+                        }
+
+                        // Pasar directamente al Ticket de Resultados
+                        onGameComplete(finalScore);
                     }, resolvedSongUrl, t);
 
 
@@ -3748,28 +3344,18 @@ Ganador: ${payload.winnerAddress}`);
                             <style>{`
                                 @keyframes floatSlow {
                                     0% { transform: translateY(0px) rotate(0deg); opacity: 0.15; }
-                                    50% { transform: translateY(-40px) rotate(180deg); opacity: 0.45; }
+                                    50% { transform: translateY(-30px) rotate(180deg); opacity: 0.4; }
                                     100% { transform: translateY(0px) rotate(360deg); opacity: 0.15; }
                                 }
-                                @keyframes neonPulse {
-                                    0% { text-shadow: 0 0 10px rgba(139,0,0,0.6), 2px 2px 0px #d4af37, -2px -2px 0px #27ae60; }
-                                    50% { text-shadow: 0 0 25px rgba(231,76,60,0.95), 2px 2px 0px #f1c40f, -2px -2px 0px #2ecc71; }
-                                    100% { text-shadow: 0 0 10px rgba(139,0,0,0.6), 2px 2px 0px #d4af37, -2px -2px 0px #27ae60; }
+                                @keyframes cleanGlow {
+                                    0%, 100% { filter: drop-shadow(0 0 12px rgba(231,76,60,0.6)) drop-shadow(0 0 25px rgba(212,175,55,0.4)); }
+                                    50% { filter: drop-shadow(0 0 20px rgba(231,76,60,0.9)) drop-shadow(0 0 35px rgba(212,175,55,0.7)); }
+                                }
+                                @keyframes cleanButtonPulse {
+                                    0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(212,175,55,0.4), 0 0 40px rgba(139,0,0,0.3); }
+                                    50% { transform: scale(1.03); box-shadow: 0 0 30px rgba(212,175,55,0.7), 0 0 50px rgba(231,76,60,0.5); }
                                 }
                             `}</style>
-
-                            {/* Retro Scanline Overlay */}
-                            <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                background: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
-                                backgroundSize: '100% 4px, 6px 100%',
-                                pointerEvents: 'none',
-                                zIndex: 1
-                            }} />
 
                             {/* Floating Background Ingredients */}
                             <div style={{ position: 'absolute', top: '15%', left: '10%', fontSize: '2rem', animation: 'floatSlow 12s infinite ease-in-out', pointerEvents: 'none', zIndex: 0 }}>🧀</div>
@@ -3800,47 +3386,49 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 alignItems: 'center', 
-                                gap: '0.75rem',
+                                gap: '0.6rem',
                                 zIndex: 10,
-                                border: '3px double rgba(212, 175, 55, 0.4)',
-                                padding: '1.5rem',
+                                border: '2px solid rgba(212, 175, 55, 0.4)',
+                                padding: '1.2rem 1.5rem',
                                 borderRadius: '16px',
-                                background: 'rgba(10, 7, 5, 0.85)',
-                                boxShadow: '0 10px 30px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.1)'
+                                background: 'rgba(10, 7, 5, 0.88)',
+                                backdropFilter: 'blur(8px)',
+                                boxShadow: '0 12px 36px rgba(0,0,0,0.85), inset 0 0 20px rgba(212, 175, 55, 0.1)'
                             }}>
                                 <h1 style={{
                                     fontFamily: 'Bangers, cursive',
-                                    fontSize: '4.2rem',
-                                    lineHeight: '0.85',
+                                    fontSize: 'clamp(3rem, 7vh, 4.2rem)',
+                                    lineHeight: '0.9',
                                     color: '#e74c3c',
-                                    animation: 'neonPulse 3s infinite ease-in-out',
+                                    animation: 'cleanGlow 3s infinite ease-in-out',
                                     letterSpacing: '0.06em',
-                                    transform: 'skewY(-4deg)',
-                                    margin: '0 0 0.5rem 0'
+                                    margin: '0 0 0.3rem 0',
+                                    textRendering: 'optimizeLegibility',
+                                    WebkitFontSmoothing: 'antialiased'
                                 }}>
                                     RHYTHM<br />SLICE
                                 </h1>
                                 
                                 <div style={{
                                     display: 'inline-block',
-                                    padding: '0.2rem 0.6rem',
+                                    padding: '0.25rem 0.8rem',
                                     background: 'rgba(212, 175, 55, 0.15)',
                                     border: '1px solid #d4af37',
                                     borderRadius: '50px',
-                                    fontSize: '0.55rem',
+                                    fontSize: '0.65rem',
                                     fontFamily: 'monospace',
                                     color: '#ffcc00',
                                     fontWeight: 'bold',
                                     letterSpacing: '0.15em',
-                                    marginBottom: '0.2rem'
+                                    marginBottom: '0.1rem'
                                 }}>
-                                    SOROBAN ZK EDITION
+                                    ARCADE EDITION
                                 </div>
 
                                 <p style={{
                                     fontFamily: '"Special Elite", monospace',
                                     fontSize: '0.88rem',
-                                    color: '#fff',
+                                    color: '#f5efe6',
                                     letterSpacing: '0.1em',
                                     margin: 0,
                                     textShadow: '0 2px 4px rgba(0,0,0,0.8)'
@@ -3854,25 +3442,25 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '0.5rem',
+                                gap: '0.4rem',
                                 position: 'relative',
                                 zIndex: 10
                             }}>
                                 <div style={{
-                                    fontSize: '5.5rem',
+                                    fontSize: '5.2rem',
                                     filter: 'drop-shadow(0 0 20px rgba(212, 175, 55, 0.7))',
-                                    animation: 'pulse 1.8s infinite ease-in-out',
                                     cursor: 'pointer',
-                                    transition: 'transform 0.2s'
+                                    transition: 'transform 0.2s ease',
+                                    userSelect: 'none'
                                 }} 
                                 onClick={() => setView('lobby')}
                                 >
                                     🍕
                                 </div>
                                 <div style={{
-                                    fontSize: '1.3rem',
+                                    fontSize: '1.2rem',
                                     color: '#fff',
-                                    marginTop: '-10px',
+                                    marginTop: '-6px',
                                     display: 'flex',
                                     gap: '0.5rem',
                                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
@@ -3887,27 +3475,29 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '1rem',
+                                gap: '0.8rem',
                                 zIndex: 10
                             }}>
                                 <button
                                     onClick={() => setView('lobby')}
                                     className="primary-btn"
                                     style={{
-                                        width: '85%',
-                                        maxWidth: '260px',
-                                        padding: '1.1rem',
-                                        fontSize: '1.2rem',
+                                        width: '88%',
+                                        maxWidth: '280px',
+                                        padding: '1rem',
+                                        fontSize: '1.15rem',
                                         fontFamily: 'var(--font-display)',
                                         letterSpacing: '0.08em',
                                         fontWeight: 'bold',
-                                        boxShadow: '0 0 25px rgba(212,175,55,0.5), 0 0 50px rgba(139,0,0,0.3)',
-                                        animation: 'pulse 1.4s infinite ease-in-out',
+                                        animation: 'cleanButtonPulse 2s infinite ease-in-out',
                                         background: 'linear-gradient(135deg, #d4af37, #c0392b)',
                                         color: '#fff',
                                         border: '2px solid #ffcc00',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer'
+                                        borderRadius: '10px',
+                                        cursor: 'pointer',
+                                        transform: 'translateZ(0)',
+                                        WebkitFontSmoothing: 'antialiased',
+                                        boxSizing: 'border-box'
                                     }}
                                 >
                                     🍕 {language === 'es' ? 'ENTRAR A LA COCINA' : 'ENTER KITCHEN'} 🍕
@@ -3918,7 +3508,7 @@ Ganador: ${payload.winnerAddress}`);
                                         background: 'rgba(39,174,96,0.12)',
                                         border: '1px solid rgba(39,174,96,0.35)',
                                         borderRadius: '10px',
-                                        padding: '0.5rem 0.9rem',
+                                        padding: '0.45rem 0.85rem',
                                         fontSize: '0.65rem',
                                         fontFamily: 'monospace',
                                         color: '#27ae60',
@@ -3947,13 +3537,13 @@ Ganador: ${payload.winnerAddress}`);
                                         background: 'rgba(212,175,55,0.1)',
                                         border: '1px dashed rgba(212,175,55,0.5)',
                                         borderRadius: '10px',
-                                        padding: '0.5rem 0.9rem',
+                                        padding: '0.45rem 0.85rem',
                                         fontSize: '0.65rem',
                                         fontFamily: 'monospace',
                                         color: '#d4af37',
                                         maxWidth: '240px',
                                         textAlign: 'center',
-                                        lineHeight: '1.5',
+                                        lineHeight: '1.4',
                                     }}>
                                         🔑 {language === 'es'
                                             ? 'Conecta una wallet Stellar para ganar $SLICE y NFTs on-chain'
@@ -3966,12 +3556,12 @@ Ganador: ${payload.winnerAddress}`);
                                     display: 'flex',
                                     justifyContent: 'center',
                                     gap: '1rem',
-                                    marginTop: '0.2rem',
+                                    marginTop: '0.1rem',
                                 }}>
                                     {[
                                         { icon: '🎸', label: language === 'es' ? 'Ritmo' : 'Rhythm' },
                                         { icon: '🍕', label: language === 'es' ? 'Pizza' : 'Pizza' },
-                                        { icon: '⛓', label: language === 'es' ? 'On-chain' : 'On-chain' },
+                                        { icon: '🏆', label: language === 'es' ? 'Ranking' : 'Ranking' },
                                         { icon: '⚔️', label: 'PvP' },
                                     ].map(f => (
                                         <div key={f.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
@@ -3983,11 +3573,11 @@ Ganador: ${payload.winnerAddress}`);
 
                                 <div style={{
                                     fontSize: '0.48rem',
-                                    color: 'rgba(255,255,255,0.18)',
+                                    color: 'rgba(255,255,255,0.22)',
                                     fontFamily: 'monospace',
-                                    marginTop: '0.2rem'
+                                    marginTop: '0.1rem'
                                 }}>
-                                    SOROBAN ZK EDITION • STELLAR TESTNET
+                                    ARCADE EDITION • STELLAR
                                 </div>
                             </div>
                         </div>
@@ -4481,212 +4071,159 @@ Ganador: ${payload.winnerAddress}`);
                             pointerEvents: view !== 'lobby' ? 'none' : 'auto',
 
                             transform: view !== 'lobby' ? 'scale(0.95)' : 'scale(1)',
-
                             width: '100%',
-
                             height: '100%',
-
                             display: 'flex',
-
                             flexDirection: 'column',
-
                             alignItems: 'center',
-
-                            justifyContent: 'space-between',
-
-                            paddingTop: '2.8rem',
-
-                            paddingBottom: '2.8rem',
-
+                            justifyContent: 'center',
+                            gap: '1rem',
+                            padding: '1.5rem 1rem',
                             boxSizing: 'border-box',
-
                             position: 'relative',
-
                             zIndex: 1
-
                         }}>
 
-
-
-                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.2rem' }}>
-
-                                <h1 className="main-logo">RHYTHM<br />SLICE</h1>
-
-                                <p className="subtitle" style={{ marginBottom: '0' }}>PIZZA KITCHEN</p>
-
+                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0' }}>
+                                <h1 className="main-logo" style={{ fontSize: 'clamp(2.4rem, 6vh, 3.2rem)', margin: 0, lineHeight: 0.95 }}>
+                                    RHYTHM<br />SLICE
+                                </h1>
+                                <div style={{
+                                    marginTop: '0.4rem',
+                                    background: '#8B0000',
+                                    color: '#FFF8DC',
+                                    padding: '0.2rem 0.8rem',
+                                    borderRadius: '6px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 'bold',
+                                    letterSpacing: '2px',
+                                    border: '1px solid rgba(212, 175, 55, 0.5)',
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                    textTransform: 'uppercase'
+                                }}>
+                                    🍕 PIZZA KITCHEN 🍕
+                                </div>
                             </div>
 
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.8rem', width: '88%', maxWidth: '330px' }}>
-
-                                 <button id="startBtn"
-
-                                     onClick={() => handleStartGame()}
-
-                                     disabled={!engineRef.current}
-
-                                     style={{ opacity: engineRef.current ? 1 : 0.5, cursor: engineRef.current ? 'pointer' : 'not-allowed', fontSize: '1rem', padding: '0.62rem' }}
-
-                                 >
-
-                                     {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
-
-                                 </button>
-
-
-
-                                {/* Vibrant Disco Music Selector Between Buttons */}
-
-                                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '0.4rem', marginBottom: '0.4rem' }}>
-
-                                    <button
-                                        onClick={() => setView('songpicker')}
-                                        title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
-                                        className="lobby-song-selector-btn"
-                                    >
-
-                                        <div style={{
-
-                                            animation: 'vinyl-spin 2s linear infinite',
-
-                                            filter: 'drop-shadow(0 0 8px rgba(218,165,32,0.6))',
-
-                                            display: 'flex',
-
-                                            flexShrink: 0
-
-                                        }}>
-
-                                            <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-
-                                                <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
-
-                                                {[38, 33, 28, 23].map(r => (
-
-                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
-
-                                                ))}
-
-                                                <circle cx="50" cy="50" r="21" fill="#4A0E0E" />
-
-                                                <circle cx="50" cy="50" r="20" fill="#DAA520" />
-
-                                                <circle cx="50" cy="50" r="20" fill="none" stroke="#FFF8DC" strokeWidth="1" />
-
-                                                <circle cx="50" cy="50" r="4.5" fill="#FFF8DC" />
-
-                                                <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(218,165,32,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
-
-                                            </svg>
-
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2 }}>
-
-                                            <span style={{ fontSize: '0.85rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textShadow: '0 0 5px rgba(255,248,220,0.5)' }}>
-
-                                                {selectedSong.title}
-
-                                            </span>
-
-                                            <span style={{ fontSize: '0.55rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: 'bold' }}>
-
-                                                {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
-
-                                            </span>
-
-                                        </div>
-
-                                    </button>
-
-                                </div>
-
-
-
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.75rem',
+                                width: '92%',
+                                maxWidth: '340px',
+                                background: 'rgba(18, 6, 6, 0.72)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1.5px solid rgba(212, 175, 55, 0.35)',
+                                borderRadius: '18px',
+                                padding: '1rem 0.9rem',
+                                boxSizing: 'border-box',
+                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(212, 175, 55, 0.08)'
+                            }}>
                                 <button
-                                    className="lobby-timed-oven-btn"
-                                    onClick={() => setView('oven')}
+                                    id="startBtn"
+                                    onClick={() => handleStartGame()}
+                                    disabled={!engineRef.current}
+                                    style={{
+                                        opacity: engineRef.current ? 1 : 0.6,
+                                        cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                        fontSize: '1.15rem',
+                                        padding: '0.85rem 1rem',
+                                        width: '100%',
+                                        background: 'linear-gradient(135deg, #27ae60 0%, #1e824c 100%)',
+                                        border: '2px solid #2ecc71',
+                                        color: '#fff',
+                                        borderRadius: '12px',
+                                        fontWeight: 'bold',
+                                        letterSpacing: '1px',
+                                        boxShadow: '0 4px 14px rgba(39, 174, 96, 0.45)',
+                                        textTransform: 'uppercase',
+                                        fontFamily: 'var(--font-title)'
+                                    }}
                                 >
-                                    <span style={{ fontSize: '1.2rem' }}>🔥</span>
-                                    <span style={{ fontSize: '0.8rem', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', fontWeight: 'bold', color: 'var(--ph-gold)' }}>
-                                        {language === 'es' ? '🔥 HORNO TIMED-BAKE & NFT' : '🔥 TIMED-BAKE OVEN & NFT'}
-                                    </span>
+                                    {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
-
+                                {/* Vibrant Vinyl Music Selector */}
+                                <button
+                                    onClick={() => setView('songpicker')}
+                                    title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
+                                    className="lobby-song-selector-btn"
+                                    style={{ width: '100%', margin: 0, boxSizing: 'border-box' }}
+                                >
+                                    <div style={{
+                                        animation: 'vinyl-spin 2s linear infinite',
+                                        filter: 'drop-shadow(0 0 8px rgba(218,165,32,0.6))',
+                                        display: 'flex',
+                                        flexShrink: 0
+                                    }}>
+                                        <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
+                                            {[38, 33, 28, 23].map(r => (
+                                                <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
+                                            ))}
+                                            <circle cx="50" cy="50" r="21" fill="#4A0E0E" />
+                                            <circle cx="50" cy="50" r="20" fill="#DAA520" />
+                                            <circle cx="50" cy="50" r="20" fill="none" stroke="#FFF8DC" strokeWidth="1" />
+                                            <circle cx="50" cy="50" r="4.5" fill="#FFF8DC" />
+                                            <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(218,165,32,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                                        </svg>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2, overflow: 'hidden' }}>
+                                        <span style={{ fontSize: '0.88rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textShadow: '0 0 5px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                                            {selectedSong.title}
+                                        </span>
+                                        <span style={{ fontSize: '0.55rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 'bold' }}>
+                                            {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
+                                        </span>
+                                    </div>
+                                </button>
 
                                 <div className="grid grid-cols-2 gap-2 w-full">
+                                    <button
+                                        className="secondary-btn lobby-nav-btn"
+                                        style={{ position: 'relative', overflow: 'hidden', padding: '0.55rem 0.4rem' }}
+                                        onClick={() => setView('store')}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>🛒</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.market}</span>
+                                        </div>
+                                    </button>
 
                                     <button
-
                                         className="secondary-btn lobby-nav-btn"
-
-                                        style={{ position: 'relative', overflow: 'hidden' }}
-
-                                        onClick={() => setView('store')}
-
+                                        style={{ border: '1.5px solid rgba(212, 175, 55, 0.6)', padding: '0.55rem 0.4rem' }}
+                                        onClick={() => { loadLeaderboard(); setView('leaderboard'); }}
                                     >
-
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-
-                                            <span className="btn-icon">🛒</span>
-
-                                            <span className="btn-text">{t.market}</span>
-
+                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>🏆</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: 'var(--ph-gold)' }}>{t.ranking}</span>
                                         </div>
-
                                     </button>
 
-                                    <button className="secondary-btn lobby-nav-btn" onClick={() => { loadLeaderboard(); setView('leaderboard'); }}>
-
-                                        <span className="btn-icon">🏆</span>
-
-                                        <span className="btn-text">{t.ranking}</span>
-
+                                    <button
+                                        className="secondary-btn lobby-nav-btn"
+                                        style={{ padding: '0.55rem 0.4rem' }}
+                                        onClick={() => setShowSettings(true)}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>⚙️</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.setup}</span>
+                                        </div>
                                     </button>
 
-                                    <button className="secondary-btn lobby-nav-btn" onClick={() => setShowSettings(true)}>
-
-                                        <span className="btn-icon">⚙️</span>
-
-                                        <span className="btn-text">{t.setup}</span>
-
+                                    <button
+                                        className="secondary-btn lobby-nav-btn"
+                                        style={{ padding: '0.55rem 0.4rem' }}
+                                        onClick={() => setView('howto')}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>📜</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.rules}</span>
+                                        </div>
                                     </button>
-
-                                    <button className="secondary-btn lobby-nav-btn" onClick={() => setView('howto')}>
-
-                                        <span className="btn-icon">📜</span>
-
-                                        <span className="btn-text">{t.rules}</span>
-
-                                    </button>
-
                                 </div>
-
-                                {/* Daily Check-in Sidebar Float Button */}
-                                <button
-                                    onClick={() => setShowCheckInModal(true)}
-                                    className="lobby-daily-checkin-btn"
-                                >
-                                    <span style={{ fontSize: '1.1rem' }}>📅</span>
-                                    <span style={{ fontSize: '0.54rem', fontWeight: 'bold', fontFamily: 'monospace', color: '#fff', writingMode: 'vertical-lr', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        {language === 'es' ? 'DIARIO' : 'DAILY'}
-                                    </span>
-                                    {canCheckIn && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '-3px',
-                                            left: '-3px',
-                                            width: '9px',
-                                            height: '9px',
-                                            borderRadius: '50%',
-                                            background: '#ff4757',
-                                            border: '1.5px solid #fff'
-                                        }} />
-                                    )}
-                                </button>
-
                             </div>
-
                         </div>
 
 
@@ -4881,11 +4418,27 @@ Ganador: ${payload.winnerAddress}`);
                                                             letterSpacing: '0.02em',
 
                                                             transition: 'all 0.2s ease'
-
                                                         }}>
-
-                                                            {song.title}
-
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                                                <span>{song.title}</span>
+                                                                {previewingSongId === song.id && (
+                                                                    <span style={{
+                                                                        fontSize: '0.6rem',
+                                                                        background: '#27AE60',
+                                                                        color: '#fff',
+                                                                        padding: '1px 6px',
+                                                                        borderRadius: '4px',
+                                                                        fontWeight: 'bold',
+                                                                        letterSpacing: '0.04em',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '3px',
+                                                                        animation: 'pulse 1.2s infinite'
+                                                                    }}>
+                                                                        🔊 {language === 'es' ? 'SONANDO' : 'PLAYING'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         <div style={{
@@ -7055,7 +6608,7 @@ Ganador: ${payload.winnerAddress}`);
 
                                         <button
 
-                                            onClick={loadLeaderboard}
+                                            onClick={() => loadLeaderboard()}
 
                                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', width: 40, color: '#666' }}
 
@@ -7077,11 +6630,15 @@ Ganador: ${payload.winnerAddress}`);
                                         marginBottom: '0.5rem'
                                     }}>
                                         <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold' }}>
-                                            {language === 'es' ? 'Canción de la Mafia:' : 'Mafia Track:'}
+                                            {language === 'es' ? 'Filtrar por Canción:' : 'Filter by Song:'}
                                         </span>
                                         <select
                                             value={leaderboardSongId}
-                                            onChange={(e) => setLeaderboardSongId(Number(e.target.value))}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setLeaderboardSongId(val as any);
+                                                loadLeaderboard(val);
+                                            }}
                                             style={{
                                                 background: '#222',
                                                 color: '#fff',
@@ -7091,169 +6648,101 @@ Ganador: ${payload.winnerAddress}`);
                                                 fontSize: '0.85rem',
                                                 cursor: 'pointer',
                                                 outline: 'none',
-                                                fontWeight: 'bold'
+                                                fontWeight: 'bold',
+                                                maxWidth: '65%'
                                             }}
                                         >
-                                            <option value={1}>🍕 O Sole Mio (Classic)</option>
-                                            <option value={2}>🎸 Tarantella Rock (Medium)</option>
-                                            <option value={3}>🎹 Bella Ciao (Hard)</option>
+                                            <option value="all">🌟 {language === 'es' ? 'Todas las Canciones' : 'All Songs'}</option>
+                                            {SONGS.map(s => (
+                                                <option key={s.id} value={s.id}>
+                                                    🍕 {s.title} ({s.difficulty === 3 ? 'Hard' : s.difficulty === 2 ? 'Med' : 'Easy'})
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
 
                                     {/* Leaderboard submission badge from last game */}
-
                                     {lbSubmitStatus !== 'none' && (
-
                                         <div style={{
-
                                             textAlign: 'center',
-
                                             padding: '0.4rem 0.8rem',
-
                                             marginBottom: '0.5rem',
-
                                             borderRadius: '8px',
-
                                             fontSize: '0.8rem',
-
                                             fontWeight: 'bold',
-
                                             background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
-
                                             color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
-
                                             border: `1px solid ${lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c'}`,
-
                                         }}>
-
                                             {lbSubmitStatus === 'ok' ? '✅ Your score was submitted to the board!' : '⚠️ Leaderboard submission failed — see console'}
-
                                         </div>
-
                                     )}
 
-
-
                                     <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
-
                                         {leaderboardLoading ? (
-
                                             <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-
                                                 <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
-
-                                                Loading on-chain scores...
-
+                                                Loading scores...
                                             </div>
-
                                         ) : leaderboardError ? (
-
                                             <div style={{ textAlign: 'center', padding: '2rem' }}>
-
                                                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
-
                                                 <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
-
                                                 <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
-
-                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={loadLeaderboard}>Try Again</button>
-
+                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={() => loadLeaderboard()}>Try Again</button>
                                             </div>
-
                                         ) : leaderboard.length === 0 ? (
-
                                             <div style={{ textAlign: 'center', padding: '2rem' }}>
-
                                                 <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
-
                                                 <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
-
                                                 <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
-
                                                 <button
-
                                                     className="primary-btn"
-
                                                     style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
-
                                                     onClick={() => { setView('lobby'); handleStartGame(); }}
-
                                                 >🔥 FIRE UP OVEN</button>
-
                                             </div>
-
                                         ) : (
-
                                             <div style={{ width: '100%' }}>
-
                                                 <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
-
-                                                    ⛓ Scores verified on Stellar Testnet · {leaderboard.length} entr{leaderboard.length === 1 ? 'y' : 'ies'}
-
+                                                    🏆 Arcade Leaderboard · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
                                                 </div>
-
                                                 {leaderboard.map((entry, i) => {
-
                                                     const medals = ['🥇', '🥈', '🥉'];
-
-                                                    const medal = medals[i] ?? `${i + 1}.`;
-
-                                                    const shortAddr = entry.player.length >= 10
-
-                                                        ? `${entry.player.slice(0, 6)}…${entry.player.slice(-4)}`
-
-                                                        : entry.player;
-
-                                                    const isMe = entry.player === userAddress;
+                                                    const medal = medals[i] ?? `#${i + 1}`;
+                                                    const displayName = entry.nickname || (entry.player_id && entry.player_id.length >= 10 ? `${entry.player_id.slice(0, 6)}…${entry.player_id.slice(-4)}` : 'Chef Anon');
+                                                    const isMe = entry.nickname === chefName || (userAddress && entry.player_id === userAddress);
+                                                    const songName = entry.metadata?.songTitle || entry.metadata?.song_id || '';
 
                                                     return (
-
                                                         <div key={i} style={{
-
                                                             display: 'flex',
-
                                                             alignItems: 'center',
-
                                                             gap: '0.75rem',
-
                                                             padding: '0.75rem 0.5rem',
-
                                                             borderBottom: '1px solid #E0D4B8',
-
                                                             background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
-
                                                             borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
-
                                                         }}>
-
-                                                            <span style={{ fontSize: '1.3rem', minWidth: '2rem', textAlign: 'center' }}>{medal}</span>
-
+                                                            <span style={{ fontSize: '1.25rem', minWidth: '2.2rem', textAlign: 'center' }}>{medal}</span>
                                                             <div style={{ flex: 1, minWidth: 0 }}>
-
-                                                                <div style={{ fontSize: '0.85rem', fontWeight: isMe ? 'bold' : 'normal', fontFamily: 'monospace', color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-
-                                                                    {shortAddr}{isMe ? ' (you)' : ''}
-
+                                                                <div style={{ fontSize: '0.95rem', fontWeight: isMe ? 'bold' : '600', fontFamily: "'Special Elite', monospace", color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {displayName}{isMe ? ' (tú)' : ''}
                                                                 </div>
-
+                                                                {songName && (
+                                                                    <div style={{ fontSize: '0.7rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                        🎵 {songName}
+                                                                    </div>
+                                                                )}
                                                             </div>
-
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#27ae60', whiteSpace: 'nowrap' }}>
-
-                                                                {entry.score.toLocaleString()} pts
-
+                                                            <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                                                                {Number(entry.score).toLocaleString()} pts
                                                             </div>
-
                                                         </div>
-
                                                     );
-
                                                 })}
-
                                             </div>
-
                                         )}
-
                                     </div>
 
 
@@ -8812,28 +8301,164 @@ Ganador: ${payload.winnerAddress}`);
                                         }}>S</div>
                                     </div>
 
-                                    {/* On-chain verified score */}
-                                    {onChainScore !== null && (
-                                        <div style={{ width: '100%', marginTop: '0.6rem', textAlign: 'center', fontSize: '0.85rem', color: '#555', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                                            <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '3px 0', width: '100%', letterSpacing: '1px' }}>
-                                                *** {language === 'es' ? 'COPIA VERIFICADA' : 'VERIFIED COPY'} ***
-                                            </div>
-                                            <div>
-                                                {t.scoreVerified.toUpperCase()}: <strong>{onChainScore.toLocaleString()} PTS</strong>
-                                            </div>
+
+                                    {/* Chef Name & Optional Email Lead Capture */}
+                                    <div style={{ width: '100%', marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', borderTop: '1px dashed #ccc', paddingTop: '0.5rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                👨‍🍳 {language === 'es' ? 'Nombre del Chef:' : 'Chef Nickname:'}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                maxLength={24}
+                                                value={chefName}
+                                                onChange={(e) => {
+                                                    setChefName(e.target.value);
+                                                    try { localStorage.setItem('gp_chef_name', e.target.value); } catch {}
+                                                    setIsScoreSaved(false);
+                                                }}
+                                                placeholder={language === 'es' ? 'Tu Apodo / Nickname' : 'Your Nickname'}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '0.45rem 0.6rem',
+                                                    background: '#fff',
+                                                    border: '1.5px solid #8B0000',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.9rem',
+                                                    fontFamily: "'Special Elite', monospace",
+                                                    color: '#111',
+                                                    boxSizing: 'border-box'
+                                                }}
+                                            />
                                         </div>
-                                    )}
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                ✉️ {language === 'es' ? 'Email (Opcional):' : 'Email (Optional):'}
+                                            </label>
+                                            <input
+                                                type="email"
+                                                value={playerEmail}
+                                                onChange={(e) => {
+                                                    setPlayerEmail(e.target.value);
+                                                    try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
+                                                    setIsScoreSaved(false);
+                                                }}
+                                                placeholder={language === 'es' ? 'correo@ejemplo.com' : 'email@example.com'}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '0.45rem 0.6rem',
+                                                    background: '#fff',
+                                                    border: '1.5px solid #ccc',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.85rem',
+                                                    fontFamily: "'Special Elite', monospace",
+                                                    color: '#111',
+                                                    boxSizing: 'border-box'
+                                                }}
+                                            />
+                                            <span style={{ fontSize: '0.66rem', color: '#666', fontStyle: 'italic', lineHeight: 1.25, marginTop: '1px' }}>
+                                                {language === 'es'
+                                                    ? '✉️ Opcional: ingresa tu correo para recibir noticias y actualizaciones exclusivas de Rhythm Slice.'
+                                                    : '✉️ Optional: enter your email to receive news and updates on Rhythm Slice.'}
+                                            </span>
+                                        </div>
+
+                                        <button
+                                            onClick={async () => {
+                                                const scoreToSave = lastScoreRef.current || lastScore || 0;
+                                                if (scoreToSave <= 0) {
+                                                    alert(language === 'es'
+                                                        ? '⚠️ Consigue puntos jugando la canción para poder clasificar en el ranking.'
+                                                        : '⚠️ Score points by playing the track to qualify for the leaderboard.');
+                                                    return;
+                                                }
+                                                setIsSavingScore(true);
+                                                try {
+                                                    await SpicyCrustService.submitScore({
+                                                        playerExternalId: userAddress || 'guest_player',
+                                                        nickname: chefName || 'Chef Don',
+                                                        email: playerEmail || undefined,
+                                                        score: scoreToSave,
+                                                        metadata: {
+                                                            songId: selectedSong.id,
+                                                            songTitle: selectedSong.title,
+                                                            difficulty: selectedSong.difficulty === 3 ? 'Hard' : (selectedSong.difficulty === 2 ? 'Medium' : 'Easy'),
+                                                            timestamp: Date.now()
+                                                        }
+                                                    });
+                                                    setIsScoreSaved(true);
+                                                    loadLeaderboard();
+                                                } catch (err) {
+                                                    console.error('Error guardando score:', err);
+                                                } finally {
+                                                    setIsSavingScore(false);
+                                                }
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.65rem 0.8rem',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 'bold',
+                                                fontFamily: "'Special Elite', monospace",
+                                                background: isScoreSaved ? '#27ae60' : '#8B0000',
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                marginTop: '0.3rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                                            }}
+                                        >
+                                            {isSavingScore ? '⏳ Guardando...' : (isScoreSaved ? '✅ ¡PUNTUACIÓN GUARDADA!' : '💾 GUARDAR EN EL RANKING')}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%', marginTop: '0.8rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '0.8rem' }}>
+                                    <button
+                                        onClick={() => {
+                                            const results = document.getElementById('results');
+                                            if (results) results.style.display = 'none';
+                                            const overlay = document.getElementById('overlay');
+                                            if (overlay) overlay.style.display = 'flex';
+                                            loadLeaderboard();
+                                            setView('leaderboard');
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 1rem',
+                                            fontSize: '1rem',
+                                            fontWeight: 'bold',
+                                            fontFamily: "'Special Elite', monospace",
+                                            background: '#D4AF37',
+                                            color: '#1a1005',
+                                            border: 'none',
+                                            borderRadius: '10px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px',
+                                            boxShadow: '0 3px 8px rgba(212,175,55,0.3)'
+                                        }}
+                                    >
+                                        🏆 {language === 'es' ? 'VER TABLA DE LÍDERES' : 'VIEW LEADERBOARD'}
+                                    </button>
+
                                     <button
                                         id="restartBtn"
                                         className="primary-btn"
                                         onClick={handleCookAgain}
-                                        style={{ width: '100%', padding: '0.85rem 1rem', fontSize: '1.1rem', boxShadow: 'none' }}
+                                        style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '1.05rem', boxShadow: 'none' }}
                                     >
-                                        🍕 {language === 'es' ? 'GUARDAR Y REPETIR' : 'SAVE & COOK AGAIN'}
+                                        🍕 {language === 'es' ? 'TOCAR DE NUEVO' : 'PLAY AGAIN'}
                                     </button>
 
                                     {onChainScore !== null && onChainScore >= 4000 ? (
@@ -8895,302 +8520,7 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                    {/* TX Sealed Pop-up — appears after on-chain submission, auto-closes in 8s */}
 
-                    {showTxPopup && (
-
-                        <div style={{
-
-                            position: 'absolute', top: 0, left: 0,
-
-                            width: '100%', height: '100%',
-
-                            zIndex: 30,
-
-                            background: 'rgba(0,0,0,0.75)',
-
-                            backdropFilter: 'blur(6px)',
-
-                            display: 'flex',
-
-                            alignItems: 'center',
-
-                            justifyContent: 'center',
-
-                        }}>
-
-                            <div style={{
-
-                                background: '#FFF8E7',
-
-                                border: '3px solid #27ae60',
-
-                                borderRadius: '16px',
-
-                                padding: '1.5rem',
-
-                                width: '88%',
-
-                                maxWidth: '360px',
-
-                                boxShadow: '0 10px 40px rgba(39,174,96,0.3)',
-
-                                display: 'flex',
-
-                                flexDirection: 'column',
-
-                                gap: '1rem',
-
-                            }}>
-
-                                {/* Header */}
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-
-                                    <div>
-
-                                        <div style={{ color: '#27ae60', fontWeight: 'bold', fontSize: '0.85rem', letterSpacing: '0.1em' }}>
-
-                                            ⛓ {language === 'es' ? 'SELLADO EN STELLAR' : 'SEALED ON STELLAR'}
-
-                                        </div>
-
-                                        <div style={{ color: '#555', fontSize: '0.75rem', marginTop: '2px', fontWeight: 'bold' }}>
-
-                                            {language === 'es' ? 'Puntaje verificado en cadena' : 'Score verified on-chain'}
-
-                                        </div>
-
-                                    </div>
-
-                                    <button
-
-                                        onClick={closeTxPopup}
-
-                                        style={{ background: '#F9F5EB', border: '1px solid #D0B488', borderRadius: '50%', width: 28, height: 28, color: '#8B0000', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-
-                                    >✕</button>
-
-                                </div>
-
-
-
-                                {/* TX rows */}
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-
-                                    {popupTxs.map((tx, i) => {
-
-                                        const shortHash = `${tx.hash.slice(0, 8)}…${tx.hash.slice(-6)}`;
-
-                                        return (
-
-                                            <div key={i} style={{
-
-                                                display: 'flex',
-
-                                                alignItems: 'center',
-
-                                                justifyContent: 'space-between',
-
-                                                background: 'rgba(39,174,96,0.08)',
-
-                                                border: '1px solid rgba(39,174,96,0.3)',
-
-                                                borderRadius: '8px',
-
-                                                padding: '0.5rem 0.75rem',
-
-                                                gap: '0.5rem',
-
-                                            }}>
-
-                                                <div>
-
-                                                    <div style={{ color: '#27ae60', fontSize: '0.78rem', fontWeight: 'bold' }}>✅ {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}</div>
-
-                                                    <div style={{ color: '#888', fontSize: '0.7rem', fontFamily: 'monospace' }}>{shortHash}</div>
-
-                                                </div>
-
-                                                <a
-
-                                                    href={`${EXPLORER_BASE}/${tx.hash}`}
-
-                                                    target="_blank"
-
-                                                    rel="noopener noreferrer"
-
-                                                    style={{ color: '#27ae60', fontSize: '1.2rem', textDecoration: 'none', flexShrink: 0 }}
-
-                                                    title="View on Stellar Explorer"
-
-                                                >🔗</a>
-
-                                            </div>
-
-                                        );
-
-                                    })}
-
-                                </div>
-
-
-
-                                {/* SLICE reward banner */}
-
-                                {sliceEarned > 0 && (
-
-                                    <div style={{
-
-                                        background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))',
-
-                                        border: '1px solid rgba(212,175,55,0.6)',
-
-                                        borderRadius: '10px',
-
-                                        padding: '0.75rem 1rem',
-
-                                        display: 'flex',
-
-                                        alignItems: 'center',
-
-                                        gap: '0.75rem',
-
-                                    }}>
-
-                                        <span style={{ fontSize: '1.6rem' }}>🍕</span>
-
-                                        <div>
-
-                                            <div style={{ color: '#d4af37', fontWeight: 'bold', fontSize: '1rem', letterSpacing: '0.05em' }}>
-
-                                                +{sliceEarned} $SLICE {language === 'es' ? 'ganados' : 'earned'}
-
-                                            </div>
-
-                                            <div style={{ color: '#a08828', fontSize: '0.72rem', marginTop: '2px' }}>
-
-                                                {language === 'es' ? 'Acreditados en tu wallet' : 'Minted to your wallet on-chain'}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                )}
-
-
-
-                                {/* Actions */}
-
-                                <button
-
-                                    onClick={closeTxPopup}
-
-                                    className="primary-btn"
-
-                                    style={{ width: '100%', padding: '0.8rem', fontSize: '1rem' }}
-
-                                >
-
-                                    🍕 {language === 'es' ? 'REPETIR' : 'COOK AGAIN'}
-
-                                </button>
-
-
-
-                                {/* Check-in Prompt (shows if not yet checked in today) */}
-                                {canCheckIn && (
-                                    <div
-                                        onClick={() => { closeTxPopup(); setShowCheckInModal(true); }}
-                                        style={{
-                                            background: 'linear-gradient(135deg, rgba(139,0,0,0.12), rgba(212,175,55,0.1))',
-                                            border: '1.5px dashed #d4af37',
-                                            borderRadius: '10px',
-                                            padding: '0.65rem 1rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.7rem',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                        }}
-                                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.15)')}
-                                        onMouseLeave={e => (e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139,0,0,0.12), rgba(212,175,55,0.1))')}
-                                    >
-                                        <span style={{ fontSize: '1.4rem' }}>📕</span>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.78rem', color: '#8B0000', letterSpacing: '0.04em' }}>
-                                                {language === 'es' ? '¡Firma el Diario del Don hoy!' : "Sign the Don's Journal today!"}
-                                            </div>
-                                            <div style={{ fontSize: '0.65rem', color: '#888', marginTop: '1px' }}>
-                                                {checkInStreak > 0
-                                                    ? (language === 'es' ? `Racha actual: 🔥 ${checkInStreak} días` : `Current streak: 🔥 ${checkInStreak} days`)
-                                                    : (language === 'es' ? 'Empieza tu racha hoy' : 'Start your streak today')}
-                                            </div>
-                                        </div>
-                                        <div style={{
-                                            background: '#d4af37',
-                                            color: '#1a0000',
-                                            fontSize: '0.6rem',
-                                            fontWeight: 'bold',
-                                            padding: '3px 8px',
-                                            borderRadius: '6px',
-                                            fontFamily: 'monospace',
-                                            flexShrink: 0,
-                                            animation: 'pulse 1.5s infinite',
-                                        }}>
-                                            ✍ {language === 'es' ? 'FIRMAR' : 'SIGN'}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Quest Progress Summary */}
-                                {dailyQuestProgress.some((p, i) => p > 0 && !(dailyQuestClaimed[i])) && (
-                                    <div style={{
-                                        background: 'rgba(0,0,0,0.04)',
-                                        border: '1px solid rgba(0,0,0,0.1)',
-                                        borderRadius: '10px',
-                                        padding: '0.6rem 0.8rem',
-                                    }}>
-                                        <div style={{ fontSize: '0.68rem', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
-                                            📋 {language === 'es' ? 'Misiones de Hoy' : "Today's Quests"}
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                            {[
-                                                { label: language === 'es' ? '🍕 Hornear 2 pizzas' : '🍕 Bake 2 pizzas', target: 2, reward: '🍄' },
-                                                { label: language === 'es' ? '🎵 Completar 1 canción' : '🎵 Complete 1 song', target: 1, reward: '🍇' },
-                                                { label: language === 'es' ? '🥩 Congelar ingredientes' : '🥩 Freeze ingredients', target: 1, reward: '✨' },
-                                            ].map((q, idx) => {
-                                                const prog = Math.min(dailyQuestProgress[idx] ?? 0, q.target);
-                                                const claimed = dailyQuestClaimed[idx] ?? false;
-                                                const done = prog >= q.target;
-                                                return (
-                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <div style={{ flex: 1, background: 'rgba(0,0,0,0.06)', borderRadius: '4px', height: '5px', overflow: 'hidden' }}>
-                                                            <div style={{ height: '100%', width: `${Math.round((prog / q.target) * 100)}%`, background: claimed ? '#27ae60' : done ? '#d4af37' : '#8B0000', borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                                                        </div>
-                                                        <span style={{ fontSize: '0.62rem', color: claimed ? '#27ae60' : done ? '#d4af37' : '#888', fontFamily: 'monospace', minWidth: '60px' }}>
-                                                            {q.label.split(' ').slice(0, 2).join(' ')} {prog}/{q.target} {claimed ? '✓' : done ? q.reward : ''}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Countdown */}
-                                <div style={{ textAlign: 'center', color: '#555', fontSize: '0.72rem' }}>
-                                    {language === 'es' ? 'Cierre automático en' : 'Auto-closing in'} {popupCountdown}s
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    )}
 
 
 

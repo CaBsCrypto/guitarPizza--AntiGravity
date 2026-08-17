@@ -272,7 +272,9 @@ export function WalletStandalone() {
         </>
       )}
 
-      {network && <div className="wallet-standalone-network">{network}</div>}
+      {network && !network.toLowerCase().includes('avalanche') && !network.toLowerCase().includes('fuji') && (
+        <div className="wallet-standalone-network">{network}</div>
+      )}
       {error && <div className="wallet-standalone-error">{error}</div>}
 
       {/* ── Passkey Selection & Creation Modals ── */}

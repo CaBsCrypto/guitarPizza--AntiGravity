@@ -13,11 +13,11 @@ fn test_staking_vault() {
     let user = Address::generate(&env);
 
     // 2. Register mock tokens
-    let slice_token_addr = env.register_stellar_asset_contract(&admin);
-    let cheese_token_addr = env.register_stellar_asset_contract(&admin);
-    let pepperoni_token_addr = env.register_stellar_asset_contract(&admin);
-    let bacon_token_addr = env.register_stellar_asset_contract(&admin);
-    let onion_token_addr = env.register_stellar_asset_contract(&admin);
+    let slice_token_addr = env.register_stellar_asset_contract(admin.clone());
+    let cheese_token_addr = env.register_stellar_asset_contract(admin.clone());
+    let pepperoni_token_addr = env.register_stellar_asset_contract(admin.clone());
+    let bacon_token_addr = env.register_stellar_asset_contract(admin.clone());
+    let onion_token_addr = env.register_stellar_asset_contract(admin.clone());
 
     // Setup clients for tokens to mint
     let slice_admin = token::StellarAssetClient::new(&env, &slice_token_addr);

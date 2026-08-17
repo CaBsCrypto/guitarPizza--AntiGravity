@@ -205,7 +205,7 @@ export function useWallet() {
           // Extract EVM embedded or connected wallet address from Privy
           const evmWallet = wallets.find(w => 
             w.walletClientType === 'privy' || 
-            w.chainType === 'ethereum' ||
+            (w as any).chainType === 'ethereum' ||
             w.address?.startsWith('0x')
           ) || wallets[0];
           

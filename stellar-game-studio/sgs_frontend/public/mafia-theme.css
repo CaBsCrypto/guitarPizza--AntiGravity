@@ -1059,4 +1059,31 @@ button {
     .store-grid {
         grid-template-columns: 1fr !important;
     }
-}
+}
+
+/* ============================================================
+   MOBILE PWA & TOUCH OPTIMIZATIONS
+   ============================================================ */
+html, body {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+}
+
+canvas#gameCanvas {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* iOS Safe Area Insets for Notch / Dynamic Island */
+@supports (padding-top: env(safe-area-inset-top)) {
+    #restaurant-table-bg {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
+

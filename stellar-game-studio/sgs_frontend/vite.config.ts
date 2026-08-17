@@ -13,11 +13,13 @@ export default defineConfig(({ mode }) => ({
     global: 'globalThis'
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      buffer: path.resolve(__dirname, './node_modules/buffer/'),
-      '@solana-program/token': path.resolve(__dirname, './src/utils/emptyMock.ts')
-    },
+    alias: [
+      { find: /^react-aria\/(.*)/, replacement: path.resolve(__dirname, './node_modules/react-aria/dist/exports/$1.js') },
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      { find: 'buffer', replacement: path.resolve(__dirname, './node_modules/buffer/') },
+      { find: '@solana-program/token', replacement: path.resolve(__dirname, './src/utils/emptyMock.ts') },
+      { find: '@stripe/stripe-js', replacement: path.resolve(__dirname, './src/utils/emptyMock.ts') }
+    ],
     dedupe: ['@stellar/stellar-sdk']
   },
   optimizeDeps: {
