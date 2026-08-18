@@ -1,5 +1,5 @@
 // Guitar Pizza Service Worker (PWA Cache & Offline Resilience)
-const CACHE_NAME = 'guitar-pizza-cache-v1';
+const CACHE_NAME = 'guitar-pizza-cache-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',

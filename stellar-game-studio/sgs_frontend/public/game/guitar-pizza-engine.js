@@ -275,14 +275,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         } else if (gameState === STATE.PAUSED) {
             gameState = STATE.GAME;
             // Resume the song exactly where we left off (resolvedStart + gameTimer)
-            const songRate = AudioEngine._fireRate || 1.0;
             const resolvedStart = CONFIG.SONG_START || 0;
             const resolvedDuration = CONFIG.SONG_DURATION || 0;
-            const durationLeft = resolvedDuration - gameTimer;
+            const durationLeft = resolvedDuration - Math.max(0, gameTimer);
             // gameTimer < 0 means we're still in the lead-in: the song hasn't
             // started yet (_pendingSongPlay will fire it), so don't resume audio.
             if (durationLeft > 0 && gameTimer >= 0) {
-                AudioEngine.playSong(songRate, resolvedStart + gameTimer, durationLeft);
+                AudioEngine.playSong(1.0, resolvedStart + gameTimer, durationLeft, null, gameTimer);
             }
             lastTime = performance.now(); // reset time to prevent huge dt jump
         }
@@ -684,10 +683,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     };
 
     // --- OFFLINE DSP BEAT DETECTOR & CHART GENERATOR ---
-    function generateChartFromAudio(songBuffer, bpm) {
+    function generateChartFromAudio(songBuffer, bpm, songStartSec = 0, songDurationSec = 0) {
         const channelData = songBuffer.getChannelData(0);
         const sampleRate = songBuffer.sampleRate;
-        const duration = songBuffer.duration;
+        const totalFileDuration = songBuffer.duration;
+        const startSec = songStartSec || 0;
+        const playDuration = songDurationSec > 0 ? songDurationSec : (totalFileDuration - startSec);
+        const endSec = Math.min(totalFileDuration, startSec + playDuration);
         
         const blockSize = 512;
         const totalBlocks = Math.floor(channelData.length / blockSize);
@@ -787,8 +789,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         const laneLastNoteTime = [-999, -999, -999, -999];
         
         function addNote(time, lane, isTrap = false, isSustain = false, length = 0) {
-            const quantized = Math.round(time / stepLength) * stepLength;
-            if (quantized < 0.2 || quantized > duration - 2.5) return;
+            // Strictly filter to the active playing segment of the song!
+            if (time < startSec + 0.2 || time > endSec - 1.5) return;
+
+            // Offset note time so it is relative to gameplay start (0.0s = startSec in audio)
+            const relativeTime = time - startSec;
+            const quantized = Math.round(relativeTime / stepLength) * stepLength;
+            if (quantized < 0.2 || quantized > playDuration - 1.5) return;
             
             // Enforce minimum time spacing (cooldown) to ensure fun, playable notes: at least 0.8 beats
             const minSpacing = beatLength * 0.8;
@@ -901,7 +908,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 // Run dynamic offline beat detection mapper if chartData is missing
                 if (!options.chartData || !Array.isArray(options.chartData.notes) || options.chartData.notes.length === 0) {
                     console.log('[Engine] Generating dynamic chart from audio track...');
-                    const autoNotes = generateChartFromAudio(this.songBuffer, CONFIG.BPM);
+                    const autoNotes = generateChartFromAudio(this.songBuffer, CONFIG.BPM, CONFIG.SONG_START, CONFIG.SONG_DURATION);
                     options.chartData = { notes: autoNotes };
                     console.log(`[Engine] Dynamically mapped ${autoNotes.length} notes across 4 lanes.`);
                 }
@@ -909,7 +916,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 console.warn('[AudioEngine] Failed to load song:', e);
             }
         },
-        playSong: function (initialRate, startSec, durationSec) {
+        songStartCtxTime: null,
+        songStartSec: 0,
+        songDurationSec: 0,
+        songOffsetAtPlay: 0,
+        isPlaying: false,
+
+        playSong: function (initialRate, startSec, durationSec, scheduledTimeCtx, offsetInSegment) {
             if (!this.isInit || !this.songBuffer) return;
             this.stopSong();
 
@@ -923,7 +936,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             this.songSource = this.ctx.createBufferSource();
             this.songSource.buffer = this.songBuffer;
             this.songSource.loop = false; // segment play — no full loop
-            this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
+            this.songSource.playbackRate.value = 1.0; // Strictly 1.0 for perfect rhythmic synchronization
 
             this.songSource.connect(this.musicGain);
             this.musicGain.connect(this.filterNode);
@@ -932,21 +945,36 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             // Play only the curated segment
             const s = startSec || 0;
             const d = durationSec || this.songBuffer.duration;
-            this.songSource.start(0, s, d);
-            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
+            this.songStartSec = s;
+            this.songDurationSec = d;
+            this.songOffsetAtPlay = offsetInSegment || 0;
+
+            const nowCtx = this.ctx.currentTime;
+            const startWhen = (typeof scheduledTimeCtx === 'number' && scheduledTimeCtx >= nowCtx)
+                ? scheduledTimeCtx
+                : nowCtx;
+
+            this.songStartCtxTime = startWhen;
+            this.isPlaying = true;
+
+            this.songSource.start(startWhen, s, d);
+            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's, scheduled at ctx ' + startWhen.toFixed(4) + ')');
 
             // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
             const fadeStart = Math.max(0, d - 3);
-            const fadeStartCtx = this.ctx.currentTime + fadeStart;
+            const fadeStartCtx = startWhen + fadeStart;
             this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
-            this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
+            this.musicGain.gain.linearRampToValueAtTime(0.0, startWhen + d);
 
             // When the segment naturally ends -> trigger level complete (victory)
             this.songSource.onended = () => {
+                this.isPlaying = false;
                 if (gameState === STATE.GAME) completeLevel();
             };
         },
         stopSong: function () {
+            this.isPlaying = false;
+            this.songStartCtxTime = null;
             if (this.songSource) {
                 try { this.songSource.stop(); } catch (e) { }
                 try { this.songSource.disconnect(); } catch (e) { }
@@ -954,11 +982,25 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
         },
 
+        getSongPosition: function () {
+            if (!this.isPlaying || this.songStartCtxTime === null || !this.ctx) {
+                return null;
+            }
+            const currentCtxTime = this.ctx.currentTime;
+            if (currentCtxTime < this.songStartCtxTime) {
+                // Audio scheduled in future (e.g. before lead-in ends)
+                return -(this.songStartCtxTime - currentCtxTime);
+            }
+            const elapsed = currentCtxTime - this.songStartCtxTime;
+            const hwLatency = (typeof this.ctx.outputLatency === 'number') ? this.ctx.outputLatency : 0;
+            return Math.max(0, this.songOffsetAtPlay + elapsed - hwLatency);
+        },
+
         // ── REACTIVE AUDIO ────────────────────────────────────────────────────
-        _fireRate: 1.0,      // target playback rate during fire mode
+        _fireRate: 1.0,      // target playback rate reference
         _sustainTimer: 0,    // throttle for sustain ticks
 
-        onHit: function (isPerfect) {
+        onHit: function (isPerfect, lane) {
             if (!this.filterNode || !this.isInit || !this.musicGain || !this.songSource) return;
             const now = this.ctx.currentTime;
 
@@ -973,11 +1015,6 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setValueAtTime(22050, now);
                 this.filterNode.frequency.setTargetAtTime(16000, now + 0.06, 0.25);
-
-                // Pitch: satisfying swell +5%, decay back
-                this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setValueAtTime(1.05, now);
-                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.06, 0.22);
             } else {
                 // ── NORMAL HIT: lighter swell ─────────────────────────────────
                 // Volume: bump to 0.90, fall back
@@ -988,11 +1025,6 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 // Filter: open brighter briefly
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setTargetAtTime(20000, now, 0.08);
-
-                // Pitch: subtle +2% nudge
-                this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setValueAtTime(1.02, now);
-                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.03, 0.14);
             }
 
             // Trigger synthesized sound effect with lane harmony
@@ -1002,43 +1034,25 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         onMiss: function () {
             if (!this.filterNode || !this.isInit) return;
             const now = this.ctx.currentTime;
-            // ── HARD vinyl scratch ──
-            // Filter: instant slam to 280Hz, slow crawl back
+            // ── Vinyl scratch filter muffling (quick recovery) ──
             this.filterNode.frequency.cancelScheduledValues(now);
             this.filterNode.frequency.setValueAtTime(20000, now);
-            this.filterNode.frequency.linearRampToValueAtTime(280, now + 0.07);
-            // Stay muffled (around 800Hz) until a correct pizza is hit
-            this.filterNode.frequency.setTargetAtTime(800, now + 0.1, 0.5);
-            // Pitch: big dip + wobble back
-            if (this.songSource) {
-                this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setValueAtTime(0.82, now);
-                this.songSource.playbackRate.linearRampToValueAtTime(1.06, now + 0.18);
-                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.2, 0.5);
-            }
+            this.filterNode.frequency.linearRampToValueAtTime(350, now + 0.07);
+            this.filterNode.frequency.setTargetAtTime(16000, now + 0.15, 0.35);
 
             // Trigger error buzzer SFX
             this.playMissSFX();
         },
 
         onFireMode: function () {
-            if (!this.isInit || !this.songSource) return;
+            if (!this.isInit || !this.filterNode) return;
             const now = this.ctx.currentTime;
-            this._fireRate = 1.15; // Speed up song during fever
-            this.songSource.playbackRate.cancelScheduledValues(now);
-            this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.5);
-            if (this.filterNode) {
-                this.filterNode.frequency.cancelScheduledValues(now);
-                this.filterNode.frequency.setValueAtTime(22050, now);
-            }
+            this.filterNode.frequency.cancelScheduledValues(now);
+            this.filterNode.frequency.setValueAtTime(22050, now);
         },
 
         onFireModeEnd: function () {
-            if (!this.isInit || !this.songSource) return;
-            const now = this.ctx.currentTime;
-            this._fireRate = 1.0; // Reset to normal speed
-            this.songSource.playbackRate.cancelScheduledValues(now);
-            this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.2);
+            // Keep steady playback
         },
 
         onSustainTick: function (dt) {
@@ -1051,23 +1065,13 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const cur = this.filterNode.frequency.value;
             const target = Math.min(22050, cur + 1200);
             this.filterNode.frequency.setTargetAtTime(target, now, 0.08);
-            const curRate = this.songSource.playbackRate.value;
-            const targetRate = Math.min(this._fireRate + 0.08, curRate + 0.004);
-            this.songSource.playbackRate.setTargetAtTime(targetRate, now, 0.3);
         },
 
         onSustainComplete: function () {
-            if (!this.isInit) return;
+            if (!this.isInit || !this.filterNode) return;
             const now = this.ctx.currentTime;
-            if (this.songSource) {
-                this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setValueAtTime(1.12, now);
-                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.08, 0.45);
-            }
-            if (this.filterNode) {
-                this.filterNode.frequency.cancelScheduledValues(now);
-                this.filterNode.frequency.setValueAtTime(22050, now);
-            }
+            this.filterNode.frequency.cancelScheduledValues(now);
+            this.filterNode.frequency.setValueAtTime(22050, now);
             this._sustainTimer = 0;
         },
 
@@ -1362,18 +1366,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 const perfect = absOffset < PERFECT_WINDOW_SEC;
                 const tasty = absOffset < TASTY_WINDOW_SEC;
 
-                // Precision Timing Calibration Calculation
+                // Precision Timing Calibration Calculation (Visual feedback only - no jitter on global latency)
                 accuracyTicks.push({ offset: timeOffset, life: 1.5, isPerfect: perfect });
                 if (accuracyTicks.length > 20) accuracyTicks.shift();
-
-                // Dynamic Auto-Calibration: gently align latency to player's natural offset over time
-                if (tasty) {
-                    latency += timeOffset * 0.035; 
-                    latency = Math.max(-0.1, Math.min(0.3, latency));
-                    if (window.updateGuitarPizzaLatency) {
-                        window.updateGuitarPizzaLatency(latency * 1000);
-                    }
-                }
 
                 totalHits++;
                 // Trigger box bounce animation on the hit lane
@@ -1486,7 +1481,20 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
 
         if (fireMode) feverTime += dt;  // accumulate seconds in fever/fire mode
-        gameTimer += dt;
+
+        // --- MASTER AUDIO CLOCK SYNC ---
+        // Lock gameTimer strictly to Web Audio hardware playback position to avoid CPU frame drift
+        if (AudioEngine.isPlaying && AudioEngine.songStartCtxTime !== null) {
+            const audioPos = AudioEngine.getSongPosition();
+            if (typeof audioPos === 'number' && audioPos >= 0) {
+                gameTimer = audioPos;
+            } else {
+                gameTimer += dt;
+            }
+        } else {
+            gameTimer += dt;
+        }
+
         // Lead-in over: start the song exactly when the clock crosses zero
         if (_pendingSongPlay && gameTimer >= 0) {
             const _startSong = _pendingSongPlay;
@@ -2830,9 +2838,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 if (songUrl) {
                     _pendingSongPlay = () => {
                         if (AudioEngine.songBuffer) {
-                            AudioEngine.playSong(songRate, resolvedStart, resolvedDuration);
+                            AudioEngine.playSong(1.0, resolvedStart, resolvedDuration);
                         } else {
-                            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
+                            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(1.0, resolvedStart, resolvedDuration));
                         }
                     };
                 }
