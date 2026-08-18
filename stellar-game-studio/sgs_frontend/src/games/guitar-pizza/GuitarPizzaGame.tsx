@@ -190,8 +190,13 @@ const TRANSLATIONS = {
 
         engineLevelComplete: '🎉 ¡NIVEL COMPLETADO!',
 
-        engineServiceEnded: 'SERVICIO FINALIZADO'
-
+        engineServiceEnded: 'SERVICIO FINALIZADO',
+        gamepadTitle: 'CONTROL / GAMEPAD (XBOX)',
+        gamepadDesc: 'Soporte plug-and-play para controles de Xbox / PC / PlayStation.',
+        gamepadAutoDetect: 'DETECCIÓN AUTOMÁTICA',
+        gamepadPause: 'Pausa',
+        gamepadBack: 'Volver / Menú',
+        keyboardAlts: 'Teclas alternativas: D, F, J, K o Flechas ⬅️ ⬇️ ⬆️ ➡️'
     },
 
     en: {
@@ -304,8 +309,13 @@ const TRANSLATIONS = {
 
         engineLevelComplete: '🎉 LEVEL COMPLETE!',
 
-        engineServiceEnded: 'SERVICE ENDED'
-
+        engineServiceEnded: 'SERVICE ENDED',
+        gamepadTitle: 'GAMEPAD / CONTROLLER (XBOX)',
+        gamepadDesc: 'Plug-and-play support for Xbox / PC / PlayStation controllers.',
+        gamepadAutoDetect: 'AUTO-DETECTED',
+        gamepadPause: 'Pause',
+        gamepadBack: 'Back / Menu',
+        keyboardAlts: 'Alternative keys: D, F, J, K or Arrow Keys ⬅️ ⬇️ ⬆️ ➡️'
     }
 
 };
@@ -3240,46 +3250,72 @@ Ganador: ${payload.winnerAddress}`);
 
                 <div
                     id="game-device-screen"
-                    className="game-container game-frame"
+                    className="game-container game-frame phone-device-frame"
                     ref={containerRef}
                     style={{
-                        width: isGameFullscreen ? '100vw' : 'min(100%, calc((100vh - 2rem) * 9 / 16))',
-                        height: isGameFullscreen ? '100vh' : 'auto',
-                        aspectRatio: '9/16',
+                        height: isGameFullscreen ? '100vh' : 'calc(100% - 0.4rem)',
+                        maxHeight: isGameFullscreen ? '100vh' : 'calc(100vh - 62px)',
+                        aspectRatio: '9 / 16',
+                        width: 'auto',
+                        maxWidth: isGameFullscreen ? '100vw' : 'calc((100vh - 62px) * 9 / 16)',
                         position: 'relative',
                         overflow: 'hidden',
-                        border: isGameFullscreen ? 'none' : '8px solid #000',
-                        borderRadius: isGameFullscreen ? '0' : '20px',
-                        boxShadow: isGameFullscreen ? 'none' : '0 0 50px rgba(0,0,0,0.5)',
+                        border: isGameFullscreen ? 'none' : '8px solid #141210',
+                        outline: isGameFullscreen ? 'none' : '2px solid rgba(212, 175, 55, 0.45)',
+                        borderRadius: isGameFullscreen ? '0' : '34px',
+                        boxShadow: isGameFullscreen
+                            ? 'none'
+                            : '0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 0 0 2px #000',
+                        boxSizing: 'border-box',
                     }}
                 >
-                    {/* ── Floating fullscreen FAB inside the game screen ── */}
-                    <button
-                        onClick={toggleGameFullscreen}
-                        aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                        style={{
-                            position: 'absolute',
-                            top: '10px',
-                            right: '10px',
-                            zIndex: 9999,
-                            width: '36px',
-                            height: '36px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'rgba(10, 4, 2, 0.75)',
-                            border: '1.5px solid rgba(204, 41, 41, 0.5)',
-                            borderRadius: '8px',
-                            color: '#F5EDE0',
-                            fontSize: '1.1rem',
-                            cursor: 'pointer',
-                            backdropFilter: 'blur(6px)',
-                            opacity: 0.8,
-                            lineHeight: 1,
-                        }}
-                    >
-                        {isGameFullscreen ? '⊠' : '⛶'}
-                    </button>
+                    {/* ── Smartphone Dynamic Island / Notch ── */}
+                    {!isGameFullscreen && (
+                        <div
+                            className="phone-notch-island"
+                            style={{
+                                position: 'absolute',
+                                top: '8px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '88px',
+                                height: '18px',
+                                backgroundColor: '#0a0a0a',
+                                borderRadius: '20px',
+                                zIndex: 120,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '0 8px',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                                pointerEvents: 'none',
+                                border: '1px solid rgba(255,255,255,0.08)'
+                            }}
+                        >
+                            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#182438', border: '1px solid #333' }} />
+                            <div style={{ width: '32px', height: '3px', borderRadius: '2px', background: '#222' }} />
+                            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#0e1820' }} />
+                        </div>
+                    )}
+
+                    {/* ── Smartphone Home Indicator Bar ── */}
+                    {!isGameFullscreen && (
+                        <div
+                            className="phone-home-indicator"
+                            style={{
+                                position: 'absolute',
+                                bottom: '6px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '90px',
+                                height: '4px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                borderRadius: '2px',
+                                zIndex: 120,
+                                pointerEvents: 'none'
+                            }}
+                        />
+                    )}
 
 
 
@@ -4059,17 +4095,43 @@ Ganador: ${payload.winnerAddress}`);
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '0.75rem',
-                                width: '92%',
-                                maxWidth: '340px',
-                                background: 'rgba(18, 6, 6, 0.72)',
-                                backdropFilter: 'blur(10px)',
-                                border: '1.5px solid rgba(212, 175, 55, 0.35)',
-                                borderRadius: '18px',
-                                padding: '1rem 0.9rem',
+                                gap: '0.7rem',
+                                width: '94%',
+                                maxWidth: '345px',
+                                background: 'linear-gradient(180deg, rgba(28, 12, 10, 0.92) 0%, rgba(12, 5, 4, 0.96) 100%)',
+                                backdropFilter: 'blur(12px)',
+                                border: '2px solid rgba(212, 175, 55, 0.55)',
+                                borderRadius: '20px',
+                                padding: '0.85rem 0.85rem',
                                 boxSizing: 'border-box',
-                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(212, 175, 55, 0.08)'
+                                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 20px rgba(212, 175, 55, 0.12)'
                             }}>
+                                {/* Chef Rank & High Score Badge */}
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    background: 'rgba(0, 0, 0, 0.45)',
+                                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                                    borderRadius: '10px',
+                                    padding: '0.35rem 0.65rem',
+                                    fontSize: '0.68rem',
+                                    fontFamily: 'monospace'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        <span style={{ color: '#FFD700', fontWeight: 'bold' }}>
+                                            {personalBests[selectedSong.id] && personalBests[selectedSong.id] > 50000 ? '⭐ MAESTRO' : (personalBests[selectedSong.id] && personalBests[selectedSong.id] > 20000 ? '🍕 CHEF' : '🍕 PIZZAIOLO')}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <span style={{ color: '#aaa' }}>RECORD:</span>
+                                        <span style={{ color: '#2ECC71', fontWeight: 'bold' }}>
+                                            {personalBests[selectedSong.id] ? `${personalBests[selectedSong.id].toLocaleString()} PTS` : '0 PTS'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Juicy 3D Arcade CTA Button */}
                                 <button
                                     id="startBtn"
                                     onClick={() => handleStartGame()}
@@ -4077,100 +4139,143 @@ Ganador: ${payload.winnerAddress}`);
                                     style={{
                                         opacity: engineRef.current ? 1 : 0.6,
                                         cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                        fontSize: '1.15rem',
+                                        fontSize: '1.2rem',
                                         padding: '0.85rem 1rem',
                                         width: '100%',
-                                        background: 'linear-gradient(135deg, #27ae60 0%, #1e824c 100%)',
-                                        border: '2px solid #2ecc71',
+                                        background: 'linear-gradient(180deg, #2ecc71 0%, #27ae60 50%, #1e824c 100%)',
+                                        border: '2px solid #58d68d',
                                         color: '#fff',
-                                        borderRadius: '12px',
-                                        fontWeight: 'bold',
-                                        letterSpacing: '1px',
-                                        boxShadow: '0 4px 14px rgba(39, 174, 96, 0.45)',
+                                        borderRadius: '14px',
+                                        fontWeight: '900',
+                                        letterSpacing: '1.5px',
+                                        boxShadow: '0 5px 0 #145a32, 0 10px 20px rgba(39, 174, 96, 0.45)',
                                         textTransform: 'uppercase',
-                                        fontFamily: 'var(--font-title)'
+                                        fontFamily: 'var(--font-title)',
+                                        transform: 'translateY(0)',
+                                        transition: 'all 0.1s ease',
+                                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                                     }}
+                                    onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #145a32, 0 4px 10px rgba(39, 174, 96, 0.4)'; }}
+                                    onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #145a32, 0 10px 20px rgba(39, 174, 96, 0.45)'; }}
                                 >
-                                    {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <span>🍕</span>
+                                        <span>{engineRef.current ? (language === 'es' ? '¡JUEGA AHORA!' : 'PLAY NOW!') : `🔥 ${t.heatingUp}`}</span>
+                                        <span>🎸</span>
+                                    </div>
                                 </button>
 
-                                {/* Vibrant Vinyl Music Selector */}
+                                {/* Vinyl Track Selector */}
                                 <button
                                     onClick={() => setView('songpicker')}
                                     title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
                                     className="lobby-song-selector-btn"
-                                    style={{ width: '100%', margin: 0, boxSizing: 'border-box' }}
-                                >
-                                    <div style={{
-                                        animation: 'vinyl-spin 2s linear infinite',
-                                        filter: 'drop-shadow(0 0 8px rgba(218,165,32,0.6))',
+                                    style={{
+                                        width: '100%',
+                                        margin: 0,
+                                        boxSizing: 'border-box',
+                                        background: 'linear-gradient(180deg, rgba(35, 18, 15, 0.9) 0%, rgba(20, 10, 8, 0.95) 100%)',
+                                        border: '1.5px solid rgba(212, 175, 55, 0.45)',
+                                        borderRadius: '12px',
+                                        padding: '0.55rem 0.75rem',
                                         display: 'flex',
-                                        flexShrink: 0
-                                    }}>
-                                        <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                            <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
-                                            {[38, 33, 28, 23].map(r => (
-                                                <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
-                                            ))}
-                                            <circle cx="50" cy="50" r="21" fill="#4A0E0E" />
-                                            <circle cx="50" cy="50" r="20" fill="#DAA520" />
-                                            <circle cx="50" cy="50" r="20" fill="none" stroke="#FFF8DC" strokeWidth="1" />
-                                            <circle cx="50" cy="50" r="4.5" fill="#FFF8DC" />
-                                            <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(218,165,32,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
-                                        </svg>
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            position: 'relative',
+                                            width: '32px',
+                                            height: '32px',
+                                            animation: 'vinyl-spin 3s linear infinite',
+                                            filter: 'drop-shadow(0 0 6px rgba(218,165,32,0.7))',
+                                            display: 'flex',
+                                            flexShrink: 0
+                                        }}>
+                                            <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="50" cy="50" r="49" fill="#140A0A" stroke="#DAA520" strokeWidth="3" />
+                                                {[38, 32, 26].map(r => (
+                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#8B0000" strokeWidth="2" strokeOpacity="0.5" />
+                                                ))}
+                                                <circle cx="50" cy="50" r="18" fill="#DAA520" />
+                                                <circle cx="50" cy="50" r="6" fill="#140A0A" />
+                                            </svg>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }}>
+                                            <span style={{ fontSize: '0.88rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textShadow: '0 0 6px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }}>
+                                                {selectedSong.title}
+                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                                                <span style={{ fontSize: '0.54rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 'bold' }}>
+                                                    {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
+                                                </span>
+                                                <span style={{ fontSize: '0.52rem', background: 'rgba(218,165,32,0.25)', color: '#FFD700', padding: '1px 5px', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 'bold' }}>
+                                                    {selectedSong.bpm ?? 120} BPM
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2, overflow: 'hidden' }}>
-                                        <span style={{ fontSize: '0.88rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textShadow: '0 0 5px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
-                                            {selectedSong.title}
-                                        </span>
-                                        <span style={{ fontSize: '0.55rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 'bold' }}>
-                                            {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
-                                        </span>
+                                    {/* Animated Equalizer */}
+                                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2.5px', height: '14px', flexShrink: 0, paddingRight: '2px' }}>
+                                        <span style={{ width: '3px', height: '8px', background: '#DAA520', borderRadius: '1px' }} />
+                                        <span style={{ width: '3px', height: '14px', background: '#2ECC71', borderRadius: '1px' }} />
+                                        <span style={{ width: '3px', height: '6px', background: '#E74C3C', borderRadius: '1px' }} />
+                                        <span style={{ width: '3px', height: '11px', background: '#DAA520', borderRadius: '1px' }} />
                                     </div>
                                 </button>
 
-                                <div className="grid grid-cols-2 gap-2 w-full">
+                                {/* 3 Nav Buttons (Ranking, Setup, Rules) */}
+                                <div className="grid grid-cols-3 gap-2 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{ position: 'relative', overflow: 'hidden', padding: '0.55rem 0.4rem' }}
-                                        onClick={() => setView('store')}
-                                    >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>🛒</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.market}</span>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        className="secondary-btn lobby-nav-btn"
-                                        style={{ border: '1.5px solid rgba(212, 175, 55, 0.6)', padding: '0.55rem 0.4rem' }}
+                                        style={{
+                                            border: '1.5px solid rgba(212, 175, 55, 0.7)',
+                                            padding: '0.6rem 0.4rem',
+                                            background: 'linear-gradient(180deg, #241410 0%, #120907 100%)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
+                                        }}
                                         onClick={() => { loadLeaderboard(); setView('leaderboard'); }}
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>🏆</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: 'var(--ph-gold)' }}>{t.ranking}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '2px' }}>
+                                            <span className="btn-icon" style={{ fontSize: '1.2rem', filter: 'drop-shadow(0 2px 4px rgba(218,165,32,0.4))' }}>🏆</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: 'var(--ph-gold)', fontWeight: 'bold' }}>{t.ranking}</span>
                                         </div>
                                     </button>
 
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{ padding: '0.55rem 0.4rem' }}
+                                        style={{
+                                            border: '1.5px solid rgba(212, 175, 55, 0.4)',
+                                            padding: '0.6rem 0.4rem',
+                                            background: 'linear-gradient(180deg, #241410 0%, #120907 100%)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
+                                        }}
                                         onClick={() => setShowSettings(true)}
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>⚙️</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.setup}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '2px' }}>
+                                            <span className="btn-icon" style={{ fontSize: '1.2rem' }}>⚙️</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: '#FFF8DC' }}>{t.setup}</span>
                                         </div>
                                     </button>
 
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{ padding: '0.55rem 0.4rem' }}
+                                        style={{
+                                            border: '1.5px solid rgba(212, 175, 55, 0.4)',
+                                            padding: '0.6rem 0.4rem',
+                                            background: 'linear-gradient(180deg, #241410 0%, #120907 100%)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
+                                        }}
                                         onClick={() => setView('howto')}
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>📜</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.rules}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '2px' }}>
+                                            <span className="btn-icon" style={{ fontSize: '1.2rem' }}>📜</span>
+                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: '#FFF8DC' }}>{t.rules}</span>
                                         </div>
                                     </button>
                                 </div>
@@ -4186,80 +4291,110 @@ Ganador: ${payload.winnerAddress}`);
 
 
                         {/* ── SONG PICKER (MAFIA EDITION) ─────────────────────────────── */}
-
                         {(view === 'songpicker' || closingView === 'songpicker') && (
-
-                            <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
-
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
-                                    background: '#FFF8E7',
-                                    border: '6px solid #8B0000',
-                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
-                                    color: '#333',
-                                    borderRadius: '16px',
-                                    paddingTop: '1.2rem',
-                                    paddingBottom: '1.2rem',
-                                    paddingLeft: '1.2rem',
-                                    paddingRight: '1.2rem',
-                                    height: '92%',
-                                    maxHeight: '92%',
+                            <div
+                                className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`}
+                                onClick={() => closeModalWithAnimation('lobby')}
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    background: 'rgba(0, 0, 0, 0.65)',
+                                    zIndex: 3000,
                                     display: 'flex',
-                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    padding: '0.5rem',
                                     boxSizing: 'border-box'
-                                }}>
-
-                                    <div className="modal-header" style={{
-
-                                        borderBottom: '3px dashed #8B0000',
-
-                                        paddingBottom: '1.2rem',
-
-                                        marginBottom: '0.5rem'
-
-                                    }}>
-
-                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
-
-                                            background: '#8B0000',
-
-                                            color: 'white',
-
-                                            border: '2px solid #5C0000',
-
+                                }}
+                            >
+                                <div
+                                    className="modal-content"
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                        background: '#FFF8E7',
+                                        border: '4px solid #8B0000',
+                                        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
+                                        color: '#333',
+                                        borderRadius: '20px',
+                                        padding: '0.85rem 0.9rem',
+                                        width: '96%',
+                                        maxWidth: '360px',
+                                        height: '90%',
+                                        maxHeight: '90%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        boxSizing: 'border-box',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    {/* Header */}
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            borderBottom: '2px dashed #8B0000',
+                                            paddingBottom: '0.45rem',
+                                            marginBottom: '0.45rem',
                                             flexShrink: 0
-
-                                        }}>
-
-                                            <ArrowLeft size={20} />
-
+                                        }}
+                                    >
+                                        <div
+                                            className="back-btn-circle"
+                                            onClick={() => closeModalWithAnimation('lobby')}
+                                            style={{
+                                                background: '#8B0000',
+                                                color: 'white',
+                                                border: '2px solid #5C0000',
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                flexShrink: 0
+                                            }}
+                                        >
+                                            <ArrowLeft size={18} />
                                         </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 5px', minWidth: 0 }}>
-
-                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.4rem' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
-
-                                            <div style={{ fontSize: '0.75rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
-
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                            <h2 style={{ margin: 0, color: '#8B0000', fontFamily: 'var(--font-display)', fontSize: '1.25rem', lineHeight: 1.1, fontWeight: 'bold' }}>
+                                                🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}
+                                            </h2>
+                                            <div style={{ fontSize: '0.68rem', color: '#27AE60', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>
+                                                {language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}
+                                            </div>
                                         </div>
 
-
-
+                                        <div style={{ width: '32px', flexShrink: 0 }} />
                                     </div>
 
-
-
-                                    <div style={{ flex: '1 1 auto', minHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem', marginTop: '0.6rem' }}>
-
+                                    {/* Scrollable Song List */}
+                                    <div
+                                        style={{
+                                            flex: '1 1 0%',
+                                            minHeight: 0,
+                                            overflowY: 'auto',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.5rem',
+                                            paddingRight: '0.2rem',
+                                            margin: '0.2rem 0'
+                                        }}
+                                    >
                                         {SONGS.map((song) => {
-
                                             const isSelected = selectedSong.id === song.id;
-
                                             const mins = Math.floor(song.duration / 60);
-
                                             const secs = Math.floor(song.duration % 60);
+                                            const isPlayingPreview = previewingSongId === song.id;
 
                                             return (
-
                                                 <button
                                                     key={song.id}
                                                     disabled={!song.available}
@@ -4267,466 +4402,326 @@ Ganador: ${payload.winnerAddress}`);
                                                         setSelectedSong(song);
                                                         playSongPreview(song);
                                                     }}
-
                                                     style={{
-
                                                         display: 'flex',
-
-                                                        alignItems: 'flex-start',
-
-                                                        gap: '0.5rem',
-                                                        padding: '0.5rem 0.7rem',
-                                                        borderRadius: '8px',
-
-                                                        border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
-
-                                                        background: isSelected ? 'rgba(39, 174, 96, 0.1)' : '#fff',
-
+                                                        alignItems: 'center',
+                                                        gap: '0.6rem',
+                                                        padding: '0.55rem 0.7rem',
+                                                        borderRadius: '12px',
+                                                        border: isSelected ? '2px solid #27AE60' : '1.5px solid #E2D7BE',
+                                                        background: isSelected
+                                                            ? 'linear-gradient(135deg, rgba(39, 174, 96, 0.12) 0%, rgba(218, 165, 32, 0.08) 100%)'
+                                                            : '#FFFFFF',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
-
-                                                        opacity: song.available ? 1 : 0.6,
-
+                                                        opacity: song.available ? 1 : 0.55,
                                                         textAlign: 'left',
-
                                                         color: '#333',
-
                                                         width: '100%',
-
-                                                        transition: 'all 0.2s ease',
-
-                                                        boxShadow: isSelected ? '0 4px 12px rgba(39, 174, 96, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)'
-
+                                                        transition: 'all 0.15s ease',
+                                                        boxShadow: isSelected
+                                                            ? '0 4px 14px rgba(39, 174, 96, 0.22)'
+                                                            : '0 2px 4px rgba(0,0,0,0.03)',
+                                                        position: 'relative',
+                                                        flexShrink: 0,
+                                                        boxSizing: 'border-box'
                                                     }}
-
-                                                    onMouseEnter={(e) => {
-
-                                                        if (!isSelected && song.available) {
-
-                                                            e.currentTarget.style.background = '#F9F5EB';
-
-                                                            e.currentTarget.style.transform = 'translateY(-2px)';
-
-                                                            e.currentTarget.style.borderColor = '#D0B488';
-
-                                                        }
-
-                                                    }}
-
-                                                    onMouseLeave={(e) => {
-
-                                                        if (!isSelected && song.available) {
-
-                                                            e.currentTarget.style.background = '#fff';
-
-                                                            e.currentTarget.style.transform = 'translateY(0)';
-
-                                                            e.currentTarget.style.borderColor = '#E0D4B8';
-
-                                                        }
-
-                                                    }}
-
                                                 >
-
-                                                    {/* Track number or Pizza Slice */}
-
-                                                    <div style={{ width: '40px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '0.2rem' }}>
-
+                                                    {/* Left Recipe / Slice Icon */}
+                                                    <div style={{ width: '34px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         {isSelected ? (
-
-                                                            <div style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
-
+                                                            <div style={{ fontSize: '1.55rem', filter: 'drop-shadow(0 2px 4px rgba(39,174,96,0.35))' }}>🍕</div>
                                                         ) : (
-
-                                                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: song.available ? '#8B0000' : '#aaa', fontWeight: 'bold' }}>
-
+                                                            <div style={{
+                                                                width: '30px',
+                                                                height: '30px',
+                                                                borderRadius: '50%',
+                                                                background: '#F9F5EB',
+                                                                border: '1.5px solid #D4AF37',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontFamily: 'monospace',
+                                                                fontSize: '0.78rem',
+                                                                color: '#8B0000',
+                                                                fontWeight: 'bold'
+                                                            }}>
                                                                 {song.available ? `#${song.index}` : '🔒'}
-
-                                                            </span>
-
+                                                            </div>
                                                         )}
-
                                                     </div>
 
-
-
-                                                    {/* Info */}
-
-                                                    <div style={{ flex: 1, minWidth: 0, paddingRight: '0.4rem', paddingTop: '0.2rem' }}>
-
+                                                    {/* Center Recipe Info */}
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{
-
                                                             fontWeight: '900',
-
-                                                            fontSize: isSelected ? '0.95rem' : '0.85rem', // Smaller fonts
-
-                                                            color: isSelected ? '#27AE60' : '#8B0000',
-
+                                                            fontSize: isSelected ? '0.88rem' : '0.82rem',
+                                                            color: isSelected ? '#1E8449' : '#8B0000',
                                                             textTransform: 'uppercase',
-
                                                             lineHeight: '1.15',
-
-                                                            letterSpacing: '0.02em',
-
-                                                            transition: 'all 0.2s ease'
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '5px'
                                                         }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                                                                <span>{song.title}</span>
-                                                                {previewingSongId === song.id && (
-                                                                    <span style={{
-                                                                        fontSize: '0.6rem',
-                                                                        background: '#27AE60',
-                                                                        color: '#fff',
-                                                                        padding: '1px 6px',
-                                                                        borderRadius: '4px',
-                                                                        fontWeight: 'bold',
-                                                                        letterSpacing: '0.04em',
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '3px',
-                                                                        animation: 'pulse 1.2s infinite'
-                                                                    }}>
-                                                                        🔊 {language === 'es' ? 'SONANDO' : 'PLAYING'}
-                                                                    </span>
-                                                                )}
-                                                            </div>
+                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</span>
+                                                            {isPlayingPreview && (
+                                                                <span style={{
+                                                                    fontSize: '0.52rem',
+                                                                    background: '#27AE60',
+                                                                    color: '#fff',
+                                                                    padding: '1px 5px',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: 'bold',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '2px',
+                                                                    animation: 'pulse 1.2s infinite',
+                                                                    flexShrink: 0
+                                                                }}>
+                                                                    🔊 {language === 'es' ? 'EN VIVO' : 'LIVE'}
+                                                                </span>
+                                                            )}
                                                         </div>
 
                                                         <div style={{
-                                                            fontSize: '0.7rem',
+                                                            fontSize: '0.68rem',
                                                             color: isSelected ? '#14532D' : '#666',
-                                                            marginTop: '3px',
+                                                            marginTop: '1px',
                                                             fontWeight: '600',
-                                                            lineHeight: '1.15'
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
                                                         }}>
                                                             {song.artist}
                                                         </div>
 
-                                                        {/* Difficulty Stars */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '5px' }}>
-                                                            {[1, 2, 3].map(star => (
-                                                                <span
-                                                                    key={star}
-                                                                    style={{
-                                                                        fontSize: '0.65rem',
-                                                                        opacity: star <= song.difficulty ? 1 : 0.2,
-                                                                        filter: star <= song.difficulty
-                                                                            ? (song.difficulty === 3 ? 'drop-shadow(0 0 3px #ff4444)' : 'drop-shadow(0 0 2px #d4af37)')
-                                                                            : 'none',
-                                                                        transition: 'all 0.2s',
-                                                                    }}
-                                                                >
-                                                                    {song.difficulty === 3 ? '💀' : '🍕'}
-                                                                </span>
-                                                            ))}
+                                                        {/* Difficulty & Record Row */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
                                                             <span style={{
                                                                 fontSize: '0.52rem',
-                                                                fontFamily: 'monospace',
-                                                                marginLeft: '3px',
-                                                                color: song.difficulty === 3 ? '#cc3333' : song.difficulty === 2 ? '#c0852a' : '#27ae60',
+                                                                padding: '1px 5px',
+                                                                borderRadius: '3px',
                                                                 fontWeight: 'bold',
-                                                                letterSpacing: '0.03em',
+                                                                background: song.difficulty === 3 ? 'rgba(231,76,60,0.12)' : song.difficulty === 2 ? 'rgba(218,165,32,0.12)' : 'rgba(39,174,96,0.12)',
+                                                                color: song.difficulty === 3 ? '#C0392B' : song.difficulty === 2 ? '#B7950B' : '#1E8449',
+                                                                border: song.difficulty === 3 ? '1px solid rgba(231,76,60,0.25)' : song.difficulty === 2 ? '1px solid rgba(218,165,32,0.25)' : '1px solid rgba(39,174,96,0.25)',
+                                                                fontFamily: 'monospace'
                                                             }}>
-                                                                {song.difficulty === 1
-                                                                    ? (language === 'es' ? 'FÁCIL' : 'EASY')
-                                                                    : song.difficulty === 2
-                                                                        ? (language === 'es' ? 'MEDIO' : 'MEDIUM')
-                                                                        : (language === 'es' ? 'DIFÍCIL' : 'HARD')}
+                                                                {song.difficulty === 1 ? '🍕 ' + (language === 'es' ? 'SUAVE' : 'EASY') : song.difficulty === 2 ? '🍕🍕 ' + (language === 'es' ? 'CLÁSICA' : 'MEDIUM') : '🔥 ' + (language === 'es' ? 'DIABLO' : 'EXPERT')}
                                                             </span>
+
+                                                            {personalBests[song.id] ? (
+                                                                <span style={{ fontSize: '0.52rem', color: '#8B6914', fontFamily: 'monospace', fontWeight: 'bold' }}>
+                                                                    🏆 {personalBests[song.id].toLocaleString()} pts
+                                                                </span>
+                                                            ) : null}
                                                         </div>
-
-                                                        {/* Personal Best */}
-                                                        {personalBests[song.id] ? (
-                                                            <div style={{
-                                                                fontSize: '0.52rem',
-                                                                fontFamily: 'monospace',
-                                                                marginTop: '3px',
-                                                                color: '#8B6914',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '3px',
-                                                            }}>
-                                                                <span>🏆</span>
-                                                                <span style={{ fontWeight: 'bold' }}>{personalBests[song.id].toLocaleString()}</span>
-                                                                <span style={{ opacity: 0.7 }}>{language === 'es' ? 'pts récord' : 'pts best'}</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{
-                                                                fontSize: '0.5rem',
-                                                                fontFamily: 'monospace',
-                                                                marginTop: '3px',
-                                                                color: 'rgba(0,0,0,0.25)',
-                                                                fontStyle: 'italic',
-                                                            }}>
-                                                                {language === 'es' ? '— sin récord aún' : '— no record yet'}
-                                                            </div>
-                                                        )}
-
                                                     </div>
 
-
-
-                                                    {/* Right side stats */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: '6px', flexShrink: 0, paddingTop: '0.2rem' }}>
-
-                                                        {/* BPM Badge */}
+                                                    {/* Right side BPM & Time */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '3px', flexShrink: 0 }}>
                                                         <div style={{
-                                                            fontSize: '0.7rem',
+                                                            fontSize: '0.62rem',
                                                             fontWeight: '900',
                                                             background: isSelected ? '#27AE60' : '#EAE3D1',
                                                             color: isSelected ? 'white' : '#666',
-                                                            padding: '2px 6px',
+                                                            padding: '1px 5px',
                                                             border: isSelected ? '1px solid #1E8449' : '1px solid #D1C5AD',
-                                                            borderRadius: '6px',
-                                                            letterSpacing: '0.05em',
-                                                            boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.3)' : 'none'
+                                                            borderRadius: '5px',
+                                                            fontFamily: 'monospace'
                                                         }}>
                                                             {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
                                                         </div>
-
-                                                        {/* Duration */}
                                                         <div style={{
-                                                            fontSize: '0.9rem',
-                                                            fontFamily: 'var(--font-mono)',
-                                                            color: isSelected ? '#1E8449' : '#333',
+                                                            fontSize: '0.75rem',
+                                                            fontFamily: 'monospace',
+                                                            color: isSelected ? '#1E8449' : '#666',
                                                             fontWeight: 'bold'
                                                         }}>
                                                             {mins}:{secs.toString().padStart(2, '0')}
                                                         </div>
-
-                                                        {/* New Record indicator (only when selected and PB exists) */}
-                                                        {isSelected && personalBests[song.id] && (
-                                                            <div style={{
-                                                                background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))',
-                                                                border: '1px solid rgba(212,175,55,0.5)',
-                                                                borderRadius: '6px',
-                                                                padding: '3px 6px',
-                                                                textAlign: 'center',
-                                                            }}>
-                                                                <div style={{ fontSize: '0.5rem', color: '#8B6914', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                                                                    🏆 BEST
-                                                                </div>
-                                                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#8B6914', fontFamily: 'monospace' }}>
-                                                                    {personalBests[song.id].toLocaleString()}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Play Count placeholder — shows '▶ Beat it' for no-record songs when selected */}
-                                                        {isSelected && !personalBests[song.id] && song.available && (
-                                                            <div style={{
-                                                                fontSize: '0.52rem',
-                                                                fontFamily: 'monospace',
-                                                                color: '#8B0000',
-                                                                fontWeight: 'bold',
-                                                                letterSpacing: '0.04em',
-                                                                border: '1px dashed rgba(139,0,0,0.4)',
-                                                                borderRadius: '5px',
-                                                                padding: '2px 5px',
-                                                                textAlign: 'center',
-                                                            }}>
-                                                                ▶ {language === 'es' ? 'SIN RÉCORD' : 'NO RECORD'}
-                                                            </div>
-                                                        )}
-
                                                     </div>
-
                                                 </button>
-
                                             );
-
                                         })}
-
                                     </div>
 
-
-
-                                    {/* Ticket Sync and Actions HUD */}
-                                    {userAddress && userAddress !== 'G_DEMO_USER' && (
-                                        <div style={{
-                                            background: '#F9F5EB',
-                                            border: '1px dashed #D0B488',
-                                            borderRadius: '8px',
-                                            padding: '0.5rem',
-                                            marginTop: '0.5rem',
+                                    {/* Compact Ticket HUD & Action Buttons */}
+                                    <div
+                                        style={{
                                             display: 'flex',
                                             flexDirection: 'column',
-                                            gap: '6px',
-                                            width: '100%',
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#8B0000' }}>
-                                                    🎟️ {language === 'es' ? 'MIS TICKETS DE TORNEO:' : 'MY TOURNAMENT TICKETS:'} <span style={{ fontSize: '1.1rem', color: '#27AE60' }}>{ticketBalance}</span>
+                                            gap: '0.4rem',
+                                            marginTop: '0.4rem',
+                                            paddingTop: '0.4rem',
+                                            borderTop: '2px dashed #E0D4B8',
+                                            flexShrink: 0,
+                                            width: '100%'
+                                        }}
+                                    >
+                                        {/* Ticket Sync Strip (if connected) */}
+                                        {userAddress && userAddress !== 'G_DEMO_USER' && (
+                                            <div style={{
+                                                background: '#F9F5EB',
+                                                border: '1px dashed #D0B488',
+                                                borderRadius: '8px',
+                                                padding: '0.35rem 0.5rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                width: '100%',
+                                                boxSizing: 'border-box'
+                                            }}>
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#8B0000' }}>
+                                                    🎟️ TICKETS: <span style={{ color: '#27AE60', fontSize: '0.85rem' }}>{ticketBalance}</span>
                                                 </span>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                                                <button
-                                                    onClick={async () => {
-                                                        const signer = getContractSignerRef.current();
-                                                        setStatus(language === 'es' ? 'Reclamando Staking...' : 'Claiming Staking...');
-                                                        try {
-                                                            const res = await StellarContractService.claimStakingTickets(userAddress, signer);
-                                                            setStatus('');
-                                                            if (res.success) {
-                                                                alert(language === 'es' ? '¡Tickets de Staking reclamados con éxito! 🎉' : 'Staking tickets successfully claimed! 🎉');
-                                                                const tickets = await StellarContractService.getTournamentTickets(userAddress);
-                                                                setTicketBalance(tickets);
-                                                            } else {
-                                                                if (res.error === 'SIGNATURE_REJECTED') {
-                                                                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
-                                                                    alert(`⚠️ Firma rechazada por el usuario.`);
+                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const signer = getContractSignerRef.current();
+                                                            setStatus(language === 'es' ? 'Reclamando Staking...' : 'Claiming Staking...');
+                                                            try {
+                                                                const res = await StellarContractService.claimStakingTickets(userAddress, signer);
+                                                                setStatus('');
+                                                                if (res.success) {
+                                                                    alert(language === 'es' ? '¡Tickets reclamados! 🎉' : 'Tickets claimed! 🎉');
+                                                                    const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                                    setTicketBalance(tickets);
                                                                 } else {
                                                                     alert(`Error: ${res.error}`);
                                                                 }
-                                                            }
-                                                        } catch (err: any) {
-                                                            setStatus('');
-                                                            if (err.message === 'SIGNATURE_REJECTED') {
-                                                                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
-                                                                alert(`⚠️ Firma rechazada por el usuario.`);
-                                                            } else {
+                                                            } catch (err: any) {
+                                                                setStatus('');
                                                                 alert(`Error: ${err.message}`);
                                                             }
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '8px',
-                                                        fontSize: '0.75rem',
-                                                        background: '#27AE60',
-                                                        color: 'white',
-                                                        border: '1px solid #1E8449',
-                                                        borderRadius: '6px',
-                                                        fontWeight: 'bold',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                >
-                                                    🎁 {language === 'es' ? 'Reclamar Staking' : 'Claim Staking'}
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        const signer = getContractSignerRef.current();
-                                                        setStatus(language === 'es' ? 'Comprando Ticket...' : 'Buying Ticket...');
-                                                        try {
-                                                            const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
-                                                            setStatus('');
-                                                            if (res.success) {
-                                                                alert(language === 'es' ? '¡Ticket comprado con éxito! 🎟️' : 'Ticket bought successfully! 🎟️');
-                                                                const tickets = await StellarContractService.getTournamentTickets(userAddress);
-                                                                setTicketBalance(tickets);
-                                                                const sliceBal = await StellarContractService.getSliceBalance(userAddress);
-                                                                setSliceBalance(sliceBal);
-                                                            } else {
-                                                                if (res.error === 'SIGNATURE_REJECTED') {
-                                                                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
-                                                                    alert(`⚠️ Firma rechazada por el usuario.`);
+                                                        }}
+                                                        style={{
+                                                            padding: '2px 6px',
+                                                            fontSize: '0.62rem',
+                                                            background: '#27AE60',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        🎁 {language === 'es' ? 'Staking' : 'Claim'}
+                                                    </button>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const signer = getContractSignerRef.current();
+                                                            setStatus(language === 'es' ? 'Comprando...' : 'Buying...');
+                                                            try {
+                                                                const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
+                                                                setStatus('');
+                                                                if (res.success) {
+                                                                    alert(language === 'es' ? '¡Ticket comprado! 🎟️' : 'Ticket bought! 🎟️');
+                                                                    const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                                    setTicketBalance(tickets);
+                                                                    const sliceBal = await StellarContractService.getSliceBalance(userAddress);
+                                                                    setSliceBalance(sliceBal);
                                                                 } else {
                                                                     alert(`Error: ${res.error}`);
                                                                 }
-                                                            }
-                                                        } catch (err: any) {
-                                                            setStatus('');
-                                                            if (err.message === 'SIGNATURE_REJECTED') {
-                                                                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
-                                                                alert(`⚠️ Firma rechazada por el usuario.`);
-                                                            } else {
+                                                            } catch (err: any) {
+                                                                setStatus('');
                                                                 alert(`Error: ${err.message}`);
                                                             }
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        flex: 1,
-                                                        padding: '8px',
-                                                        fontSize: '0.75rem',
-                                                        background: '#D4AF37',
-                                                        color: 'white',
-                                                        border: '1px solid #AA8010',
-                                                        borderRadius: '6px',
-                                                        fontWeight: 'bold',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                >
-                                                    🛒 {language === 'es' ? 'Comprar (10 $SLICE)' : 'Buy (10 $SLICE)'}
-                                                </button>
+                                                        }}
+                                                        style={{
+                                                            padding: '2px 6px',
+                                                            fontSize: '0.62rem',
+                                                            background: '#D4AF37',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 'bold',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        🛒 10 $SLICE
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Action Buttons */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem', width: '100%' }}>
-                                        <button
-                                            disabled={!engineRef.current}
-                                            onClick={() => {
-                                                if (engineRef.current) {
-                                                    stopPreviewAudio();
-                                                    setIsPracticeMode(true);
-                                                    setTimeout(() => {
-                                                        closeModalWithAnimation('lobby');
-                                                        handleStartGame();
-                                                    }, 150);
-                                                }
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.7rem',
-                                                fontSize: '0.9rem',
-                                                background: 'linear-gradient(135deg, #2D3748, #4A5568)',
-                                                color: 'white',
-                                                border: '2px solid #1A202C',
-                                                borderRadius: '8px',
-                                                fontWeight: 'bold',
-                                                cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                            }}
-                                        >
-                                            ⚔️ {language === 'es' ? 'PRÁCTICA LIBRE (GRATIS)' : 'FREE PRACTICE (FREE)'}
-                                        </button>
-
-                                        <button
-                                            disabled={!engineRef.current}
-                                            onClick={() => {
-                                                if (engineRef.current) {
-                                                    if (userAddress && userAddress !== 'G_DEMO_USER' && ticketBalance < 1) {
-                                                        alert(language === 'es' ? '⚠️ Necesitas al menos 1 Ticket para jugar en modo competitivo.' : '⚠️ You need at least 1 Ticket to play competitively.');
-                                                        return;
+                                        {/* Action Buttons Grid */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '6px', width: '100%' }}>
+                                            <button
+                                                disabled={!engineRef.current}
+                                                onClick={() => {
+                                                    if (engineRef.current) {
+                                                        stopPreviewAudio();
+                                                        setIsPracticeMode(true);
+                                                        setTimeout(() => {
+                                                            closeModalWithAnimation('lobby');
+                                                            handleStartGame();
+                                                        }, 150);
                                                     }
-                                                    stopPreviewAudio();
-                                                    setIsPracticeMode(false);
-                                                    setTimeout(() => {
-                                                        closeModalWithAnimation('lobby');
-                                                        handleStartGame();
-                                                    }, 150);
-                                                }
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '1rem',
-                                                fontSize: '1.1rem',
-                                                background: 'linear-gradient(135deg, #8B0000, #B30000)',
-                                                color: 'white',
-                                                border: '2px solid #5C0000',
-                                                borderRadius: '8px',
-                                                fontWeight: 'bold',
-                                                cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.08em',
-                                                boxShadow: '0 4px 10px rgba(139, 0, 0, 0.4)',
-                                            }}
-                                        >
-                                            🔥 {engineRef.current ? (language === 'es' ? 'TORNEO COMPETITIVO' : 'COMPETITIVE TOURNAMENT') : `🔥 ${t.heatingUp}`}
-                                        </button>
+                                                }}
+                                                style={{
+                                                    padding: '0.65rem 0.4rem',
+                                                    fontSize: '0.78rem',
+                                                    background: 'linear-gradient(135deg, #2D3748, #4A5568)',
+                                                    color: 'white',
+                                                    border: '1.5px solid #1A202C',
+                                                    borderRadius: '10px',
+                                                    fontWeight: 'bold',
+                                                    cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.04em',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '4px'
+                                                }}
+                                            >
+                                                ⚔️ {language === 'es' ? 'PRÁCTICA' : 'PRACTICE'}
+                                            </button>
+
+                                            <button
+                                                disabled={!engineRef.current}
+                                                onClick={() => {
+                                                    if (engineRef.current) {
+                                                        if (userAddress && userAddress !== 'G_DEMO_USER' && ticketBalance < 1) {
+                                                            alert(language === 'es' ? '⚠️ Necesitas al menos 1 Ticket para jugar en modo competitivo.' : '⚠️ You need at least 1 Ticket to play competitively.');
+                                                            return;
+                                                        }
+                                                        stopPreviewAudio();
+                                                        setIsPracticeMode(false);
+                                                        setTimeout(() => {
+                                                            closeModalWithAnimation('lobby');
+                                                            handleStartGame();
+                                                        }, 150);
+                                                    }
+                                                }}
+                                                style={{
+                                                    padding: '0.65rem 0.4rem',
+                                                    fontSize: '0.85rem',
+                                                    background: 'linear-gradient(135deg, #8B0000, #B30000)',
+                                                    color: 'white',
+                                                    border: '1.5px solid #5C0000',
+                                                    borderRadius: '10px',
+                                                    fontWeight: 'bold',
+                                                    cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    boxShadow: '0 3px 8px rgba(139, 0, 0, 0.4)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '4px'
+                                                }}
+                                            >
+                                                🔥 {engineRef.current ? (language === 'es' ? 'COMPETIR' : 'TOURNAMENT') : `${t.heatingUp}`}
+                                            </button>
+                                        </div>
                                     </div>
-
                                 </div>
-
                             </div>
-
                         )}
 
-
-
-                        {(view === 'store' || closingView === 'store') && (
+{(view === 'store' || closingView === 'store') && (
 
                             <div className={`modal-backdrop ${closingView === 'store' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
 
@@ -7769,23 +7764,71 @@ Ganador: ${payload.winnerAddress}`);
                                     <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
 
                                         <section style={{ marginBottom: '1.5rem' }}>
-
                                             <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
 
-                                            <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '0.5rem' }}>{t.controlsDesc}</p>
-
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
-
-                                                <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
-
-                                                <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
-
-                                                <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
-
-                                                <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
-
+                                            {/* Keyboard Sub-Section */}
+                                            <div style={{ background: '#FFFDF9', border: '1px solid #E0D4B8', borderRadius: '10px', padding: '0.8rem', marginBottom: '0.8rem' }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: '0.88rem', color: '#8B0000', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    ⌨️ {language === 'es' ? 'TECLADO' : 'KEYBOARD'}
+                                                </div>
+                                                <p style={{ fontSize: '0.85rem', color: '#555', margin: '0 0 0.6rem 0' }}>{t.controlsDesc}</p>
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.6rem' }}>
+                                                    <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
+                                                    <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
+                                                    <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
+                                                    <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center' }}>
+                                                    {t.keyboardAlts}
+                                                </div>
                                             </div>
 
+                                            {/* Gamepad / Xbox Sub-Section */}
+                                            <div style={{ background: '#1A1815', border: '1.5px solid #2ECC71', borderRadius: '12px', padding: '0.9rem', color: '#FFF', boxShadow: '0 4px 12px rgba(46, 204, 113, 0.15)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '4px' }}>
+                                                    <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        🎮 {t.gamepadTitle}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.7rem', background: 'rgba(46, 204, 113, 0.2)', color: '#2ECC71', border: '1px solid #2ECC71', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>
+                                                        {t.gamepadAutoDetect}
+                                                    </span>
+                                                </div>
+                                                <p style={{ fontSize: '0.82rem', color: '#CCC', margin: '0 0 0.75rem 0' }}>{t.gamepadDesc}</p>
+
+                                                {/* 4 Lanes Grid for Gamepad */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '0.75rem', textAlign: 'center' }}>
+                                                    {/* Lane 1 */}
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: '0.7rem', color: '#E74C3C', fontWeight: 'bold', marginBottom: '4px' }}>🔴 {language === 'es' ? 'Carril 1' : 'Lane 1'}</div>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2980B9', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>X</div>
+                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ⬅️<br />LT</div>
+                                                    </div>
+                                                    {/* Lane 2 */}
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: '0.7rem', color: '#F1C40F', fontWeight: 'bold', marginBottom: '4px' }}>🟡 {language === 'es' ? 'Carril 2' : 'Lane 2'}</div>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#27AE60', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>A</div>
+                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ⬇️<br />LB</div>
+                                                    </div>
+                                                    {/* Lane 3 */}
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: '0.7rem', color: '#E67E22', fontWeight: 'bold', marginBottom: '4px' }}>🥓 {language === 'es' ? 'Carril 3' : 'Lane 3'}</div>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F39C12', color: '#000', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>Y</div>
+                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ⬆️<br />RB</div>
+                                                    </div>
+                                                    {/* Lane 4 */}
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: '0.7rem', color: '#9B59B6', fontWeight: 'bold', marginBottom: '4px' }}>🟣 {language === 'es' ? 'Carril 4' : 'Lane 4'}</div>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#C0392B', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>B</div>
+                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ➡️<br />RT</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Aux Controls */}
+                                                <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: '0.75rem', color: '#CCC', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+                                                    <span><strong>Start / ≡ :</strong> {t.gamepadPause}</span>
+                                                    <span><strong>Back / ⧉ :</strong> {t.gamepadBack}</span>
+                                                </div>
+                                            </div>
                                         </section>
 
 

@@ -796,31 +796,32 @@ button {
 
 .modal-content {
     background: #FFF8E7;
-    /* Cream parchment */
     width: 100%;
     max-width: 500px;
-    height: 85%;
-    /* Sheet style with rounded top */
-    border-radius: 20px 20px 0 0;
-    border: 6px solid #8B0000;
+    height: 88%;
+    max-height: 88%;
+    border-radius: 22px 22px 0 0;
+    border: 5px solid #8B0000;
     border-bottom: none;
-    padding: 1.5rem;
+    padding: 0.9rem 0.9rem;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(139, 0, 0, 0.05);
-    /* Inner red shadow */
     color: #333;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
+    overflow: hidden;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    border-bottom: 3px dashed #8B0000;
-    padding-bottom: 1rem;
+    margin-bottom: 0.6rem;
+    border-bottom: 2px dashed #8B0000;
+    padding-bottom: 0.5rem;
+    flex-shrink: 0;
 }
 
 .modal-title {
@@ -851,6 +852,21 @@ button {
 
 .back-btn-circle:active {
     transform: scale(0.9);
+}
+
+.modal-content ::-webkit-scrollbar {
+    width: 4px;
+}
+.modal-content ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+.modal-content ::-webkit-scrollbar-thumb {
+    background: rgba(139, 0, 0, 0.35);
+    border-radius: 10px;
+}
+.modal-content ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 0, 0, 0.6);
 }
 
 @keyframes slideUp {
