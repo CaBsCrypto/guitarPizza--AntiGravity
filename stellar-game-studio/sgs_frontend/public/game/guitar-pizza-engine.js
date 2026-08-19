@@ -225,6 +225,40 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
     }
 
+    function resetToMenu() {
+        AudioEngine.stopSong();
+        gameState = STATE.MENU;
+        loopRunning = false;
+        if (requestId) {
+            cancelAnimationFrame(requestId);
+            requestId = null;
+        }
+        score = 0; combo = 0; maxCombo = 0; health = 100;
+        fireMode = false; difficultyTimer = 0;
+        pizzaProgress = 0; pizzasMade = 0;
+        perfectStreak = 0; secretIngredients = 0;
+        rushHourActive = false; rushHourTimer = 0;
+        rushHourDuration = 0; rushHourNextTrigger = 15;
+        totalPerfectHits = 0; totalHits = 0;
+        feverTime = 0; totalTraps = 0; trapsAvoided = 0; totalNotes = 0;
+        notes = []; particles = []; feedbackSystem = [];
+        gameTimer = 0; nextNoteTime = 0;
+        _pendingSongPlay = null;
+        inputLog = [];
+        isVictory = false;
+        _levelCompleteTriggered = false;
+        laneBoxPhase = [0, 0, 0, 0];
+        laneBoxAnim = [0, 0, 0, 0];
+        laneHitAnim = [0, 0, 0, 0];
+        trapBurnAnim = [0, 0, 0, 0];
+        accuracyTicks = [];
+        centerBanner = null;
+        showScreen('menu');
+        if (ctx && canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
     function showScreen(screen) {
         if (uiOverlay) uiOverlay.style.display = 'none';
         if (uiResults) uiResults.style.display = 'none';
@@ -232,7 +266,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         if (screen === 'menu') {
             if (uiOverlay) uiOverlay.style.display = 'flex';
             // Clear canvas to transparent so CSS gradient shows
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (ctx && canvas) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
         } else if (screen === 'results') {
             if (uiResults) uiResults.style.display = 'flex';
             if (uiResScore) uiResScore.innerText = Math.floor(score).toString();
@@ -2987,7 +3023,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         AudioEngine.loadSong(songUrl);
     }
 
-    return {
+    const api = {
         cleanup: () => {
             shouldRun = false;
             cancelAnimationFrame(requestId);
@@ -3016,6 +3052,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
             window.toggleGuitarPizzaPause = null;
             window.getGuitarPizzaStats = null;
+            window.resetGuitarPizzaToMenu = null;
         },
         setVolume: (v) => AudioEngine.setVolume(v),
         startGame: () => {
@@ -3023,6 +3060,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 startGame();
             }
         },
+        resetToMenu: resetToMenu,
         getInputLog: () => inputLog,
         getInputState: () => Input,
         updateLatency: updateLatencyFunc,
@@ -3038,5 +3076,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             latency: latency * 1000
         })
     };
+
+    window.resetGuitarPizzaToMenu = resetToMenu;
+    return api;
 };
 

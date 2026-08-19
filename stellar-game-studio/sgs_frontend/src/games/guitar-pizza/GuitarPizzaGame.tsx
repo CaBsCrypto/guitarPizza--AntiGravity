@@ -2851,7 +2851,7 @@ Ganador: ${payload.winnerAddress}`);
 
                     // Append version parameter to bust aggressive browser cache of public assets
 
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=7`.replace('//', '/');
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=8`.replace('//', '/');
 
 
 
@@ -3202,23 +3202,29 @@ Ganador: ${payload.winnerAddress}`);
 
 
     const handleBackToLobby = () => {
+        // 1. Reset engine state cleanly to STATE.MENU (stops loop, audio, and clears game tracks)
+        if (engineRef.current && typeof (engineRef.current as any).resetToMenu === 'function') {
+            (engineRef.current as any).resetToMenu();
+        } else if (typeof (window as any).resetGuitarPizzaToMenu === 'function') {
+            (window as any).resetGuitarPizzaToMenu();
+        } else {
+            const results = document.getElementById('results');
+            if (results) results.style.display = 'none';
 
-        const results = document.getElementById('results');
+            const overlay = document.getElementById('overlay');
+            if (overlay) overlay.style.display = 'flex';
+        }
 
-        if (results) results.style.display = 'none';
-
-
-
-        const overlay = document.getElementById('overlay');
-
-        if (overlay) overlay.style.display = 'flex';
-
-
+        // 2. Ensure the canvas is wiped clean of any residual gameplay or dropped text
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            }
+        }
 
         setView('lobby');
-
         loadLeaderboard(); // refresh after returning from a game
-
     };
 
 
