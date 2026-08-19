@@ -8211,56 +8211,56 @@ Ganador: ${payload.winnerAddress}`);
                         maxHeight: '100%',
                         zIndex: 20,
                         // Elegant Glassmorphism: allows the game background to be seen blurred
-                        background: 'rgba(15, 5, 5, 0.7)',
+                        background: 'rgba(15, 5, 5, 0.72)',
                         backdropFilter: 'blur(10px)',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflowY: 'auto',
                         WebkitOverflowScrolling: 'touch',
-                        padding: '0.4rem 0.5rem',
+                        padding: '1.6rem 0.6rem',
                         boxSizing: 'border-box'
                     }}>
 
                         {/* Popup Card (Vintage Mafia Receipt - 100% Responsive) */}
                         <div style={{
                             width: '100%',
-                            maxWidth: '350px',
-                            maxHeight: '98%',
+                            maxWidth: '345px',
+                            maxHeight: '94%',
                             margin: 'auto 0',
                             background: 'transparent',
-                            /* Jagged receipt edges: 14px strips at top and bottom */
+                            /* Jagged receipt edges: 16px strips at top and bottom with generous padding */
                             backgroundImage: `
                                 radial-gradient(circle at 8px 0, transparent 7px, #FDFDFD 8px),
                                 linear-gradient(#FDFDFD, #FDFDFD),
                                 radial-gradient(circle at 8px 100%, transparent 7px, #FDFDFD 8px)
                             `,
-                            backgroundSize: '16px 14px, 100% calc(100% - 24px), 16px 14px',
+                            backgroundSize: '16px 16px, 100% calc(100% - 30px), 16px 16px',
                             backgroundPosition: 'top left, center, bottom left',
                             backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '0.7rem 0.9rem',
+                            padding: '1.4rem 1.1rem',
                             color: '#111',
                             position: 'relative',
                             boxSizing: 'border-box',
-                            filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.65))'
+                            filter: 'drop-shadow(0px 10px 28px rgba(0,0,0,0.7))'
                         }}>
 
                             {/* Inner Content wrapper */}
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '2px 0', boxSizing: 'border-box' }}>
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '6px 0', boxSizing: 'border-box' }}>
 
                                 {/* Header Section */}
-                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.3rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.35rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                     <h2 id="resTitle" style={{ fontFamily: "var(--font-title)", fontSize: '1.25rem', color: '#8B0000', margin: 0, letterSpacing: '1.5px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                         LA FAMIGLIA
                                     </h2>
                                     <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.72rem', color: '#555', letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: '1px' }}>
                                         {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
                                     </div>
-                                    <div style={{ width: '100%', borderBottom: '1.5px dashed #888', marginTop: '0.3rem' }}></div>
+                                    <div style={{ width: '100%', borderBottom: '1.5px dashed #888', marginTop: '0.35rem' }}></div>
                                 </div>
 
                                 {/* Score & Grade Row */}
@@ -8269,7 +8269,7 @@ Ganador: ${payload.winnerAddress}`);
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     width: '100%',
-                                    padding: '0.15rem 0',
+                                    padding: '0.2rem 0',
                                     fontFamily: "'Special Elite', monospace"
                                 }}>
                                     {/* Left: Score & Pizzas */}
@@ -8302,10 +8302,10 @@ Ganador: ${payload.winnerAddress}`);
                                     </div>
                                 </div>
 
-                                <div style={{ width: '100%', borderBottom: '1.5px dashed #888', margin: '0.3rem 0' }}></div>
+                                <div style={{ width: '100%', borderBottom: '1.5px dashed #888', margin: '0.35rem 0' }}></div>
 
-                                {/* Form: Nickname + Email + Save Button */}
-                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                {/* Form: Nickname + Email + Save Button (Ink / Stamp Style) */}
+                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.32rem' }}>
                                     <input
                                         type="text"
                                         maxLength={24}
@@ -8351,6 +8351,7 @@ Ganador: ${payload.winnerAddress}`);
                                         }}
                                     />
 
+                                    {/* Distinct Save CTA: Receipt Ink Stamp Blue (#1B3B6F) -> Emerald on Saved */}
                                     <button
                                         onClick={async () => {
                                             const scoreToSave = lastScoreRef.current || lastScore || 0;
@@ -8388,9 +8389,13 @@ Ganador: ${payload.winnerAddress}`);
                                             fontSize: '0.8rem',
                                             fontWeight: 'bold',
                                             fontFamily: "'Special Elite', monospace",
-                                            background: isScoreSaved ? '#27ae60' : '#8B0000',
+                                            background: isScoreSaved
+                                                ? '#27ae60'
+                                                : '#1B3B6F',
                                             color: '#fff',
-                                            border: 'none',
+                                            border: isScoreSaved
+                                                ? '1.5px solid #1e8449'
+                                                : '1.5px solid #0F2548',
                                             borderRadius: '6px',
                                             cursor: 'pointer',
                                             display: 'flex',
@@ -8398,7 +8403,7 @@ Ganador: ${payload.winnerAddress}`);
                                             justifyContent: 'center',
                                             gap: '5px',
                                             transition: 'all 0.2s ease',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.18)'
                                         }}
                                     >
                                         {isSavingScore ? '⏳ Guardando...' : (isScoreSaved ? '✅ ¡PUNTUACIÓN GUARDADA!' : '💾 GUARDAR MI PUNTUACIÓN')}
@@ -8415,10 +8420,9 @@ Ganador: ${payload.winnerAddress}`);
                                     width: '100%',
                                     marginTop: '0.1rem'
                                 }}>
-                                    {/* Primary Giant CTA: Play Again */}
+                                    {/* Primary Giant 3D Arcade CTA: Play Again (Vibrant Flame Gradient) */}
                                     <button
                                         id="restartBtn"
-                                        className="primary-btn"
                                         onClick={handleCookAgain}
                                         style={{
                                             width: '100%',
@@ -8426,13 +8430,27 @@ Ganador: ${payload.winnerAddress}`);
                                             fontSize: '0.95rem',
                                             fontWeight: 'bold',
                                             fontFamily: "'Special Elite', monospace",
+                                            background: 'linear-gradient(180deg, #E67E22 0%, #C0392B 100%)',
+                                            border: '2px solid #8E1B0F',
                                             borderRadius: '8px',
+                                            color: '#FFF',
+                                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                            cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '6px',
-                                            boxShadow: '0 3px 6px rgba(0,0,0,0.25)',
-                                            textTransform: 'uppercase'
+                                            boxShadow: '0 3px 0 #641209, 0 5px 10px rgba(0,0,0,0.35)',
+                                            textTransform: 'uppercase',
+                                            transition: 'transform 0.1s ease, box-shadow 0.1s ease'
+                                        }}
+                                        onMouseDown={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(2px)';
+                                            e.currentTarget.style.boxShadow = '0 1px 0 #641209, 0 3px 6px rgba(0,0,0,0.3)';
+                                        }}
+                                        onMouseUp={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0px)';
+                                            e.currentTarget.style.boxShadow = '0 3px 0 #641209, 0 5px 10px rgba(0,0,0,0.35)';
                                         }}
                                     >
                                         🍕 {language === 'es' ? 'TOCAR DE NUEVO' : 'PLAY AGAIN'}
@@ -8442,7 +8460,6 @@ Ganador: ${payload.winnerAddress}`);
                                     {onChainScore !== null && onChainScore >= 4000 && (
                                         <button
                                             id="nextLevelBtn"
-                                            className="primary-btn"
                                             onClick={handleNextLevel}
                                             style={{
                                                 width: '100%',
@@ -8451,12 +8468,15 @@ Ganador: ${payload.winnerAddress}`);
                                                 fontWeight: 'bold',
                                                 fontFamily: "'Special Elite', monospace",
                                                 background: '#27ae60',
-                                                border: 'none',
+                                                border: '1.5px solid #1e8449',
                                                 borderRadius: '8px',
+                                                color: '#fff',
+                                                cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                gap: '5px'
+                                                gap: '5px',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                             }}
                                         >
                                             🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
@@ -8488,7 +8508,7 @@ Ganador: ${payload.winnerAddress}`);
                                                 fontFamily: "'Special Elite', monospace",
                                                 background: '#D4AF37',
                                                 color: '#1a1005',
-                                                border: 'none',
+                                                border: '1.5px solid #b8972e',
                                                 borderRadius: '6px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
