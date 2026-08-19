@@ -8211,153 +8211,124 @@ Ganador: ${payload.winnerAddress}`);
                         maxHeight: '100%',
                         zIndex: 20,
                         // Elegant Glassmorphism: allows the game background to be seen blurred
-                        background: 'rgba(20, 5, 5, 0.4)',
-                        backdropFilter: 'blur(12px)',
+                        background: 'rgba(15, 5, 5, 0.65)',
+                        backdropFilter: 'blur(10px)',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'flex-start',
+                        justifyContent: 'center',
                         overflowY: 'auto',
                         WebkitOverflowScrolling: 'touch',
-                        padding: '1rem 0.5rem',
+                        padding: '0.5rem',
                         boxSizing: 'border-box'
                     }}>
 
-                        {/* Popup Card (Receipt Theme V3) */}
+                        {/* Popup Card (Receipt Theme V3 - 100% Responsive) */}
                         <div style={{
-                            width: '90%',
-                            maxWidth: '340px',
-                            minHeight: 'fit-content',
-                            margin: '2rem 0',
+                            width: '100%',
+                            maxWidth: '350px',
+                            maxHeight: '96%',
+                            margin: 'auto 0',
                             background: 'transparent',
-                            /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
+                            /* Jagged receipt edges: 14px strips at top and bottom */
                             backgroundImage: `
-                                radial-gradient(circle at 10px 0, transparent 9px, #FDFDFD 10px),
+                                radial-gradient(circle at 8px 0, transparent 7px, #FDFDFD 8px),
                                 linear-gradient(#FDFDFD, #FDFDFD),
-                                radial-gradient(circle at 10px 100%, transparent 9px, #FDFDFD 10px)
+                                radial-gradient(circle at 8px 100%, transparent 7px, #FDFDFD 8px)
                             `,
-                            backgroundSize: '20px 20px, 100% calc(100% - 38px), 20px 20px',
+                            backgroundSize: '16px 14px, 100% calc(100% - 24px), 16px 14px',
                             backgroundPosition: 'top left, center, bottom left',
                             backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'flex-start',
-                            padding: '1rem 1.25rem',
+                            justifyContent: 'space-between',
+                            padding: '0.75rem 0.9rem',
                             color: '#111',
                             position: 'relative',
-                            /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
-                            filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.5))'
+                            boxSizing: 'border-box',
+                            filter: 'drop-shadow(0px 8px 20px rgba(0,0,0,0.6))'
                         }}>
 
-                            {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '10px 0', flex: 1 }}>
+                            {/* Inner Content wrapper */}
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '4px 0', boxSizing: 'border-box' }}>
 
                                 {/* Header Section */}
-                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '1.6rem', color: '#8B0000', margin: '0 0 0.25rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.35rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <h2 id="resTitle" style={{ fontFamily: "var(--font-title)", fontSize: '1.25rem', color: '#8B0000', margin: 0, letterSpacing: '1.5px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                         LA FAMIGLIA
                                     </h2>
-                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.85rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.72rem', color: '#555', letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: '2px' }}>
                                         {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
                                     </div>
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '0.6rem' }}></div>
+                                    <div style={{ width: '100%', borderBottom: '1.5px dashed #888', marginTop: '0.35rem' }}></div>
                                 </div>
 
-                                {/* Score Content */}
-                                <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
-
-                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.5rem', color: '#111' }}>
-                                        <span>{t.score.toUpperCase()}</span>
-                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.35rem' }}>0</span>
+                                {/* Score & Grade Row (Merged for maximum vertical compactness) */}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    width: '100%',
+                                    padding: '0.2rem 0',
+                                    fontFamily: "'Special Elite', monospace"
+                                }}>
+                                    {/* Left: Score & Pizzas */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#555', fontWeight: 'bold' }}>{t.score.toUpperCase()}:</span>
+                                            <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.35rem', color: '#111' }}>0</span>
+                                        </div>
+                                        <div id="resPizzas" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                            <span style={{ fontSize: '0.7rem', color: '#666' }}>{language === 'es' ? 'PIZZAS:' : 'PIZZAS:'}</span>
+                                            <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#8B0000' }}>0</span>
+                                        </div>
                                     </div>
 
-                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1rem', marginBottom: '0.5rem', color: '#444' }}>
-                                        <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
-                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.15rem' }}>0</span>
-                                    </div>
-
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '0.6rem 0' }}></div>
-
-                                    {/* Huge Grade Stamp */}
-                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.5rem 0' }}>
+                                    {/* Right: Grade Stamp */}
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <div className="grade" id="resGrade" style={{
-                                            fontSize: 'clamp(3rem, 7vh, 4.2rem)',
+                                            fontSize: '2rem',
                                             fontFamily: "'Bangers', cursive",
                                             fontWeight: 'bold',
                                             color: '#cc0000',
-                                            opacity: 0.85,
-                                            transform: 'rotate(-5deg)',
-                                            border: '4px solid #cc0000',
-                                            borderRadius: '10px',
-                                            padding: '0 1.2rem',
-                                            lineHeight: 1.1,
-                                            boxShadow: 'inset 0 0 0 2px #FDFDFD, inset 0 0 0 4px #cc0000', // Double border effect
+                                            opacity: 0.9,
+                                            transform: 'rotate(-4deg)',
+                                            border: '2.5px solid #cc0000',
+                                            borderRadius: '6px',
+                                            padding: '0 0.6rem',
+                                            lineHeight: 1.15,
+                                            boxShadow: 'inset 0 0 0 1px #FDFDFD, inset 0 0 0 2px #cc0000',
                                         }}>S</div>
                                     </div>
+                                </div>
 
+                                <div style={{ width: '100%', borderBottom: '1.5px dashed #888', margin: '0.35rem 0' }}></div>
 
-                                    {/* Chef Name & Optional Email Lead Capture */}
-                                    <div style={{ width: '100%', marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', borderTop: '1px dashed #ccc', paddingTop: '0.5rem' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                👨‍🍳 {language === 'es' ? 'Nombre del Chef:' : 'Chef Nickname:'}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                maxLength={24}
-                                                value={chefName}
-                                                onChange={(e) => {
-                                                    setChefName(e.target.value);
-                                                    try { localStorage.setItem('gp_chef_name', e.target.value); } catch {}
-                                                    setIsScoreSaved(false);
-                                                }}
-                                                placeholder={language === 'es' ? 'Tu Apodo / Nickname' : 'Your Nickname'}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.45rem 0.6rem',
-                                                    background: '#fff',
-                                                    border: '1.5px solid #8B0000',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.9rem',
-                                                    fontFamily: "'Special Elite', monospace",
-                                                    color: '#111',
-                                                    boxSizing: 'border-box'
-                                                }}
-                                            />
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                ✉️ {language === 'es' ? 'Email (Opcional):' : 'Email (Optional):'}
-                                            </label>
-                                            <input
-                                                type="email"
-                                                value={playerEmail}
-                                                onChange={(e) => {
-                                                    setPlayerEmail(e.target.value);
-                                                    try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
-                                                    setIsScoreSaved(false);
-                                                }}
-                                                placeholder={language === 'es' ? 'correo@ejemplo.com' : 'email@example.com'}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.45rem 0.6rem',
-                                                    background: '#fff',
-                                                    border: '1.5px solid #ccc',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.85rem',
-                                                    fontFamily: "'Special Elite', monospace",
-                                                    color: '#111',
-                                                    boxSizing: 'border-box'
-                                                }}
-                                            />
-                                            <span style={{ fontSize: '0.66rem', color: '#666', fontStyle: 'italic', lineHeight: 1.25, marginTop: '1px' }}>
-                                                {language === 'es'
-                                                    ? '✉️ Opcional: ingresa tu correo para recibir noticias y actualizaciones exclusivas de Rhythm Slice.'
-                                                    : '✉️ Optional: enter your email to receive news and updates on Rhythm Slice.'}
-                                            </span>
-                                        </div>
-
+                                {/* Chef Name & Save Score Compact Lead Capture */}
+                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                    <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                                        <input
+                                            type="text"
+                                            maxLength={24}
+                                            value={chefName}
+                                            onChange={(e) => {
+                                                setChefName(e.target.value);
+                                                try { localStorage.setItem('gp_chef_name', e.target.value); } catch {}
+                                                setIsScoreSaved(false);
+                                            }}
+                                            placeholder={language === 'es' ? '👨‍🍳 Tu Apodo / Nickname' : '👨‍🍳 Your Nickname'}
+                                            style={{
+                                                flex: 1,
+                                                padding: '0.35rem 0.5rem',
+                                                background: '#fff',
+                                                border: '1.5px solid #8B0000',
+                                                borderRadius: '6px',
+                                                fontSize: '0.78rem',
+                                                fontFamily: "'Special Elite', monospace",
+                                                color: '#111',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
                                         <button
                                             onClick={async () => {
                                                 const scoreToSave = lastScoreRef.current || lastScore || 0;
@@ -8390,32 +8361,85 @@ Ganador: ${payload.winnerAddress}`);
                                                 }
                                             }}
                                             style={{
-                                                width: '100%',
-                                                padding: '0.65rem 0.8rem',
-                                                fontSize: '0.9rem',
+                                                padding: '0.35rem 0.6rem',
+                                                fontSize: '0.78rem',
                                                 fontWeight: 'bold',
                                                 fontFamily: "'Special Elite', monospace",
                                                 background: isScoreSaved ? '#27ae60' : '#8B0000',
                                                 color: '#fff',
                                                 border: 'none',
-                                                borderRadius: '8px',
+                                                borderRadius: '6px',
                                                 cursor: 'pointer',
-                                                marginTop: '0.3rem',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                gap: '6px',
+                                                gap: '4px',
+                                                whiteSpace: 'nowrap',
                                                 transition: 'all 0.2s ease',
-                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
                                             }}
                                         >
-                                            {isSavingScore ? '⏳ Guardando...' : (isScoreSaved ? '✅ ¡PUNTUACIÓN GUARDADA!' : '💾 GUARDAR EN EL RANKING')}
+                                            {isSavingScore ? '⏳...' : (isScoreSaved ? '✅ ¡GUARDADO!' : '💾 GUARDAR')}
                                         </button>
                                     </div>
+
+                                    <input
+                                        type="email"
+                                        value={playerEmail}
+                                        onChange={(e) => {
+                                            setPlayerEmail(e.target.value);
+                                            try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
+                                            setIsScoreSaved(false);
+                                        }}
+                                        placeholder={language === 'es' ? '✉️ Email opcional (newsletter)' : '✉️ Optional email'}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.3rem 0.5rem',
+                                            background: '#fff',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '6px',
+                                            fontSize: '0.72rem',
+                                            fontFamily: "'Special Elite', monospace",
+                                            color: '#333',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '0.8rem' }}>
+                                <div style={{ width: '100%', borderBottom: '1.5px dashed #888', margin: '0.35rem 0' }}></div>
+
+                                {/* 4 Action Buttons in a sleek 2x2 Responsive Grid */}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr',
+                                    gap: '6px',
+                                    width: '100%',
+                                    marginTop: '0.2rem'
+                                }}>
+                                    {/* Btn 1: Play Again */}
+                                    <button
+                                        id="restartBtn"
+                                        className="primary-btn"
+                                        onClick={handleCookAgain}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.55rem 0.4rem',
+                                            fontSize: '0.82rem',
+                                            fontWeight: 'bold',
+                                            fontFamily: "'Special Elite', monospace",
+                                            boxShadow: 'none',
+                                            borderRadius: '8px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '4px',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        🍕 {language === 'es' ? 'DE NUEVO' : 'PLAY AGAIN'}
+                                    </button>
+
+                                    {/* Btn 2: Leaderboard */}
                                     <button
                                         onClick={() => {
                                             const results = document.getElementById('results');
@@ -8427,34 +8451,27 @@ Ganador: ${payload.winnerAddress}`);
                                         }}
                                         style={{
                                             width: '100%',
-                                            padding: '0.75rem 1rem',
-                                            fontSize: '1rem',
+                                            padding: '0.55rem 0.4rem',
+                                            fontSize: '0.82rem',
                                             fontWeight: 'bold',
                                             fontFamily: "'Special Elite', monospace",
                                             background: '#D4AF37',
                                             color: '#1a1005',
                                             border: 'none',
-                                            borderRadius: '10px',
+                                            borderRadius: '8px',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '6px',
-                                            boxShadow: '0 3px 8px rgba(212,175,55,0.3)'
+                                            gap: '4px',
+                                            whiteSpace: 'nowrap',
+                                            boxShadow: '0 2px 4px rgba(212,175,55,0.25)'
                                         }}
                                     >
-                                        🏆 {language === 'es' ? 'VER TABLA DE LÍDERES' : 'VIEW LEADERBOARD'}
+                                        🏆 {language === 'es' ? 'RANKING' : 'RANKING'}
                                     </button>
 
-                                    <button
-                                        id="restartBtn"
-                                        className="primary-btn"
-                                        onClick={handleCookAgain}
-                                        style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '1.05rem', boxShadow: 'none' }}
-                                    >
-                                        🍕 {language === 'es' ? 'TOCAR DE NUEVO' : 'PLAY AGAIN'}
-                                    </button>
-
+                                    {/* Btn 3: Next Level */}
                                     {onChainScore !== null && onChainScore >= 4000 ? (
                                         <button
                                             id="nextLevelBtn"
@@ -8462,47 +8479,77 @@ Ganador: ${payload.winnerAddress}`);
                                             onClick={handleNextLevel}
                                             style={{
                                                 width: '100%',
-                                                padding: '0.85rem 1rem',
-                                                fontSize: '1.1rem',
-                                                background: '#E67E22',
-                                                borderColor: '#D35400',
+                                                padding: '0.55rem 0.4rem',
+                                                fontSize: '0.82rem',
+                                                fontWeight: 'bold',
+                                                fontFamily: "'Special Elite', monospace",
+                                                background: '#27ae60',
+                                                border: 'none',
                                                 boxShadow: 'none',
-                                                textTransform: 'uppercase'
+                                                borderRadius: '8px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '4px',
+                                                whiteSpace: 'nowrap'
                                             }}
                                         >
-                                            🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
+                                            🚀 {language === 'es' ? 'NIVEL 2' : 'LEVEL 2'}
                                         </button>
                                     ) : (
                                         <button
                                             id="nextLevelBtn"
-                                            style={{ width: '100%', padding: '0.8rem 1rem', fontSize: '0.95rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.55rem 0.4rem',
+                                                fontSize: '0.75rem',
+                                                fontFamily: "'Special Elite', monospace",
+                                                opacity: 0.55,
+                                                cursor: 'not-allowed',
+                                                background: '#E0D4B8',
+                                                border: '1.5px solid #ccc',
+                                                borderRadius: '8px',
+                                                color: '#777',
+                                                fontWeight: 'bold',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '4px',
+                                                whiteSpace: 'nowrap'
+                                            }}
                                             disabled
                                             title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
                                         >
-                                            🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
+                                            🔒 {language === 'es' ? 'NIVEL 2 (4K)' : 'LEVEL 2 (4K)'}
                                         </button>
                                     )}
 
+                                    {/* Btn 4: Exit */}
                                     <button
                                         id="backToLobbyBtn"
                                         onClick={handleBackToLobby}
                                         style={{
                                             width: '100%',
-                                            padding: '0.75rem 1rem',
-                                            fontSize: '1rem',
+                                            padding: '0.55rem 0.4rem',
+                                            fontSize: '0.82rem',
                                             fontFamily: "'Special Elite', monospace",
                                             background: 'transparent',
-                                            border: '2px dashed #8B0000',
-                                            borderRadius: '12px',
+                                            border: '1.5px dashed #8B0000',
+                                            borderRadius: '8px',
                                             color: '#8B0000',
                                             fontWeight: 'bold',
                                             cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '4px',
+                                            whiteSpace: 'nowrap',
                                             transition: 'all 0.2s ease'
                                         }}
                                         onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
                                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                     >
-                                        {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
+                                        🚪 {language === 'es' ? 'SALIR' : 'EXIT'}
                                     </button>
                                 </div>
 

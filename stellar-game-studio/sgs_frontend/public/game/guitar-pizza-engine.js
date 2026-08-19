@@ -244,16 +244,24 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const nextLevelBtn = document.getElementById('nextLevelBtn');
 
             if (isVictory) {
-                if (titleEl) { titleEl.innerText = t.engineLevelComplete; titleEl.style.color = '#ffd700'; }
-                if (pizzasEl) { pizzasEl.style.display = 'block'; }
+                if (titleEl) { titleEl.innerText = t.engineLevelComplete; titleEl.style.color = '#8B0000'; }
+                if (pizzasEl) { pizzasEl.style.display = 'flex'; }
                 if (pizzasCountEl) { pizzasCountEl.innerText = pizzasMade; }
-                if (nextLevelBtn) { nextLevelBtn.style.display = 'block'; }
-                if (uiResults) { uiResults.style.background = 'rgba(20,50,20,0.7)'; }
+                if (nextLevelBtn) {
+                    nextLevelBtn.style.display = 'flex';
+                    nextLevelBtn.style.opacity = '1';
+                    nextLevelBtn.style.cursor = 'pointer';
+                }
+                if (uiResults) { uiResults.style.background = 'rgba(20,50,20,0.65)'; }
             } else {
-                if (titleEl) { titleEl.innerText = t.engineServiceEnded; titleEl.style.color = '#fff'; }
+                if (titleEl) { titleEl.innerText = t.engineServiceEnded; titleEl.style.color = '#8B0000'; }
                 if (pizzasEl) { pizzasEl.style.display = 'none'; }
-                if (nextLevelBtn) { nextLevelBtn.style.display = 'none'; }
-                if (uiResults) { uiResults.style.background = 'rgba(0,0,0,0.6)'; }
+                if (nextLevelBtn) {
+                    nextLevelBtn.style.display = 'flex';
+                    nextLevelBtn.style.opacity = '0.55';
+                    nextLevelBtn.style.cursor = 'not-allowed';
+                }
+                if (uiResults) { uiResults.style.background = 'rgba(15,5,5,0.65)'; }
             }
 
             // Calculate Grade
