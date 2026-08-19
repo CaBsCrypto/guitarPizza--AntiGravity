@@ -338,199 +338,6 @@ const getDaysBetween = (date1Str: string, date2Str: string) => {
     return diffDays;
 };
 
-interface OnboardingModalProps {
-  showOnboarding: boolean;
-  onboardingStep: number;
-  setOnboardingStep: React.Dispatch<React.SetStateAction<number>>;
-  language: 'es' | 'en';
-  dismissOnboarding: () => void;
-}
-
-function OnboardingModal({
-  showOnboarding,
-  onboardingStep,
-  setOnboardingStep,
-  language,
-  dismissOnboarding,
-}: OnboardingModalProps) {
-  if (!showOnboarding) return null;
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'rgba(10,0,0,0.88)',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-        backdropFilter: 'blur(8px)',
-      }}
-    >
-      {/* Card */}
-      <div
-        style={{
-          background: 'linear-gradient(160deg, #1a0000 0%, #0d0000 100%)',
-          border: '2px solid #d4af37',
-          borderRadius: '20px',
-          padding: '2rem 1.5rem 1.5rem',
-          maxWidth: '320px',
-          width: '100%',
-          boxShadow: '0 30px 60px rgba(0,0,0,0.8), 0 0 40px rgba(212,175,55,0.15)',
-          textAlign: 'center',
-          position: 'relative',
-        }}
-      >
-        {/* Gold accent top line */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: '20%',
-            right: '20%',
-            height: '3px',
-            background: 'linear-gradient(90deg, transparent, #d4af37, transparent)',
-            borderRadius: '0 0 3px 3px',
-          }}
-        />
-
-        {/* Step dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '1.5rem' }}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: i === onboardingStep ? '20px' : '7px',
-                height: '7px',
-                borderRadius: '4px',
-                background: i === onboardingStep ? '#d4af37' : 'rgba(212,175,55,0.25)',
-                transition: 'all 0.3s ease',
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Step content */}
-        {onboardingStep === 0 && (
-          <>
-            <div style={{ fontSize: '3rem', marginBottom: '0.8rem', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>🎸🍕</div>
-            <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '0.06em', marginBottom: '0.6rem', textTransform: 'uppercase' }}>
-              {language === 'es' ? 'Bienvenido, Mafioso' : 'Welcome, Mafioso'}
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#ccc', lineHeight: '1.55', fontFamily: 'var(--font-body)' }}>
-              {language === 'es'
-                ? 'Guitar Pizza es un juego de ritmo on-chain. Cocina pizzas al ritmo de la música, acumula puntos y gana recompensas reales en la blockchain de Stellar.'
-                : 'Guitar Pizza is an on-chain rhythm game. Cook pizzas to the beat, rack up points, and earn real rewards on the Stellar blockchain.'}
-            </div>
-          </>
-        )}
-
-        {onboardingStep === 1 && (
-          <>
-            <div style={{ fontSize: '3rem', marginBottom: '0.8rem', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>⛓️🏆</div>
-            <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '0.06em', marginBottom: '0.6rem', textTransform: 'uppercase' }}>
-              {language === 'es' ? 'Gana $SLICE & NFTs' : 'Earn $SLICE & NFTs'}
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#ccc', lineHeight: '1.55', fontFamily: 'var(--font-body)' }}>
-              {language === 'es'
-                ? 'Cada partida te acerca a tokens $SLICE y NFTs de ingredientes raros. Completa misiones diarias, rompe récords y gana Tickets de Torneo.'
-                : 'Every session brings you closer to $SLICE tokens and rare ingredient NFTs. Complete daily quests, break records, and earn Tournament Tickets.'}
-            </div>
-            {/* Mini reward showcase */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.8rem', marginTop: '0.8rem' }}>
-              {['🍄 Truffle', '🍇 Grape', '🎟️ Ticket', '🔥 Streak'].map((label) => (
-                <div key={label} style={{ fontSize: '0.55rem', color: '#d4af37', fontFamily: 'monospace', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.2rem' }}>{label.split(' ')[0]}</div>
-                  <div style={{ opacity: 0.7 }}>{label.split(' ')[1]}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {onboardingStep === 2 && (
-          <>
-            <div style={{ fontSize: '3rem', marginBottom: '0.8rem', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>🔑✨</div>
-            <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '0.06em', marginBottom: '0.6rem', textTransform: 'uppercase' }}>
-              {language === 'es' ? 'Conecta tu Wallet' : 'Connect your Wallet'}
-            </div>
-            <div style={{ fontSize: '0.78rem', color: '#ccc', lineHeight: '1.55', fontFamily: 'var(--font-body)' }}>
-              {language === 'es'
-                ? 'Conecta una wallet Stellar (Freighter, Albedo, xBull) para guardar tus logros on-chain. ¡Puedes jugar sin wallet, pero no ganarás tokens!'
-                : 'Connect a Stellar wallet (Freighter, Albedo, xBull) to save your achievements on-chain. You can play without one, but you won\'t earn tokens!'}
-            </div>
-            <div style={{ marginTop: '1rem', fontSize: '0.6rem', fontFamily: 'monospace', color: '#888', border: '1px dashed rgba(212,175,55,0.3)', borderRadius: '8px', padding: '0.5rem' }}>
-              {language === 'es' ? '💡 Red: Stellar Testnet (gratis para probar)' : '💡 Network: Stellar Testnet (free to try)'}
-            </div>
-          </>
-        )}
-
-        {/* Navigation buttons */}
-        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.8rem', justifyContent: 'center' }}>
-          {/* Skip */}
-          <button
-            onClick={dismissOnboarding}
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '8px',
-              color: '#888',
-              fontSize: '0.72rem',
-              fontFamily: 'monospace',
-              padding: '0.5rem 1rem',
-              cursor: 'pointer',
-              letterSpacing: '0.05em',
-            }}
-          >
-            {language === 'es' ? 'Saltar' : 'Skip'}
-          </button>
-
-          {/* Next / Done */}
-          <button
-            onClick={() => {
-              if (onboardingStep < 2) {
-                setOnboardingStep((s) => s + 1);
-              } else {
-                dismissOnboarding();
-              }
-            }}
-            style={{
-              background: 'linear-gradient(135deg, #d4af37, #8B6914)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#1a0000',
-              fontSize: '0.78rem',
-              fontWeight: 'bold',
-              fontFamily: 'var(--font-display)',
-              padding: '0.55rem 1.4rem',
-              cursor: 'pointer',
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              boxShadow: '0 4px 12px rgba(212,175,55,0.4)',
-            }}
-          >
-            {onboardingStep < 2
-              ? language === 'es'
-                ? 'Siguiente →'
-                : 'Next →'
-              : language === 'es'
-              ? '¡Empezar! 🍕'
-              : "Let's Cook! 🍕"}
-          </button>
-        </div>
-
-        {/* Step counter */}
-        <div style={{ marginTop: '0.8rem', fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace', letterSpacing: '0.06em' }}>
-          {onboardingStep + 1} / 3 — GUITAR PIZZA • ARCADE EDITION
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompleteProp, onBack, embed = false }: GuitarPizzaGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -614,18 +421,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     const t = TRANSLATIONS[language];
 
-    // New Player Onboarding — shows once on first visit
-    const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
-        try { return !localStorage.getItem('gp_onboarding_done'); }
-        catch { return false; }
-    });
 
-    const [onboardingStep, setOnboardingStep] = useState(0);
-
-    const dismissOnboarding = () => {
-        setShowOnboarding(false);
-        try { localStorage.setItem('gp_onboarding_done', '1'); } catch { /* noop */ }
-    };
 
 
 
@@ -3233,26 +3029,6 @@ Ganador: ${payload.winnerAddress}`);
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
             {/* Game Container */}
             <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
-                {/* Floating Game Controls (Settings & Fullscreen) */}
-                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 30, display: 'flex', gap: '8px' }}>
-                    <button
-                        onClick={toggleGameFullscreen}
-                        className="settings-btn gp-fs-btn"
-                        title={isGameFullscreen ? (language === 'es' ? 'Salir de pantalla completa' : 'Exit fullscreen') : (language === 'es' ? 'Pantalla completa' : 'Fullscreen')}
-                        aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                        style={{ fontSize: '1.2rem', lineHeight: 1, background: 'rgba(10,7,5,0.7)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                    >
-                        {isGameFullscreen ? '⊠' : '⛶'}
-                    </button>
-                    <button 
-                        onClick={() => setShowSettings(true)} 
-                        className="settings-btn" 
-                        title="Settings"
-                        style={{ background: 'rgba(10,7,5,0.7)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                    >
-                        <Settings size={20} />
-                    </button>
-                </div>
 
                 <div
                     id="game-device-screen"
@@ -3743,263 +3519,136 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
-
-                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-
-                                            <Globe size={20} color="#8B0000" />
-
-                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.language}</span>
-
+                                <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.2rem', WebkitOverflowScrolling: 'touch' }}>
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: 'clamp(0.6rem, 2vw, 0.9rem)', borderRadius: '12px', marginBottom: 'clamp(0.7rem, 2vw, 1rem)', border: '1px solid #E0D4B8' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 1.5vw, 0.8rem)' }}>
+                                            <Globe size={18} color="#8B0000" />
+                                            <span style={{ fontSize: 'clamp(0.9rem, 2.8vw, 1.05rem)', fontWeight: 'bold', color: '#8B0000' }}>{t.language}</span>
                                         </div>
-
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-
+                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
                                             <button
-
                                                 onClick={() => setLanguage('es')}
-
                                                 style={{
-
-                                                    padding: '0.5rem 1rem',
-
+                                                    padding: 'clamp(0.4rem, 1.2vw, 0.55rem) clamp(0.75rem, 2vw, 1rem)',
                                                     borderRadius: '8px',
-
                                                     border: '1px solid #D0B488',
-
                                                     background: language === 'es' ? 'var(--color-accent)' : '#F9F5EB',
-
                                                     color: language === 'es' ? '#fff' : '#333',
-
                                                     fontWeight: 'bold',
-
+                                                    fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)',
                                                     cursor: 'pointer'
-
                                                 }}
-
                                             >ES</button>
-
                                             <button
-
                                                 onClick={() => setLanguage('en')}
-
                                                 style={{
-
-                                                    padding: '0.5rem 1rem',
-
+                                                    padding: 'clamp(0.4rem, 1.2vw, 0.55rem) clamp(0.75rem, 2vw, 1rem)',
                                                     borderRadius: '8px',
-
                                                     border: '1px solid #D0B488',
-
                                                     background: language === 'en' ? 'var(--color-accent)' : '#F9F5EB',
-
                                                     color: language === 'en' ? '#fff' : '#333',
-
                                                     fontWeight: 'bold',
-
+                                                    fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)',
                                                     cursor: 'pointer'
-
                                                 }}
-
                                             >EN</button>
-
                                         </div>
-
                                     </div>
 
-
-
-                                    <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.chefName}</label>
-
+                                    <div style={{ marginBottom: 'clamp(0.8rem, 2.2vw, 1.2rem)', width: '100%' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.35rem', color: '#8B0000', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', fontWeight: 'bold' }}>{t.chefName}</label>
                                         <input
-
                                             type="text"
-
                                             value={chefName}
-
                                             onChange={(e) => setChefName(e.target.value)}
-
-                                            style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
-
+                                            style={{ width: '100%', padding: 'clamp(0.55rem, 1.8vw, 0.75rem)', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', boxSizing: 'border-box' }}
                                         />
-
                                     </div>
 
-
-
-                                    <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.xHandle}</label>
-
+                                    <div style={{ marginBottom: 'clamp(0.8rem, 2.2vw, 1.2rem)', width: '100%' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.35rem', color: '#8B0000', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', fontWeight: 'bold' }}>{t.xHandle}</label>
                                         <input
-
                                             type="text"
-
                                             value={xHandle}
-
                                             onChange={(e) => setXHandle(e.target.value)}
-
-                                            style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
-
+                                            style={{ width: '100%', padding: 'clamp(0.55rem, 1.8vw, 0.75rem)', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', boxSizing: 'border-box' }}
                                         />
-
                                     </div>
 
-
-
-                                    <div style={{ marginBottom: '1.5rem', width: '100%' }}>
-
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.wallet}</label>
-
-                                        <div style={{ padding: '0.8rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: '0.9rem', wordBreak: 'break-all', color: '#27ae60' }}>
-
+                                    <div style={{ marginBottom: 'clamp(0.8rem, 2.2vw, 1.2rem)', width: '100%' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.35rem', color: '#8B0000', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', fontWeight: 'bold' }}>{t.wallet}</label>
+                                        <div style={{ padding: 'clamp(0.55rem, 1.8vw, 0.75rem)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', wordBreak: 'break-all', color: '#27ae60' }}>
                                             {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : "Not Connected"}
-
                                         </div>
-
                                     </div>
 
-
-
-                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
-
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.volume}</span>
-
-                                        <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 50, height: 50, padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}>
-
-                                            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} color="#FFF" />}
-
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: 'clamp(0.6rem, 2vw, 0.9rem)', borderRadius: '12px', marginBottom: 'clamp(0.7rem, 2vw, 1rem)', border: '1px solid #E0D4B8' }}>
+                                        <span style={{ fontSize: 'clamp(0.9rem, 2.8vw, 1.05rem)', fontWeight: 'bold', color: '#8B0000' }}>{t.volume}</span>
+                                        <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 'clamp(38px, 9vw, 46px)', height: 'clamp(38px, 9vw, 46px)', padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0, cursor: 'pointer', border: 'none' }}>
+                                            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} color="#FFF" />}
                                         </button>
-
                                     </div>
-
-
 
                                     {/* ── MY TXs HISTORY ───────────────────────────────── */}
-
-                                    <div style={{ marginBottom: '1rem', width: '100%' }}>
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
-
-                                            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8B0000' }}>⛓ {t.myTxs}</span>
-
-                                            <span style={{ fontSize: '0.75rem', color: '#999' }}>({txHistory.length})</span>
-
+                                    <div style={{ marginBottom: '0.6rem', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <span style={{ fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)', fontWeight: 'bold', color: '#8B0000' }}>⛓ {t.myTxs}</span>
+                                            <span style={{ fontSize: '0.72rem', color: '#999' }}>({txHistory.length})</span>
                                         </div>
 
-
-
                                         {txHistory.length === 0 ? (
-
-                                            <div style={{ textAlign: 'center', color: '#8B0000', fontSize: '0.85rem', padding: '1rem', background: '#F9F5EB', borderRadius: '8px', border: '1px dashed #D0B488' }}>
-
+                                            <div style={{ textAlign: 'center', color: '#8B0000', fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', padding: '0.8rem', background: '#F9F5EB', borderRadius: '8px', border: '1px dashed #D0B488' }}>
                                                 {t.noTxs}
-
                                             </div>
-
                                         ) : (
-
-                                            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #E0D4B8' }}>
-
-                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-
+                                            <div style={{ overflowX: 'auto', maxHeight: '170px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #E0D4B8', WebkitOverflowScrolling: 'touch' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.68rem, 2vw, 0.76rem)' }}>
                                                     <thead>
-
-                                                        <tr style={{ background: '#E0D4B8', color: '#8B0000', textAlign: 'left' }}>
-
-                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>Type</th>
-
-                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold', textAlign: 'right' }}>Score</th>
-
-                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold' }}>Date</th>
-
-                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>TX</th>
-
+                                                        <tr style={{ background: '#E0D4B8', color: '#8B0000', textAlign: 'left', position: 'sticky', top: 0 }}>
+                                                            <th style={{ padding: '0.35rem 0.5rem', fontWeight: 'bold' }}>Type</th>
+                                                            <th style={{ padding: '0.35rem 0.4rem', fontWeight: 'bold', textAlign: 'right' }}>Score</th>
+                                                            <th style={{ padding: '0.35rem 0.4rem', fontWeight: 'bold' }}>Date</th>
+                                                            <th style={{ padding: '0.35rem 0.5rem', fontWeight: 'bold' }}>TX</th>
                                                         </tr>
-
                                                     </thead>
-
                                                     <tbody>
-
                                                         {txHistory.map((tx, i) => {
-
-                                                            const shortHash = `${tx.hash.slice(0, 6)}…${tx.hash.slice(-6)}`;
-
+                                                            const shortHash = `${tx.hash.slice(0, 5)}…${tx.hash.slice(-5)}`;
                                                             const d = new Date(tx.timestamp);
-
                                                             const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-
                                                             return (
-
                                                                 <tr key={i} style={{ borderTop: '1px solid #E0D4B8', background: i % 2 === 0 ? '#FFF8E7' : '#F9F5EB' }}>
-
-                                                                    <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
-
+                                                                    <td style={{ padding: '0.35rem 0.5rem', color: '#333', whiteSpace: 'nowrap' }}>
                                                                         {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}
-
                                                                     </td>
-
-                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#8B0000', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-
+                                                                    <td style={{ padding: '0.35rem 0.4rem', color: '#8B0000', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                                                                         {tx.score.toLocaleString()}
-
                                                                     </td>
-
-                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
-
+                                                                    <td style={{ padding: '0.35rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
                                                                         {dateStr}
-
                                                                     </td>
-
-                                                                    <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap' }}>
-
+                                                                    <td style={{ padding: '0.35rem 0.5rem', whiteSpace: 'nowrap' }}>
                                                                         <a
-
                                                                             href={`${EXPLORER_BASE}/${tx.hash}`}
-
                                                                             target="_blank"
-
                                                                             rel="noopener noreferrer"
-
-                                                                            style={{ color: '#2980b9', textDecoration: 'none', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-
+                                                                            style={{ color: '#2980b9', textDecoration: 'none', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
                                                                             title={tx.hash}
-
                                                                         >
-
                                                                             {shortHash} 🔗
-
                                                                         </a>
-
                                                                     </td>
-
                                                                 </tr>
-
                                                             );
-
                                                         })}
-
                                                     </tbody>
-
                                                 </table>
-
                                             </div>
-
                                         )}
-
                                     </div>
-
-
-
                                 </div>
 
-
-
-                                <button className="primary-btn" onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: '1rem', padding: '1rem', fontSize: '1rem' }}>{t.backToCooking}</button>
+                                <button className="primary-btn" onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: 'clamp(0.5rem, 1.5vw, 0.8rem)', padding: 'clamp(0.65rem, 2vw, 0.85rem)', fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)' }}>{t.backToCooking}</button>
 
                             </div>
 
@@ -6574,14 +6223,16 @@ Ganador: ${payload.winnerAddress}`);
                                     <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '0.8rem',
-                                        padding: '0.6rem 1rem',
-                                        background: 'rgba(0,0,0,0.2)',
-                                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                        gap: 'clamp(0.4rem, 1.5vw, 0.8rem)',
+                                        padding: 'clamp(0.4rem, 1.5vw, 0.6rem) clamp(0.5rem, 2vw, 0.9rem)',
+                                        background: 'rgba(0,0,0,0.15)',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(139,0,0,0.2)',
                                         justifyContent: 'space-between',
-                                        marginBottom: '0.5rem'
+                                        marginBottom: '0.4rem',
+                                        flexWrap: 'wrap'
                                     }}>
-                                        <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold' }}>
+                                        <span style={{ fontSize: 'clamp(0.72rem, 2.2vw, 0.85rem)', color: '#8B0000', fontWeight: 'bold' }}>
                                             {language === 'es' ? 'Filtrar por Canción:' : 'Filter by Song:'}
                                         </span>
                                         <select
@@ -6595,13 +6246,14 @@ Ganador: ${payload.winnerAddress}`);
                                                 background: '#222',
                                                 color: '#fff',
                                                 border: '1px solid #ff3e3e',
-                                                padding: '0.4rem 0.8rem',
-                                                borderRadius: '4px',
-                                                fontSize: '0.85rem',
+                                                padding: 'clamp(0.3rem, 1vw, 0.45rem) clamp(0.5rem, 1.5vw, 0.75rem)',
+                                                borderRadius: '6px',
+                                                fontSize: 'clamp(0.72rem, 2.2vw, 0.82rem)',
                                                 cursor: 'pointer',
                                                 outline: 'none',
                                                 fontWeight: 'bold',
-                                                maxWidth: '65%'
+                                                maxWidth: '100%',
+                                                flex: '1 1 auto'
                                             }}
                                         >
                                             <option value="all">🌟 {language === 'es' ? 'Todas las Canciones' : 'All Songs'}</option>
@@ -6617,10 +6269,10 @@ Ganador: ${payload.winnerAddress}`);
                                     {lbSubmitStatus !== 'none' && (
                                         <div style={{
                                             textAlign: 'center',
-                                            padding: '0.4rem 0.8rem',
-                                            marginBottom: '0.5rem',
+                                            padding: '0.35rem 0.6rem',
+                                            marginBottom: '0.4rem',
                                             borderRadius: '8px',
-                                            fontSize: '0.8rem',
+                                            fontSize: 'clamp(0.72rem, 2vw, 0.8rem)',
                                             fontWeight: 'bold',
                                             background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
                                             color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
@@ -6630,33 +6282,33 @@ Ganador: ${payload.winnerAddress}`);
                                         </div>
                                     )}
 
-                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                                         {leaderboardLoading ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+                                            <div style={{ textAlign: 'center', padding: '1.5rem', color: '#888', fontSize: 'clamp(0.8rem, 2.4vw, 0.9rem)' }}>
                                                 <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
                                                 Loading scores...
                                             </div>
                                         ) : leaderboardError ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
-                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
-                                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
-                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={() => loadLeaderboard()}>Try Again</button>
+                                            <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                                <div style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>⚠️</div>
+                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.2rem', fontSize: 'clamp(0.82rem, 2.5vw, 0.92rem)' }}>Could not load scores</div>
+                                                <div style={{ color: '#888', fontSize: 'clamp(0.72rem, 2.2vw, 0.8rem)' }}>{leaderboardError}</div>
+                                                <button className="primary-btn" style={{ marginTop: '0.8rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={() => loadLeaderboard()}>Try Again</button>
                                             </div>
                                         ) : leaderboard.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
-                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
+                                            <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                                <div style={{ fontSize: '2.5rem', marginBottom: '0.4rem' }}>🍕</div>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.2rem', fontSize: 'clamp(0.88rem, 2.6vw, 1rem)' }}>{t.noScores}</div>
+                                                <div style={{ color: '#888', fontSize: 'clamp(0.78rem, 2.4vw, 0.88rem)' }}>{t.beFirst}</div>
                                                 <button
                                                     className="primary-btn"
-                                                    style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
+                                                    style={{ marginTop: '1.2rem', width: '100%', padding: 'clamp(0.65rem, 2vw, 0.85rem)', fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)' }}
                                                     onClick={() => { setView('lobby'); handleStartGame(); }}
                                                 >🔥 FIRE UP OVEN</button>
                                             </div>
                                         ) : (
                                             <div style={{ width: '100%' }}>
-                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
+                                                <div style={{ fontSize: 'clamp(0.65rem, 2vw, 0.72rem)', color: '#999', textAlign: 'center', marginBottom: '0.6rem', letterSpacing: '0.08em' }}>
                                                     🏆 Arcade Leaderboard · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
                                                 </div>
                                                 {leaderboard.map((entry, i) => {
@@ -6670,24 +6322,24 @@ Ganador: ${payload.winnerAddress}`);
                                                         <div key={i} style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            gap: '0.75rem',
-                                                            padding: '0.75rem 0.5rem',
+                                                            gap: 'clamp(0.4rem, 1.8vw, 0.75rem)',
+                                                            padding: 'clamp(0.5rem, 1.8vw, 0.7rem) clamp(0.3rem, 1.2vw, 0.5rem)',
                                                             borderBottom: '1px solid #E0D4B8',
                                                             background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
                                                             borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
                                                         }}>
-                                                            <span style={{ fontSize: '1.25rem', minWidth: '2.2rem', textAlign: 'center' }}>{medal}</span>
-                                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontSize: '0.95rem', fontWeight: isMe ? 'bold' : '600', fontFamily: "'Special Elite', monospace", color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontSize: 'clamp(0.95rem, 3.2vw, 1.25rem)', minWidth: 'clamp(1.6rem, 5vw, 2.2rem)', textAlign: 'center', flexShrink: 0 }}>{medal}</span>
+                                                            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                                                <div style={{ fontSize: 'clamp(0.82rem, 2.6vw, 0.95rem)', fontWeight: isMe ? 'bold' : '600', fontFamily: "'Special Elite', monospace", color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                     {displayName}{isMe ? ' (tú)' : ''}
                                                                 </div>
                                                                 {songName && (
-                                                                    <div style={{ fontSize: '0.7rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    <div style={{ fontSize: 'clamp(0.6rem, 2vw, 0.7rem)', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                         🎵 {songName}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                                                            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.82rem, 2.6vw, 1.05rem)', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace', flexShrink: 0 }}>
                                                                 {Number(entry.score).toLocaleString()} pts
                                                             </div>
                                                         </div>
@@ -6697,20 +6349,12 @@ Ganador: ${payload.winnerAddress}`);
                                         )}
                                     </div>
 
-
-
                                     {leaderboard.length > 0 && (
-
                                         <button
-
                                             className="primary-btn"
-
-                                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
-
+                                            style={{ width: '100%', marginTop: 'clamp(0.4rem, 1.5vw, 0.6rem)', padding: 'clamp(0.65rem, 2vw, 0.85rem)', fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)' }}
                                             onClick={() => { setView('lobby'); handleStartGame(); }}
-
                                         >🔥 {t.challenge}</button>
-
                                     )}
 
                                 </div>
@@ -7767,140 +7411,106 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
-
-                                        <section style={{ marginBottom: '1.5rem' }}>
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
+                                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.3rem', paddingBottom: '1.5rem', WebkitOverflowScrolling: 'touch' }}>
+                                        <section style={{ marginBottom: 'clamp(1rem, 2.5vw, 1.4rem)' }}>
+                                            <h3 style={{ fontSize: 'clamp(1rem, 3.2vw, 1.2rem)', fontWeight: 'bold', marginBottom: 'clamp(0.5rem, 1.8vw, 0.8rem)', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
 
                                             {/* Keyboard Sub-Section */}
-                                            <div style={{ background: '#FFFDF9', border: '1px solid #E0D4B8', borderRadius: '10px', padding: '0.8rem', marginBottom: '0.8rem' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '0.88rem', color: '#8B0000', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <div style={{ background: '#FFFDF9', border: '1px solid #E0D4B8', borderRadius: '10px', padding: 'clamp(0.6rem, 2vw, 0.85rem)', marginBottom: 'clamp(0.6rem, 2vw, 0.8rem)' }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.82rem, 2.5vw, 0.9rem)', color: '#8B0000', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     ⌨️ {language === 'es' ? 'TECLADO' : 'KEYBOARD'}
                                                 </div>
-                                                <p style={{ fontSize: '0.85rem', color: '#555', margin: '0 0 0.6rem 0' }}>{t.controlsDesc}</p>
-                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.6rem' }}>
-                                                    <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
-                                                    <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
-                                                    <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
-                                                    <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
+                                                <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#555', margin: '0 0 0.5rem 0' }}>{t.controlsDesc}</p>
+                                                <div style={{ display: 'flex', gap: 'clamp(4px, 1.5vw, 8px)', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                                                    <div className="key-box">A<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🔴</span></div>
+                                                    <div className="key-box">S<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🟡</span></div>
+                                                    <div className="key-box">K<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🥓</span></div>
+                                                    <div className="key-box">L<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🟣</span></div>
                                                 </div>
-                                                <div style={{ fontSize: '0.75rem', color: '#888', textAlign: 'center' }}>
+                                                <div style={{ fontSize: 'clamp(0.68rem, 2vw, 0.75rem)', color: '#888', textAlign: 'center' }}>
                                                     {t.keyboardAlts}
                                                 </div>
                                             </div>
 
                                             {/* Gamepad / Xbox Sub-Section */}
-                                            <div style={{ background: '#1A1815', border: '1.5px solid #2ECC71', borderRadius: '12px', padding: '0.9rem', color: '#FFF', boxShadow: '0 4px 12px rgba(46, 204, 113, 0.15)' }}>
+                                            <div style={{ background: '#1A1815', border: '1.5px solid #2ECC71', borderRadius: '12px', padding: 'clamp(0.6rem, 2vw, 0.85rem)', color: '#FFF', boxShadow: '0 4px 12px rgba(46, 204, 113, 0.15)' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '4px' }}>
-                                                    <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span style={{ fontWeight: 'bold', fontSize: 'clamp(0.82rem, 2.5vw, 0.95rem)', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         🎮 {t.gamepadTitle}
                                                     </span>
-                                                    <span style={{ fontSize: '0.7rem', background: 'rgba(46, 204, 113, 0.2)', color: '#2ECC71', border: '1px solid #2ECC71', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>
+                                                    <span style={{ fontSize: 'clamp(0.62rem, 1.8vw, 0.7rem)', background: 'rgba(46, 204, 113, 0.2)', color: '#2ECC71', border: '1px solid #2ECC71', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold' }}>
                                                         {t.gamepadAutoDetect}
                                                     </span>
                                                 </div>
-                                                <p style={{ fontSize: '0.82rem', color: '#CCC', margin: '0 0 0.75rem 0' }}>{t.gamepadDesc}</p>
+                                                <p style={{ fontSize: 'clamp(0.74rem, 2.2vw, 0.82rem)', color: '#CCC', margin: '0 0 0.6rem 0' }}>{t.gamepadDesc}</p>
 
                                                 {/* 4 Lanes Grid for Gamepad */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '0.75rem', textAlign: 'center' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'clamp(3px, 1vw, 6px)', marginBottom: '0.6rem', textAlign: 'center' }}>
                                                     {/* Lane 1 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: '0.7rem', color: '#E74C3C', fontWeight: 'bold', marginBottom: '4px' }}>🔴 {language === 'es' ? 'Carril 1' : 'Lane 1'}</div>
-                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2980B9', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>X</div>
-                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ⬅️<br />LT</div>
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#E74C3C', fontWeight: 'bold', marginBottom: '3px' }}>🔴 {language === 'es' ? 'Carril 1' : 'Lane 1'}</div>
+                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#2980B9', color: '#FFF', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>X</div>
+                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ⬅️<br />LT</div>
                                                     </div>
                                                     {/* Lane 2 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: '0.7rem', color: '#F1C40F', fontWeight: 'bold', marginBottom: '4px' }}>🟡 {language === 'es' ? 'Carril 2' : 'Lane 2'}</div>
-                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#27AE60', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>A</div>
-                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ⬇️<br />LB</div>
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#F1C40F', fontWeight: 'bold', marginBottom: '3px' }}>🟡 {language === 'es' ? 'Carril 2' : 'Lane 2'}</div>
+                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#27AE60', color: '#FFF', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>A</div>
+                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ⬇️<br />LB</div>
                                                     </div>
                                                     {/* Lane 3 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: '0.7rem', color: '#E67E22', fontWeight: 'bold', marginBottom: '4px' }}>🥓 {language === 'es' ? 'Carril 3' : 'Lane 3'}</div>
-                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F39C12', color: '#000', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>Y</div>
-                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ⬆️<br />RB</div>
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#E67E22', fontWeight: 'bold', marginBottom: '3px' }}>🥓 {language === 'es' ? 'Carril 3' : 'Lane 3'}</div>
+                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#F39C12', color: '#000', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>Y</div>
+                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ⬆️<br />RB</div>
                                                     </div>
                                                     {/* Lane 4 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 2px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: '0.7rem', color: '#9B59B6', fontWeight: 'bold', marginBottom: '4px' }}>🟣 {language === 'es' ? 'Carril 4' : 'Lane 4'}</div>
-                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#C0392B', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 4px' }}>B</div>
-                                                        <div style={{ fontSize: '0.65rem', color: '#AAA' }}>D-Pad ➡️<br />RT</div>
+                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#9B59B6', fontWeight: 'bold', marginBottom: '3px' }}>🟣 {language === 'es' ? 'Carril 4' : 'Lane 4'}</div>
+                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#C0392B', color: '#FFF', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>B</div>
+                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ➡️<br />RT</div>
                                                     </div>
                                                 </div>
 
                                                 {/* Aux Controls */}
-                                                <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: '0.75rem', color: '#CCC', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: 'clamp(0.68rem, 2vw, 0.75rem)', color: '#CCC', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '5px' }}>
                                                     <span><strong>Start / ≡ :</strong> {t.gamepadPause}</span>
                                                     <span><strong>Back / ⧉ :</strong> {t.gamepadBack}</span>
                                                 </div>
                                             </div>
                                         </section>
 
-
-
-                                        <section style={{ marginBottom: '1.5rem' }}>
-
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-
-                                                    <div style={{ fontSize: '1.5rem' }}>🎯</div>
-
+                                        <section style={{ marginBottom: 'clamp(1rem, 2.5vw, 1.4rem)' }}>
+                                            <h3 style={{ fontSize: 'clamp(1rem, 3.2vw, 1.2rem)', fontWeight: 'bold', marginBottom: 'clamp(0.5rem, 1.8vw, 0.8rem)', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.6rem, 2vw, 0.9rem)' }}>
+                                                <div style={{ display: 'flex', gap: 'clamp(0.6rem, 2vw, 0.9rem)', alignItems: 'flex-start' }}>
+                                                    <div style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', flexShrink: 0 }}>🎯</div>
                                                     <div>
-
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.precision}</p>
-
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.precisionDesc}</p>
-
+                                                        <p style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', margin: 0 }}>{t.precision}</p>
+                                                        <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#666', margin: '2px 0 0' }}>{t.precisionDesc}</p>
                                                     </div>
-
                                                 </div>
-
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-
-                                                    <div style={{ fontSize: '1.5rem' }}>🔄</div>
-
+                                                <div style={{ display: 'flex', gap: 'clamp(0.6rem, 2vw, 0.9rem)', alignItems: 'flex-start' }}>
+                                                    <div style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', flexShrink: 0 }}>🔄</div>
                                                     <div>
-
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.combo}</p>
-
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.comboDesc}</p>
-
+                                                        <p style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', margin: 0 }}>{t.combo}</p>
+                                                        <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#666', margin: '2px 0 0' }}>{t.comboDesc}</p>
                                                     </div>
-
                                                 </div>
-
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-
-                                                    <div style={{ fontSize: '1.5rem' }}>📦</div>
-
+                                                <div style={{ display: 'flex', gap: 'clamp(0.6rem, 2vw, 0.9rem)', alignItems: 'flex-start' }}>
+                                                    <div style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', flexShrink: 0 }}>📦</div>
                                                     <div>
-
-                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.orders}</p>
-
-                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.ordersDesc}</p>
-
+                                                        <p style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', margin: 0 }}>{t.orders}</p>
+                                                        <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#666', margin: '2px 0 0' }}>{t.ordersDesc}</p>
                                                     </div>
-
                                                 </div>
-
                                             </div>
-
                                         </section>
-
-
 
                                         <section>
-
-                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
-
-                                            <p style={{ fontSize: '0.9rem', color: '#666' }}>{t.rewardsDesc}</p>
-
+                                            <h3 style={{ fontSize: 'clamp(1rem, 3.2vw, 1.2rem)', fontWeight: 'bold', marginBottom: 'clamp(0.5rem, 1.8vw, 0.8rem)', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
+                                            <p style={{ fontSize: 'clamp(0.78rem, 2.4vw, 0.88rem)', color: '#666', margin: 0 }}>{t.rewardsDesc}</p>
                                         </section>
-
                                     </div>
 
                                 </div>
@@ -8568,14 +8178,7 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                    {/* ── NEW PLAYER ONBOARDING MODAL ────────────────────────────── */}
-                    <OnboardingModal
-                        showOnboarding={showOnboarding}
-                        onboardingStep={onboardingStep}
-                        setOnboardingStep={setOnboardingStep}
-                        language={language}
-                        dismissOnboarding={dismissOnboarding}
-                    />
+
 
 
 

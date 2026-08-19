@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useSafePrivy, useSafeWallets } from './useSafePrivy';
 import { useWalletStore } from '../store/walletSlice';
 import { devWalletService, DevWalletService } from '../services/devWalletService';
 import { NETWORK, NETWORK_PASSPHRASE } from '../utils/constants';
@@ -57,9 +57,9 @@ export function useWallet() {
     disconnect: storeDisconnect,
   } = useWalletStore();
 
-  // Official Privy hooks
-  const { login: privyLogin, logout: privyLogout, authenticated, user: privyUser } = usePrivy();
-  const { wallets } = useWallets();
+  // Safe Privy hooks (graceful fallback on non-secure LAN origins)
+  const { login: privyLogin, logout: privyLogout, authenticated, user: privyUser } = useSafePrivy();
+  const { wallets } = useSafeWallets();
 
   /**
    * Connect real wallet (e.g. Freighter, Lobstr, xBull)

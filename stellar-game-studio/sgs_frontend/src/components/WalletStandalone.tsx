@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { useSafePrivy } from '../hooks/useSafePrivy';
 import { useWallet } from '../hooks/useWallet';
 import { useSliceBalance } from '../hooks/useSliceBalance';
 import { passkeyService, type PasskeyAccount } from '../services/PasskeyService';
@@ -22,7 +22,7 @@ export function WalletStandalone() {
     connectPrivy,
   } = useWallet();
 
-  const { login: privyLogin } = usePrivy();
+  const { login: privyLogin } = useSafePrivy();
 
   const { balance, refresh: refreshBalance } = useSliceBalance();
 
