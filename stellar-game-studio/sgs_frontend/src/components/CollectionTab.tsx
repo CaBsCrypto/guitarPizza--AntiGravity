@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StellarContractService } from '../services/StellarContractService';
+import { AvalancheContractService } from '../services/AvalancheContractService';
+import { useSafeWallets } from '../hooks/useSafePrivy';
+import type { Address } from 'viem';
 
 interface CollectionTabProps {
     language: 'es' | 'en';
@@ -14,6 +16,7 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
     const [equippedId, setEquippedId] = useState<number | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [cardsToShow, setCardsToShow] = useState(3);
+    const { wallets } = useSafeWallets();
 
     useEffect(() => {
         const handleResize = () => {
@@ -70,27 +73,27 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
         }
         try {
             setLoading(true);
-            const tokenIds = await StellarContractService.getNftCollection(userAddress);
-            
-            // Fetch the metadata map to know which token ID gets which style
-            let metadataMap: number[] = [];
-            try {
-                const res = await fetch('/game/assets/metadata_map.json');
-                if (res.ok) metadataMap = await res.json();
-            } catch(e) { console.error("Could not load metadata map", e); }
+            let ovens: Array<{ tokenId: number; styleId: number }> = [];
 
-            // Construct the NFT objects based on the token IDs returned from Soroban
-            const nfts = tokenIds.map((id: number) => {
-                // ID is 1-indexed (1 to 888), array is 0-indexed
-                const styleId = metadataMap.length >= id ? metadataMap[id - 1] : 6; // fallback to Common Brick
+            if (userAddress.startsWith('0x')) {
+                ovens = await AvalancheContractService.getUserOvens(userAddress as Address);
+            }
 
+            // Fallback starter oven if in demo or none minted yet
+            if (ovens.length === 0) {
+                const localStarter = localStorage.getItem('gp_starter_oven');
+                if (localStarter) {
+                    ovens = [JSON.parse(localStarter)];
+                }
+            }
+
+            const nfts = ovens.map(({ tokenId, styleId }) => {
                 let name = '';
                 let image = '';
                 let bonus = '';
                 let rarity = '';
                 let multiplierValue = 1.0;
 
-                // 1: Golden, 2: Il Capo, 3: Punk, 4: Neon, 5: Arcade, 6: Brick, 7: Steel, 8: Vintage
                 switch (styleId) {
                     case 1:
                         name = language === 'es' ? "Horno Dorado OG" : "Golden OG Oven";
@@ -135,17 +138,19 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                         break;
                 }
 
-                return { id, name, image, bonus, rarity, multiplierValue };
+                return { id: tokenId, name, image, bonus, rarity, multiplierValue };
             });
             
             setOwnedNFTs(nfts);
 
-            // Auto-unequip if the user no longer owns the equipped NFT
+            // Auto-equip first oven if none equipped
             const saved = localStorage.getItem('equippedOvenId');
-            if (saved && !tokenIds.includes(parseInt(saved, 10))) {
-                setEquippedId(null);
-                localStorage.removeItem('equippedOvenId');
-                localStorage.removeItem('equippedOvenMultiplier');
+            if (saved && nfts.some(n => n.id === parseInt(saved, 10))) {
+                setEquippedId(parseInt(saved, 10));
+            } else if (nfts.length > 0) {
+                setEquippedId(nfts[0].id);
+                localStorage.setItem('equippedOvenId', nfts[0].id.toString());
+                localStorage.setItem('equippedOvenMultiplier', nfts[0].multiplierValue.toString());
             }
 
         } catch (err) {

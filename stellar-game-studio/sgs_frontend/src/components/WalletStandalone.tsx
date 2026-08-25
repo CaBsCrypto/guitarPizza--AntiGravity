@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { usePrivy } from '@privy-io/react-auth';
+import { useSafePrivy } from '../hooks/useSafePrivy';
 import { useWallet } from '../hooks/useWallet';
 import { useSliceBalance } from '../hooks/useSliceBalance';
 import { passkeyService, type PasskeyAccount } from '../services/PasskeyService';
-import { useWalletStore } from '../store/walletSlice';
 import { formatAddress } from '../utils/addressUtils';
 import './WalletStandalone.css';
 
@@ -22,7 +21,7 @@ export function WalletStandalone() {
     connectPrivy,
   } = useWallet();
 
-  const { login: privyLogin } = usePrivy();
+  const { login: privyLogin, getAccessToken } = useSafePrivy();
 
   const { balance, refresh: refreshBalance } = useSliceBalance();
 
@@ -70,48 +69,24 @@ export function WalletStandalone() {
       setPasskeyError('Please enter a username.');
       return;
     }
-    setPasskeyLoading(true);
-    setPasskeyError(null);
     try {
+      setPasskeyLoading(true);
+      setPasskeyError(null);
       await registerPasskey(usernameInput.trim());
       setPasskeyModalState(null);
       setUsernameInput('');
     } catch (err: any) {
-      setPasskeyError(err?.message || 'Biometric registration failed.');
+      setPasskeyError(err?.message || 'Failed to create biometric passkey.');
     } finally {
       setPasskeyLoading(false);
     }
   };
 
-  const handleRestorePasskeySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!usernameInput.trim()) {
-      setPasskeyError('Please enter a username.');
-      return;
-    }
-    if (!restoreSecretInput.trim()) {
-      setPasskeyError('Please enter your secret key.');
-      return;
-    }
-    setPasskeyLoading(true);
-    setPasskeyError(null);
+  const handleSelectAccount = async (acc: PasskeyAccount) => {
     try {
-      await registerPasskey(usernameInput.trim(), restoreSecretInput.trim());
-      setPasskeyModalState(null);
-      setUsernameInput('');
-      setRestoreSecretInput('');
-    } catch (err: any) {
-      setPasskeyError(err?.message || 'Account restoration failed.');
-    } finally {
-      setPasskeyLoading(false);
-    }
-  };
-
-  const handleLoginPasskeySelect = async () => {
-    setPasskeyLoading(true);
-    setPasskeyError(null);
-    try {
-      await loginPasskey();
+      setPasskeyLoading(true);
+      setPasskeyError(null);
+      await loginPasskey(acc);
       setPasskeyModalState(null);
     } catch (err: any) {
       setPasskeyError(err?.message || 'Biometric authentication failed.');
@@ -120,376 +95,266 @@ export function WalletStandalone() {
     }
   };
 
+  const handleRestorePasskeySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!usernameInput.trim() || !restoreSecretInput.trim()) {
+      setPasskeyError('Please enter both username and secret key.');
+      return;
+    }
+    try {
+      setPasskeyLoading(true);
+      setPasskeyError(null);
+      passkeyService.saveAccount({
+        credentialId: 'restored_' + Date.now(),
+        publicKey: restoreSecretInput.trim(),
+        username: usernameInput.trim(),
+        createdAt: Date.now(),
+        secretKey: restoreSecretInput.trim(),
+      });
+      await loginPasskey({
+        credentialId: 'restored_' + Date.now(),
+        publicKey: restoreSecretInput.trim(),
+        username: usernameInput.trim(),
+        createdAt: Date.now(),
+        secretKey: restoreSecretInput.trim(),
+      });
+      setPasskeyModalState(null);
+      setUsernameInput('');
+      setRestoreSecretInput('');
+    } catch (err: any) {
+      setPasskeyError(err?.message || 'Failed to restore passkey account.');
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
+  const SHOW_CRYPTO_HEADER = true;
 
   return (
     <div className="wallet-standalone">
-      {isConnected ? (
-        <div className="wallet-standalone-connected">
-          {balance !== null && (
-            <div className="slice-balance-chip">
-              🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
-            </div>
-          )}
-          <button 
-            className={`wallet-standalone-button mint-vinyl-button ${minting ? 'minting' : ''}`}
-            onClick={async () => {
-              if (minting) return;
-              setMinting(true);
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 12000);
-              try {
-                const res = await fetch('/api/drop-oven', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ playerAddress: publicKey, isDevMint: true }),
-                  signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                const responseText = await res.text();
-                let data: any = {};
-                try {
-                  data = JSON.parse(responseText);
-                } catch (e) {}
-
-                if (!res.ok) {
-                  throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
-                }
-
-                alert(
-                  "🎉 ¡HORNO ACUÑADO EXITOSAMENTE!\n\n" +
-                  "Se ha minteado tu nuevo NFT en Soroban Testnet.\n\n" +
-                  (data.txHash ? `Tx Hash: ${data.txHash}\n\n` : '') +
-                  "Dirígete a 'EL HORNO (VAULT)' -> 'Mi Colección' para equiparlo y multiplicar tus drops."
-                );
-                // Dispatch update to refresh lists on-screen
-                window.dispatchEvent(new Event('collection-updated'));
-              } catch (err: any) {
-                clearTimeout(timeoutId);
-                const errorMsg = err.name === 'AbortError' 
-                  ? 'El servidor de Soroban o Vercel tardó demasiado en responder (Timeout). ¡Por favor intenta de nuevo!' 
-                  : (err.message || err);
-                alert("⚠️ Error de conexión: " + errorMsg);
-              } finally {
-                setMinting(false);
-              }
-            }}
-            disabled={minting}
-            title="Mint a free Oven NFT on Soroban Testnet!"
-          >
-            <div className="mint-vinyl-icon">💿</div>
-            <span>{minting ? 'MINTING...' : 'MINT'}</span>
-          </button>
-          <button 
-            className="wallet-standalone-button mint-vinyl-button"
-            style={{
-              background: 'rgba(0, 240, 255, 0.15)',
-              borderColor: 'rgba(0, 240, 255, 0.4)',
-              color: '#00f0ff'
-            }}
-            onClick={async (e) => {
-              const target = e.currentTarget;
-              target.disabled = true;
-              target.textContent = 'AIRDROPPING...';
-              try {
-                const res = await fetch('/api/drop-slice', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ playerAddress: publicKey, amount: 8 }),
-                });
-                const responseText = await res.text();
-                let data: any = {};
-                try {
-                  data = JSON.parse(responseText);
-                } catch (e) {}
-
-                if (!res.ok) {
-                  throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
-                }
-
-                alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE a tu wallet.\n\nTx Hash: ${data.txHash || 'Confirmada'}`);
-                // Refresh balance chip visually using event dispatch
-                window.dispatchEvent(new Event('balance-updated'));
-              } catch (err: any) {
-                alert("⚠️ Error de conexión: " + (err.message || err));
-              } finally {
-                target.disabled = false;
-                target.innerHTML = '<span class="mint-vinyl-icon">🍕</span> <span>AIRDROP (8)</span>';
-              }
-            }}
-            title="Airdrop 8 free $SLICE on Stellar Testnet!"
-          >
-            <div className="mint-vinyl-icon">🍕</div>
-            <span>AIRDROP (8)</span>
-          </button>
-          <button className="wallet-standalone-button" onClick={disconnect}>
-            {walletType === 'passkey' ? '🧑‍🍳 ' : ''}
-            {shortAddress}
-          </button>
-          {walletType === 'passkey' && (
-            <button
-              className="wallet-standalone-button backup-button"
+      {SHOW_CRYPTO_HEADER && (
+        isConnected ? (
+          <div className="wallet-standalone-connected">
+            {balance !== null && (
+              <div className="slice-balance-chip" style={{ background: 'rgba(232, 65, 66, 0.15)', borderColor: 'rgba(232, 65, 66, 0.4)', color: '#ff6b6b' }}>
+                🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
+              </div>
+            )}
+            <button 
+              className="wallet-standalone-button mint-vinyl-button"
               style={{
-                background: 'rgba(212, 175, 55, 0.15)',
-                borderColor: 'rgba(212, 175, 55, 0.4)',
-                color: '#DAA520',
-                padding: '0.5rem 0.6rem',
-                fontSize: '0.9rem',
+                background: 'rgba(232, 65, 66, 0.2)',
+                borderColor: 'rgba(232, 65, 66, 0.5)',
+                color: '#ffffff'
+              }}
+              onClick={async (e) => {
+                const target = e.currentTarget;
+                target.disabled = true;
+                target.textContent = 'AIRDROPPING...';
+                try {
+                  let token: string | null = null;
+                  try {
+                    if (typeof getAccessToken === 'function') {
+                      token = await getAccessToken();
+                    }
+                  } catch (e) {}
+
+                  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                  const res = await fetch('/api/drop-slice', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ playerAddress: publicKey, amount: 8, network: 'avalanche-fuji' }),
+                  });
+                  const responseText = await res.text();
+                  let data: any = {};
+                  try {
+                    data = JSON.parse(responseText);
+                  } catch (e) {}
+
+                  if (!res.ok) {
+                    throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
+                  }
+
+                  alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE de prueba en Avalanche Fuji.\n\nTx: ${data.txHash || 'Confirmada'}`);
+                  window.dispatchEvent(new Event('balance-updated'));
+                } catch (err: any) {
+                  alert("⚠️ Error de conexión: " + (err.message || err));
+                } finally {
+                  target.disabled = false;
+                  target.innerHTML = '<span class="mint-vinyl-icon">🍕</span> <span>AIRDROP (8 $SLICE)</span>';
+                }
+              }}
+              title="Airdrop 8 free $SLICE tokens on Avalanche Fuji Testnet!"
+            >
+              <div className="mint-vinyl-icon">🍕</div>
+              <span>AIRDROP (8)</span>
+            </button>
+            <a 
+              href="https://faucet.avax.network/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="wallet-standalone-button"
+              style={{
+                background: 'rgba(0, 240, 255, 0.12)',
+                borderColor: 'rgba(0, 240, 255, 0.4)',
+                color: '#00f0ff',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Obtener AVAX de prueba gratis en el Faucet oficial de Avalanche Fuji para gas"
+            >
+              <span>💧</span> <span>FAUCET AVAX</span>
+            </a>
+            <button className="wallet-standalone-button" onClick={disconnect} title="Click to disconnect">
+              🔴 {shortAddress}
+            </button>
+          </div>
+        ) : (
+          <div className="wallet-standalone-actions">
+            {/* Official Privy Login Button (Avalanche / EVM) */}
+            <button
+              className="wallet-standalone-button login-button"
+              style={{
+                background: 'linear-gradient(135deg, rgba(232, 65, 66, 0.85), rgba(168, 85, 247, 0.85))',
+                color: '#ffffff',
+                borderColor: 'rgba(232, 65, 66, 0.9)',
+                fontWeight: 700,
+                boxShadow: '0 0 14px rgba(232, 65, 66, 0.4)',
                 cursor: 'pointer'
               }}
-              onClick={() => {
-                const sec = passkeyService.getSecretKey(publicKey || '');
-                setExportedSecretKey(sec);
-                setCopiedBackup(false);
-                setPasskeyModalState('backup');
-              }}
-              title="Backup your Passkey Smart Wallet key"
+              onClick={() => privyLogin()}
+              disabled={isConnecting}
+              title="Conectar billetera o iniciar sesión con Privy en Avalanche Fuji"
             >
-              <span className="backup-icon">🔑</span>
-              <span className="backup-text">Backup</span>
+              {isConnecting ? 'CONECTANDO...' : '⚡ INICIAR SESIÓN / WALLET'}
             </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Official Privy Login Button (Avalanche / EVM) */}
-          <button
-            className="wallet-standalone-button connect-main-btn"
-            style={{
-              background: 'linear-gradient(135deg, rgba(232, 65, 66, 0.35), rgba(168, 85, 247, 0.35))',
-              color: '#ffffff',
-              borderColor: 'rgba(232, 65, 66, 0.6)',
-              fontWeight: 700,
-              boxShadow: '0 0 12px rgba(232, 65, 66, 0.3)'
-            }}
-            onClick={() => connectPrivy().catch(() => undefined)}
-            disabled={isConnecting}
-            title="Login with Email, Google, Twitter or EVM Wallet via Privy"
-          >
-            <span className="btn-full-text">🔴 {isConnecting ? 'CONNECTING...' : 'LOGIN WITH PRIVY'}</span>
-            <span className="btn-mobile-text">🔴 {isConnecting ? '...' : 'PRIVY'}</span>
-          </button>
-        </>
+          </div>
+        )
       )}
 
-      {network && !network.toLowerCase().includes('avalanche') && !network.toLowerCase().includes('fuji') && (
-        <div className="wallet-standalone-network">{network}</div>
-      )}
       {error && <div className="wallet-standalone-error">{error}</div>}
 
-      {/* ── Passkey Selection & Creation Modals ── */}
-      {passkeyModalState === 'select' && (
-        <div className="passkey-modal-overlay">
-          <div className="passkey-modal">
-            <h3>Select Passkey Profile</h3>
-            <p>Choose an existing biometric profile on this device to sign in instantly.</p>
-            
-            <div className="passkey-account-list">
-              {localAccounts.map((acc) => (
-                <div
-                  key={acc.publicKey}
-                  className="passkey-account-item"
-                  onClick={handleLoginPasskeySelect}
-                >
-                  <div>
-                    <div className="passkey-account-name">🧑‍🍳 {acc.username}</div>
-                    <div className="passkey-account-address">
-                      {acc.publicKey.slice(0, 8)}...{acc.publicKey.slice(-8)}
-                    </div>
-                  </div>
-                  <span>⚡</span>
+      {/* Passkey Selection / Registration Modal */}
+      {passkeyModalState && (
+        <div className="passkey-modal-overlay" onClick={() => setPasskeyModalState(null)}>
+          <div className="passkey-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="passkey-modal-header">
+              <h3>🔑 Billetera Biométrica (Passkey)</h3>
+              <button className="passkey-modal-close" onClick={() => setPasskeyModalState(null)}>✕</button>
+            </div>
+
+            {passkeyError && <div className="passkey-error-banner">{passkeyError}</div>}
+
+            {passkeyModalState === 'select' && (
+              <div className="passkey-select-view">
+                <p>Selecciona una cuenta guardada en este dispositivo:</p>
+                <div className="passkey-accounts-list">
+                  {localAccounts.map((acc) => (
+                    <button
+                      key={acc.credentialId}
+                      className="passkey-account-item"
+                      onClick={() => handleSelectAccount(acc)}
+                      disabled={passkeyLoading}
+                    >
+                      <span className="account-avatar">🧑‍🍳</span>
+                      <div className="account-info">
+                        <span className="account-username">{acc.username}</span>
+                        <span className="account-pubkey">{formatAddress(acc.publicKey, 8, 6)}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <div className="passkey-modal-footer-links">
+                  <button className="link-button" onClick={() => setPasskeyModalState('register')}>
+                    + Crear nueva cuenta
+                  </button>
+                  <button className="link-button" onClick={() => setPasskeyModalState('restore')}>
+                    🔄 Restaurar con clave privada
+                  </button>
+                </div>
+              </div>
+            )}
 
-            {passkeyError && <div className="wallet-standalone-error" style={{ marginBottom: '1rem', textAlign: 'left', maxWidth: 'none' }}>⚠️ {passkeyError}</div>}
+            {passkeyModalState === 'register' && (
+              <form onSubmit={handleRegisterPasskeySubmit} className="passkey-form">
+                <p>Crea tu cuenta de Chef instantánea usando Touch ID / Face ID / Windows Hello:</p>
+                <input
+                  type="text"
+                  placeholder="Nombre de Chef (ej. ChefMario)"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  className="passkey-input"
+                  autoFocus
+                />
+                <button type="submit" className="passkey-submit-btn" disabled={passkeyLoading}>
+                  {passkeyLoading ? 'Verificando datos biométricos...' : 'Crear Cuenta con Huella/Rostro'}
+                </button>
+                <div className="passkey-modal-footer-links">
+                  {localAccounts.length > 0 && (
+                    <button type="button" className="link-button" onClick={() => setPasskeyModalState('select')}>
+                      ← Volver a mis cuentas
+                    </button>
+                  )}
+                  <button type="button" className="link-button" onClick={() => setPasskeyModalState('restore')}>
+                    🔄 Restaurar cuenta existente
+                  </button>
+                </div>
+              </form>
+            )}
 
-            <div className="passkey-actions" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-              <button
-                className="passkey-btn passkey-btn-secondary"
-                onClick={() => setPasskeyModalState(null)}
-                disabled={passkeyLoading}
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
-              <button
-                className="passkey-btn passkey-btn-secondary"
-                onClick={() => {
-                  setPasskeyError(null);
-                  setUsernameInput('');
-                  setRestoreSecretInput('');
-                  setPasskeyModalState('restore');
-                }}
-                disabled={passkeyLoading}
-                style={{ flex: 1, background: 'rgba(212,175,55,0.1)', color: '#DAA520', borderColor: 'rgba(212,175,55,0.3)' }}
-              >
-                🔄 Restore
-              </button>
-              <button
-                className="passkey-btn passkey-btn-primary"
-                onClick={() => setPasskeyModalState('register')}
-                disabled={passkeyLoading}
-                style={{ flex: 1 }}
-              >
-                + New Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            {passkeyModalState === 'restore' && (
+              <form onSubmit={handleRestorePasskeySubmit} className="passkey-form">
+                <p>Ingresa tu clave secreta de respaldo para restaurar tu cuenta:</p>
+                <input
+                  type="text"
+                  placeholder="Nombre de Chef"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  className="passkey-input"
+                  style={{ marginBottom: '0.5rem' }}
+                />
+                <input
+                  type="password"
+                  placeholder="Clave Privada de Respaldo"
+                  value={restoreSecretInput}
+                  onChange={(e) => setRestoreSecretInput(e.target.value)}
+                  className="passkey-input"
+                />
+                <button type="submit" className="passkey-submit-btn" disabled={passkeyLoading}>
+                  {passkeyLoading ? 'Restaurando...' : 'Restaurar Cuenta'}
+                </button>
+                <div className="passkey-modal-footer-links">
+                  <button type="button" className="link-button" onClick={() => setPasskeyModalState('register')}>
+                    ← Crear nueva cuenta
+                  </button>
+                </div>
+              </form>
+            )}
 
-      {passkeyModalState === 'register' && (
-        <div className="passkey-modal-overlay">
-          <form className="passkey-modal" onSubmit={handleRegisterPasskeySubmit}>
-            <h3>Create Passkey Smart Account</h3>
-            <p>Register a local secure credential using your device's biometrics (TouchID/FaceID) to sign transactions completely gaslessly.</p>
-            
-            <input
-              type="text"
-              placeholder="Enter kitchen username (e.g. Tony)"
-              className="passkey-input"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
-              disabled={passkeyLoading}
-              autoFocus
-            />
-
-            {passkeyError && <div className="wallet-standalone-error" style={{ marginBottom: '1rem', textAlign: 'left', maxWidth: 'none' }}>⚠️ {passkeyError}</div>}
-
-            <div className="passkey-actions">
-              <button
-                type="button"
-                className="passkey-btn passkey-btn-secondary"
-                onClick={() => {
-                  setPasskeyModalState(localAccounts.length > 0 ? 'select' : null);
-                  setUsernameInput('');
-                }}
-                disabled={passkeyLoading}
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className="passkey-btn passkey-btn-primary"
-                disabled={passkeyLoading}
-              >
-                {passkeyLoading ? 'Authenticating...' : '🔐 Create Passkey'}
-              </button>
-            </div>
-            <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666', cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => {
-                  setPasskeyError(null);
-                  setUsernameInput('');
-                  setRestoreSecretInput('');
-                  setPasskeyModalState('restore');
-                }}>
-              Already have an account? Import Backup
-            </div>
-          </form>
-        </div>
-      )}
-
-      {passkeyModalState === 'restore' && (
-        <div className="passkey-modal-overlay">
-          <form className="passkey-modal" onSubmit={handleRestorePasskeySubmit}>
-            <h3>Restore Smart Account</h3>
-            <p>Input your kitchen username and your exported Stellar Secret Key (starts with 'S') to biometrically link it to this device.</p>
-            
-            <input
-              type="text"
-              placeholder="Enter kitchen username (e.g. Tony)"
-              className="passkey-input"
-              value={usernameInput}
-              onChange={(e) => setUsernameInput(e.target.value)}
-              disabled={passkeyLoading}
-              style={{ marginBottom: '0.6rem' }}
-              autoFocus
-            />
-
-            <input
-              type="password"
-              placeholder="Enter Stellar Secret Key (starts with S...)"
-              className="passkey-input"
-              value={restoreSecretInput}
-              onChange={(e) => setRestoreSecretInput(e.target.value)}
-              disabled={passkeyLoading}
-            />
-
-            {passkeyError && <div className="wallet-standalone-error" style={{ marginBottom: '1rem', textAlign: 'left', maxWidth: 'none' }}>⚠️ {passkeyError}</div>}
-
-            <div className="passkey-actions">
-              <button
-                type="button"
-                className="passkey-btn passkey-btn-secondary"
-                onClick={() => {
-                  setPasskeyModalState(localAccounts.length > 0 ? 'select' : null);
-                  setUsernameInput('');
-                  setRestoreSecretInput('');
-                }}
-                disabled={passkeyLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="passkey-btn passkey-btn-primary"
-                disabled={passkeyLoading}
-                style={{ background: 'linear-gradient(135deg, #d4af37, #b8860b)', borderColor: '#b8860b' }}
-              >
-                {passkeyLoading ? 'Restoring...' : '🔄 Restore & Link'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {passkeyModalState === 'backup' && (
-        <div className="passkey-modal-overlay">
-          <div className="passkey-modal" style={{ maxWidth: '400px' }}>
-            <h3>🔑 Passkey Backup Credentials</h3>
-            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1.2rem' }}>
-              Below is the raw secret key for your smart wallet. Store it in a highly secure, private location. Anyone with this key can access your assets!
-            </p>
-
-            <div style={{
-              background: '#222',
-              color: '#39FF14',
-              fontFamily: 'monospace',
-              padding: '0.8rem',
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              wordBreak: 'break-all',
-              textAlign: 'center',
-              userSelect: 'all',
-              border: '1px solid #333',
-              marginBottom: '1rem'
-            }}>
-              {exportedSecretKey || 'ERROR: No key found'}
-            </div>
-
-            <div className="passkey-actions">
-              <button
-                className="passkey-btn passkey-btn-secondary"
-                onClick={() => setPasskeyModalState(null)}
-                style={{ flex: 1 }}
-              >
-                Close
-              </button>
-              <button
-                className="passkey-btn passkey-btn-primary"
-                onClick={() => {
-                  if (exportedSecretKey) {
-                    navigator.clipboard.writeText(exportedSecretKey);
-                    setCopiedBackup(true);
-                    setTimeout(() => setCopiedBackup(false), 2000);
-                  }
-                }}
-                style={{ flex: 1, background: '#DAA520', borderColor: '#DAA520' }}
-              >
-                {copiedBackup ? '✓ Copied!' : '📋 Copy Key'}
-              </button>
-            </div>
+            {passkeyModalState === 'backup' && (
+              <div className="passkey-backup-view">
+                <p>⚠️ Guarda tu clave secreta en un lugar seguro. Con ella podrás restaurar tu cuenta en cualquier dispositivo:</p>
+                <div className="secret-key-display">
+                  {exportedSecretKey || 'No se encontró clave para esta cuenta.'}
+                </div>
+                <button
+                  className="passkey-submit-btn"
+                  onClick={() => {
+                    if (exportedSecretKey) {
+                      navigator.clipboard.writeText(exportedSecretKey);
+                      setCopiedBackup(true);
+                      setTimeout(() => setCopiedBackup(false), 2500);
+                    }
+                  }}
+                >
+                  {copiedBackup ? '✓ ¡Clave Copiada!' : '📋 Copiar Clave de Respaldo'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

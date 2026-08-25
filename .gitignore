@@ -1,7 +1,11 @@
 # Environment variables - NEVER commit secrets
 .env
-.env.local
-.env.*.local
+.env.*
+**/.env
+**/.env.*
+contracts-evm/cache/
+contracts-evm/artifacts/
+
 
 # Dependencies
 node_modules/
