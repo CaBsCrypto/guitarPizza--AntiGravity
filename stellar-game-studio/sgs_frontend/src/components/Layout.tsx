@@ -1,4 +1,5 @@
 import { WalletStandalone } from './WalletStandalone';
+import { ChainSwitcher } from './ChainSwitcher';
 import type { Page } from '../types/navigation';
 import './Layout.css';
 
@@ -21,7 +22,7 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
 
         {/* Right controls */}
         <div className="rs-header-right">
-          <span className="rs-network-pill">● TESTNET</span>
+          <ChainSwitcher />
           <WalletStandalone />
           {currentPage !== 'game' && (
             <button

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ChainManager } from '../adapters/ChainManager';
 import { AvalancheContractService } from '../services/AvalancheContractService';
 import { useSafeWallets } from '../hooks/useSafePrivy';
 import type { Address } from 'viem';
@@ -73,11 +74,8 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
         }
         try {
             setLoading(true);
-            let ovens: Array<{ tokenId: number; styleId: number }> = [];
-
-            if (userAddress.startsWith('0x')) {
-                ovens = await AvalancheContractService.getUserOvens(userAddress as Address);
-            }
+            const adapter = ChainManager.getAdapter();
+            ovens = await adapter.getUserOvens(userAddress);
 
             // Fallback starter oven if in demo or none minted yet
             if (ovens.length === 0) {
