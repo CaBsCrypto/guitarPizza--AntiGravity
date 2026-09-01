@@ -6,9 +6,12 @@ import './index.css'
 
 
 const rawPrivyId = import.meta.env.VITE_PRIVY_APP_ID || ''
-const PRIVY_APP_ID = (!rawPrivyId || rawPrivyId === 'your-privy-app-id-here')
-  ? 'clp0000000000000000000000'
-  : rawPrivyId
+const hasValidPrivyId = Boolean(
+  rawPrivyId &&
+  rawPrivyId.length > 10 &&
+  rawPrivyId !== 'your-privy-app-id-here' &&
+  !rawPrivyId.startsWith('clp000000')
+);
 
 const isSecure = typeof window !== 'undefined' && (
   window.isSecureContext ||
@@ -72,10 +75,10 @@ class GlobalAppErrorBoundary extends React.Component<{ children: React.ReactNode
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <GlobalAppErrorBoundary>
-      {isSecure ? (
+      {isSecure && hasValidPrivyId ? (
         <PrivyErrorBoundary>
           <PrivyProvider
-            appId={PRIVY_APP_ID}
+            appId={rawPrivyId}
             config={{
               loginMethods: ['email', 'wallet', 'google', 'twitter', 'discord'],
               appearance: {
