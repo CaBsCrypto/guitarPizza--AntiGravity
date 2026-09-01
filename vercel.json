@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install",
+  "installCommand": "echo 'Skipping root install'",
   "buildCommand": "cd stellar-game-studio/sgs_frontend && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "stellar-game-studio/sgs_frontend/dist",
   "framework": null,
