@@ -1,4 +1,4 @@
-export type SupportedChainId = 'avalanche' | 'stellar';
+export type SupportedChainId = 'solana' | 'stellar' | 'avalanche';
 
 export interface ChainCapabilities {
   chainId: SupportedChainId;

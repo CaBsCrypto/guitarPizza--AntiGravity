@@ -4,7 +4,6 @@ import { PrivyProvider } from '@privy-io/react-auth'
 import App from './App'
 import './index.css'
 
-import { avalanche, avalancheFuji } from 'viem/chains'
 
 const rawPrivyId = import.meta.env.VITE_PRIVY_APP_ID || ''
 const PRIVY_APP_ID = (!rawPrivyId || rawPrivyId === 'your-privy-app-id-here')
@@ -78,16 +77,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <PrivyProvider
             appId={PRIVY_APP_ID}
             config={{
-              defaultChain: avalancheFuji,
-              supportedChains: [avalancheFuji, avalanche],
               loginMethods: ['email', 'wallet', 'google', 'twitter', 'discord'],
               appearance: {
                 theme: 'dark',
-                accentColor: '#E84142',
+                accentColor: '#14F195',
                 logo: '/game/assets/Benny.png',
+                walletList: ['phantom', 'solflare', 'backpack', 'detected_wallets']
               },
               embeddedWallets: {
-                ethereum: {
+                solana: {
                   createOnLogin: 'users-without-wallets',
                 },
               },

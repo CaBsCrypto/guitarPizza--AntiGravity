@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "programs/slice_token",
+    "programs/pizza_nft",
+    "programs/pvp_escrow",
+    "programs/rhythm_leaderboard",
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1

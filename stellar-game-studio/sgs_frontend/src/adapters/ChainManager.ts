@@ -1,15 +1,17 @@
 import { IBlockchainAdapter, SupportedChainId, ChainCapabilities } from './IBlockchainAdapter';
-import { AvalancheAdapter } from './AvalancheAdapter';
+import { SolanaAdapter } from './SolanaAdapter';
 import { StellarAdapter } from './StellarAdapter';
+import { AvalancheAdapter } from './AvalancheAdapter';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'gp_active_chain';
 
 class ChainManagerService {
   private static instance: ChainManagerService;
-  private currentChain: SupportedChainId = 'avalanche';
-  private avalancheAdapter = new AvalancheAdapter();
+  private currentChain: SupportedChainId = 'solana';
+  private solanaAdapter = new SolanaAdapter();
   private stellarAdapter = new StellarAdapter();
+  private avalancheAdapter = new AvalancheAdapter();
   private listeners: Set<(chain: SupportedChainId) => void> = new Set();
 
   private constructor() {
@@ -25,25 +27,26 @@ class ChainManagerService {
 
   private resolveInitialChain(): SupportedChainId {
     if (typeof window !== 'undefined') {
-      // 1. URL Query Parameter ?chain=avalanche | ?chain=stellar
+      // 1. URL Query Parameter ?chain=solana | ?chain=stellar | ?chain=avalanche
       const urlParams = new URLSearchParams(window.location.search);
       const chainParam = urlParams.get('chain')?.toLowerCase();
-      if (chainParam === 'avalanche' || chainParam === 'stellar') {
+      if (chainParam === 'solana' || chainParam === 'stellar' || chainParam === 'avalanche') {
         localStorage.setItem(STORAGE_KEY, chainParam);
         return chainParam;
       }
 
       // 2. LocalStorage selection
       const saved = localStorage.getItem(STORAGE_KEY)?.toLowerCase();
-      if (saved === 'avalanche' || saved === 'stellar') {
-        return saved;
+      if (saved === 'solana' || saved === 'stellar' || saved === 'avalanche') {
+        return saved as SupportedChainId;
       }
     }
 
-    // 3. Environment Variable fallback
-    const envChain = (import.meta.env.VITE_ACTIVE_CHAIN || 'avalanche').toLowerCase();
+    // 3. Environment Variable fallback (default: solana)
+    const envChain = (import.meta.env.VITE_ACTIVE_CHAIN || 'solana').toLowerCase();
     if (envChain === 'stellar') return 'stellar';
-    return 'avalanche';
+    if (envChain === 'avalanche') return 'avalanche';
+    return 'solana';
   }
 
   getActiveChain(): SupportedChainId {
@@ -51,7 +54,9 @@ class ChainManagerService {
   }
 
   getAdapter(): IBlockchainAdapter {
-    return this.currentChain === 'stellar' ? this.stellarAdapter : this.avalancheAdapter;
+    if (this.currentChain === 'stellar') return this.stellarAdapter;
+    if (this.currentChain === 'avalanche') return this.avalancheAdapter;
+    return this.solanaAdapter;
   }
 
   getCapabilities(): ChainCapabilities {

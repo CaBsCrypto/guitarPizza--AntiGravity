@@ -21,16 +21,17 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.chain-switcher-pill.chain-avalanche {
-  background: linear-gradient(135deg, rgba(232, 65, 66, 0.2), rgba(180, 20, 20, 0.35));
-  border-color: rgba(232, 65, 66, 0.6);
-  color: #ff8585;
+.chain-switcher-pill.chain-solana {
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.25), rgba(20, 241, 149, 0.25));
+  border-color: rgba(20, 241, 149, 0.6);
+  color: #14F195;
+  text-shadow: 0 0 10px rgba(20, 241, 149, 0.4);
 }
 
-.chain-switcher-pill.chain-avalanche:hover {
-  background: linear-gradient(135deg, rgba(232, 65, 66, 0.35), rgba(180, 20, 20, 0.5));
-  border-color: #e84142;
-  box-shadow: 0 0 14px rgba(232, 65, 66, 0.4);
+.chain-switcher-pill.chain-solana:hover {
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.45), rgba(20, 241, 149, 0.45));
+  border-color: #14F195;
+  box-shadow: 0 0 16px rgba(20, 241, 149, 0.5), inset 0 0 8px rgba(153, 69, 255, 0.3);
   transform: translateY(-1px);
 }
 

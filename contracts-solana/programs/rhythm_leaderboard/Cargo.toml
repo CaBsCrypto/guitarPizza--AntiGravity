@@ -1,0 +1,19 @@
+[package]
+name = "rhythm_leaderboard"
+version = "0.1.0"
+description = "Rhythm Slice Global Verified Leaderboard Program on Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "rhythm_leaderboard"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"
