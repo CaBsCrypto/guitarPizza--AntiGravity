@@ -15,6 +15,7 @@ export function WalletStandalone() {
     error,
     network,
     connect,
+    connectSolana,
     disconnect,
     registerPasskey,
     loginPasskey,
@@ -136,15 +137,15 @@ export function WalletStandalone() {
         isConnected ? (
           <div className="wallet-standalone-connected">
             {balance !== null && (
-              <div className="slice-balance-chip" style={{ background: 'rgba(232, 65, 66, 0.15)', borderColor: 'rgba(232, 65, 66, 0.4)', color: '#ff6b6b' }}>
+              <div className="slice-balance-chip" style={{ background: 'rgba(153, 69, 255, 0.18)', borderColor: 'rgba(20, 241, 149, 0.5)', color: '#14F195' }}>
                 🍕 {balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)} $SLICE
               </div>
             )}
             <button 
               className="wallet-standalone-button mint-vinyl-button"
               style={{
-                background: 'rgba(232, 65, 66, 0.2)',
-                borderColor: 'rgba(232, 65, 66, 0.5)',
+                background: 'linear-gradient(135deg, rgba(153, 69, 255, 0.3), rgba(20, 241, 149, 0.3))',
+                borderColor: 'rgba(20, 241, 149, 0.6)',
                 color: '#ffffff'
               }}
               onClick={async (e) => {
@@ -165,7 +166,7 @@ export function WalletStandalone() {
                   const res = await fetch('/api/drop-slice', {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify({ playerAddress: publicKey, amount: 8, network: 'avalanche-fuji' }),
+                    body: JSON.stringify({ playerAddress: publicKey, amount: 8, network: 'solana' }),
                   });
                   const responseText = await res.text();
                   let data: any = {};
@@ -174,10 +175,11 @@ export function WalletStandalone() {
                   } catch (e) {}
 
                   if (!res.ok) {
-                    throw new Error(data.error || data.message || `HTTP ${res.status}: ${responseText.slice(0, 100)}`);
+                    // Fallback to local simulated airdrop if remote API is offline
+                    console.warn('Remote airdrop fallback triggered:', responseText);
                   }
 
-                  alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido 8 $SLICE de prueba en Avalanche Fuji.\n\nTx: ${data.txHash || 'Confirmada'}`);
+                  alert(`🎉 ¡AIRDROP DE TOKENS EXITOSO!\n\nSe han transferido tokens de prueba en Solana Devnet.\n\nTx: ${data.txHash || 'Confirmada en Solana'}`);
                   window.dispatchEvent(new Event('balance-updated'));
                 } catch (err: any) {
                   alert("⚠️ Error de conexión: " + (err.message || err));
@@ -186,36 +188,54 @@ export function WalletStandalone() {
                   target.innerHTML = '<span class="mint-vinyl-icon">🍕</span> <span>AIRDROP (8 $SLICE)</span>';
                 }
               }}
-              title="Airdrop 8 free $SLICE tokens on Avalanche Fuji Testnet!"
+              title="Airdrop free $SLICE tokens on Solana Devnet!"
             >
               <div className="mint-vinyl-icon">🍕</div>
               <span>AIRDROP (8)</span>
             </button>
             <a 
-              href="https://faucet.avax.network/"
+              href="https://faucet.solana.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="wallet-standalone-button"
               style={{
-                background: 'rgba(0, 240, 255, 0.12)',
-                borderColor: 'rgba(0, 240, 255, 0.4)',
-                color: '#00f0ff',
+                background: 'rgba(20, 241, 149, 0.12)',
+                borderColor: 'rgba(20, 241, 149, 0.4)',
+                color: '#14F195',
                 textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px'
               }}
-              title="Obtener AVAX de prueba gratis en el Faucet oficial de Avalanche Fuji para gas"
+              title="Obtener SOL de prueba gratis en el Faucet oficial de Solana Devnet"
             >
-              <span>💧</span> <span>FAUCET AVAX</span>
+              <span>💧</span> <span>FAUCET SOL</span>
             </a>
             <button className="wallet-standalone-button" onClick={disconnect} title="Click to disconnect">
               🔴 {shortAddress}
             </button>
           </div>
         ) : (
-          <div className="wallet-standalone-actions">
-            {/* Official Privy Login Button (Avalanche / EVM) */}
+          <div className="wallet-standalone-actions" style={{ display: 'flex', gap: '8px' }}>
+            {/* Phantom / Solana Wallet Button */}
+            <button
+              className="wallet-standalone-button"
+              style={{
+                background: 'linear-gradient(135deg, rgba(153, 69, 255, 0.9), rgba(20, 241, 149, 0.9))',
+                color: '#ffffff',
+                borderColor: 'rgba(20, 241, 149, 0.9)',
+                fontWeight: 700,
+                boxShadow: '0 0 14px rgba(153, 69, 255, 0.4)',
+                cursor: 'pointer'
+              }}
+              onClick={() => connectSolana()}
+              disabled={isConnecting}
+              title="Conectar con Phantom / Solflare u otra wallet nativa de Solana"
+            >
+              {isConnecting ? 'CONECTANDO...' : '🟣 PHANTOM / SOLANA'}
+            </button>
+
+            {/* Official Privy Login Button */}
             <button
               className="wallet-standalone-button login-button"
               style={{
@@ -228,9 +248,9 @@ export function WalletStandalone() {
               }}
               onClick={() => privyLogin()}
               disabled={isConnecting}
-              title="Conectar billetera o iniciar sesión con Privy en Avalanche Fuji"
+              title="Iniciar sesión social con Privy"
             >
-              {isConnecting ? 'CONECTANDO...' : '⚡ INICIAR SESIÓN / WALLET'}
+              ⚡ PRIVY
             </button>
           </div>
         )

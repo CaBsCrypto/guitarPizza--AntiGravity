@@ -92,6 +92,50 @@ export function useWallet() {
   }, [setWallet, setConnecting, setError, setNetwork]);
 
   /**
+   * Connect Solana wallet (e.g. Phantom, Solflare, or window.solana)
+   */
+  const connectSolana = useCallback(async () => {
+    if (typeof window === 'undefined') {
+      setError('Solana wallet connection is only available in the browser.');
+      return;
+    }
+
+    try {
+      setConnecting(true);
+      setError(null);
+
+      const solana = (window as any).solana || (window as any).phantom?.solana;
+      if (!solana) {
+        window.open('https://phantom.app/', '_blank');
+        throw new Error('Phantom or compatible Solana wallet not detected. Please install Phantom.');
+      }
+
+      const response = await solana.connect();
+      const address = response?.publicKey?.toString() || solana.publicKey?.toString();
+      if (!address) {
+        throw new Error('No Solana address returned by wallet');
+      }
+
+      setWallet(address, 'solana-phantom', 'wallet');
+      setNetwork('solana', '');
+
+      // Set cookie for cross-session compatibility
+      const isProd = window.location.hostname.endsWith('spicycrust.com');
+      const domain = isProd ? '; domain=.spicycrust.com' : '';
+      document.cookie = `solana_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
+
+      console.log('Solana wallet connected:', address);
+      return address;
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : 'Failed to connect Solana wallet';
+      setError(message);
+      throw err;
+    } finally {
+      setConnecting(false);
+    }
+  }, [setWallet, setConnecting, setError, setNetwork]);
+
+  /**
    * Connect as a dev player (for testing)
    * DEV MODE ONLY - Not used in production
    */
@@ -202,30 +246,34 @@ export function useWallet() {
     const syncPrivyWallet = async () => {
       if (authenticated && privyUser) {
         try {
-          // Extract EVM embedded or connected wallet address from Privy
+          // Extract Solana, EVM or Stellar wallet from Privy
+          const solanaWallet = wallets.find(w => 
+            (w as any).chainType === 'solana' || 
+            w.walletClientType?.includes('solana')
+          );
           const evmWallet = wallets.find(w => 
             w.walletClientType === 'privy' || 
             (w as any).chainType === 'ethereum' ||
             w.address?.startsWith('0x')
           ) || wallets[0];
           
-          let address: string | undefined = evmWallet?.address || privyUser.wallet?.address;
+          let address: string | undefined = solanaWallet?.address || evmWallet?.address || privyUser.wallet?.address;
 
           if (!address && privyUser.id) {
-            // Fallback EVM format mock address if wallet creation is pending
+            // Fallback EVM / Solana format mock address if wallet creation is pending
             address = `0x${privyUser.id.replace(/[^a-fA-F0-9]/g, '').padEnd(40, '0').slice(0, 40)}`;
           }
 
           if (address) {
             setWallet(address, 'privy', 'wallet');
-            setNetwork('avalanche-fuji', '');
+            setNetwork('solana', '');
 
             // Set shared cookie for cross-domain compatibility
             const isProd = window.location.hostname.endsWith('spicycrust.com');
             const domain = isProd ? '; domain=.spicycrust.com' : '';
-            document.cookie = `avalanche_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
+            document.cookie = `solana_wallet=${address}${domain}; path=/; max-age=86400; Secure; SameSite=Lax`;
 
-            console.log('Privy Avalanche wallet connected:', address);
+            console.log('Privy Solana/EVM wallet connected:', address);
           }
         } catch (err) {
           console.error('Error syncing Privy wallet:', err);
@@ -444,6 +492,7 @@ export function useWallet() {
 
     // Actions
     connect,
+    connectSolana,
     connectDev,
     switchPlayer,
     disconnect,
