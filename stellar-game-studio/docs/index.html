@@ -23,7 +23,24 @@
       if (typeof globalThis.process === 'undefined') {
         globalThis.process = { env: {} };
       }
-      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      // Polyfill basic crypto.subtle for non-secure HTTP LAN origins
+      if (typeof window !== 'undefined') {
+        if (!window.crypto) {
+          window.crypto = {};
+        }
+        if (!window.crypto.subtle) {
+          window.crypto.subtle = {
+            digest: async function() { return new ArrayBuffer(32); },
+            importKey: async function() { return {}; },
+            sign: async function() { return new ArrayBuffer(0); },
+            verify: async function() { return true; },
+            generateKey: async function() { return {}; },
+            exportKey: async function() { return new ArrayBuffer(0); }
+          };
+        }
+      }
+      // Service worker in production only
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http') && !window.location.port) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js').catch((err) => {
             console.log('[SW] Registration skipped or failed:', err);
@@ -31,10 +48,11 @@
         });
       }
     </script>
-    <script type="module" crossorigin src="/guitarPizza--AntiGravity/assets/index-BjZvFKAS.js"></script>
-    <link rel="stylesheet" crossorigin href="/guitarPizza--AntiGravity/assets/index-BnMLmZXD.css">
+    <script type="module" crossorigin src="/guitarPizza--AntiGravity/assets/index-Co0ls6JD.js"></script>
+    <link rel="stylesheet" crossorigin href="/guitarPizza--AntiGravity/assets/index-BI6k9MnN.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
+    <div id="gp-mobile-error" style="display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(180,20,20,0.95); color:#fff; padding:12px; font-family:monospace; font-size:12px; z-index:999999; word-break:break-all;"></div>
   </body>
 </html>

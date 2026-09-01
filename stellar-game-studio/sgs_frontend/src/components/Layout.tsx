@@ -18,14 +18,13 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
         <div className="rs-header-left">
           <a
             href="https://spicycrust.com"
-            target="_blank"
-            rel="noopener noreferrer"
+            target="_self"
             className="rs-spicycrust-btn"
             title="Volver a SpicyCrust.com / Ver más juegos"
           >
             <span className="rs-spicycrust-icon">🍕</span>
             <span className="rs-spicycrust-text">Volver a SpicyCrust</span>
-            <span className="rs-spicycrust-arrow">↗</span>
+            <span className="rs-spicycrust-arrow">←</span>
           </a>
 
           <button className="rs-brand" onClick={() => onNavigate('home')} type="button" title="Volver al Inicio">

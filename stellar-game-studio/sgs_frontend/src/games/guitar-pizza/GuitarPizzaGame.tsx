@@ -3257,8 +3257,7 @@ Ganador: ${payload.winnerAddress}`);
                 {/* Global Portal Link: Volver a SpicyCrust */}
                 <a
                     href="https://spicycrust.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    target="_self"
                     style={{
                         position: 'absolute',
                         top: '12px',
@@ -3287,7 +3286,7 @@ Ganador: ${payload.winnerAddress}`);
                 >
                     <span style={{ fontSize: '0.95rem' }}>🍕</span>
                     <span>{language === 'es' ? 'SpicyCrust' : 'SpicyCrust'}</span>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--ph-gold)' }}>↗</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--ph-gold)' }}>←</span>
                 </a>
 
                 <div
