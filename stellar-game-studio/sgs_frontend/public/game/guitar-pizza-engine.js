@@ -843,30 +843,41 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         songBuffer: null, songSource: null, musicGain: null, filterNode: null,
 
         init: function () {
-            if (this.isInit) {
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    // Only resume if called from a user gesture (startGame)
+            if (this.ctx && this.ctx.state === 'closed') {
+                this.isInit = false;
+                this.ctx = null;
+            }
+            if (this.isInit && this.ctx) {
+                if (this.ctx.state === 'suspended') {
                     try { this.ctx.resume(); } catch (e) { }
                 }
                 return;
             }
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioContext();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.35;
-            this.masterGain.connect(this.ctx.destination);
-
-            // Create Audio Analyser Node for dynamic visuals
             try {
-                this.analyser = this.ctx.createAnalyser();
-                this.analyser.fftSize = 64; // Small fft for fast volume tracking!
-                this.masterGain.connect(this.analyser);
-            } catch (e) {
-                console.warn('[AudioEngine] AnalyserNode creation failed:', e);
-            }
-            
-            // Capture audio stream for WebRTC guest mirroring
-            if (this.ctx) {
+                if (window._GP_GLOBAL_AUDIO_CTX && window._GP_GLOBAL_AUDIO_CTX.state !== 'closed') {
+                    this.ctx = window._GP_GLOBAL_AUDIO_CTX;
+                    if (this.ctx.state === 'suspended') {
+                        try { this.ctx.resume(); } catch (e) {}
+                    }
+                } else {
+                    this.ctx = new AudioContext();
+                    window._GP_GLOBAL_AUDIO_CTX = this.ctx;
+                }
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.35;
+                this.masterGain.connect(this.ctx.destination);
+
+                // Create Audio Analyser Node for dynamic visuals
+                try {
+                    this.analyser = this.ctx.createAnalyser();
+                    this.analyser.fftSize = 64; // Small fft for fast volume tracking!
+                    this.masterGain.connect(this.analyser);
+                } catch (e) {
+                    console.warn('[AudioEngine] AnalyserNode creation failed:', e);
+                }
+                
+                // Capture audio stream for WebRTC guest mirroring
                 try {
                     this.audioDest = this.ctx.createMediaStreamDestination();
                     this.masterGain.connect(this.audioDest);
@@ -875,28 +886,48 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 } catch (err) {
                     console.warn('[AudioEngine] MediaStreamAudioDestinationNode not supported or failed to create:', err);
                 }
-            }
 
-            // It will be suspended, we will resume it later
-            this.isInit = true;
+                this.isInit = true;
+            } catch (err) {
+                console.error('[AudioEngine] Failed to create AudioContext:', err);
+            }
         },
         setVolume: function (value) {
-            if (this.masterGain) {
+            if (this.masterGain && this.ctx) {
                 const v = Math.max(0, Math.min(1, value));
-                this.masterGain.gain.cancelScheduledValues(0);
-                this.masterGain.gain.value = v * 0.35;
+                try {
+                    this.masterGain.gain.cancelScheduledValues(0);
+                    this.masterGain.gain.value = v * 0.35;
+                } catch (e) {}
             }
         },
 
         // ── MUSIC ─────────────────────────────────────────────────────────────
         loadSong: async function (url) {
-            if (!this.isInit) this.init(); // Init context early (will be suspended)
-            if (!url) return;
+            this.init();
+            if (!url || !this.ctx) return;
             try {
-                const resp = await fetch(url);
-                const arrayBuffer = await resp.arrayBuffer();
-                this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-                console.log('[AudioEngine] Song loaded and decoded:', url);
+                // Persistent decoded buffer cache to prevent memory exhaustion and repeated decodes
+                window._GP_DECODED_BUFFER_CACHE = window._GP_DECODED_BUFFER_CACHE || new Map();
+                if (window._GP_DECODED_BUFFER_CACHE.has(url)) {
+                    this.songBuffer = window._GP_DECODED_BUFFER_CACHE.get(url);
+                    console.log('[AudioEngine] Song restored from cache:', url);
+                } else {
+                    window._GP_RAW_AUDIO_CACHE = window._GP_RAW_AUDIO_CACHE || new Map();
+                    let arrayBuffer;
+                    if (window._GP_RAW_AUDIO_CACHE.has(url)) {
+                        arrayBuffer = window._GP_RAW_AUDIO_CACHE.get(url).slice(0);
+                    } else {
+                        const resp = await fetch(url);
+                        const rawBuffer = await resp.arrayBuffer();
+                        window._GP_RAW_AUDIO_CACHE.set(url, rawBuffer);
+                        arrayBuffer = rawBuffer.slice(0);
+                    }
+                    
+                    this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+                    window._GP_DECODED_BUFFER_CACHE.set(url, this.songBuffer);
+                    console.log('[AudioEngine] Song loaded and decoded:', url);
+                }
 
                 // Run dynamic offline beat detection mapper if chartData is missing
                 if (!options.chartData || !Array.isArray(options.chartData.notes) || options.chartData.notes.length === 0) {
@@ -910,47 +941,64 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
         },
         playSong: function (initialRate, startSec, durationSec) {
-            if (!this.isInit || !this.songBuffer) return;
+            this.init();
+            if (!this.ctx || !this.songBuffer) return;
+            if (this.ctx.state === 'suspended') {
+                try { this.ctx.resume(); } catch (e) {}
+            }
             this.stopSong();
 
-            this.filterNode = this.ctx.createBiquadFilter();
-            this.filterNode.type = 'lowpass';
-            this.filterNode.frequency.value = 20000;
+            try {
+                this.filterNode = this.ctx.createBiquadFilter();
+                this.filterNode.type = 'lowpass';
+                this.filterNode.frequency.value = 20000;
 
-            this.musicGain = this.ctx.createGain();
-            this.musicGain.gain.value = 0.75;
+                this.musicGain = this.ctx.createGain();
+                this.musicGain.gain.value = 0.75;
 
-            this.songSource = this.ctx.createBufferSource();
-            this.songSource.buffer = this.songBuffer;
-            this.songSource.loop = false; // segment play — no full loop
-            this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
+                this.songSource = this.ctx.createBufferSource();
+                this.songSource.buffer = this.songBuffer;
+                this.songSource.loop = false; // segment play — no full loop
+                this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
 
-            this.songSource.connect(this.musicGain);
-            this.musicGain.connect(this.filterNode);
-            this.filterNode.connect(this.masterGain);
+                this.songSource.connect(this.musicGain);
+                this.musicGain.connect(this.filterNode);
+                this.filterNode.connect(this.masterGain);
 
-            // Play only the curated segment
-            const s = startSec || 0;
-            const d = durationSec || this.songBuffer.duration;
-            this.songSource.start(0, s, d);
-            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
+                // Play only the curated segment
+                const s = startSec || 0;
+                const d = durationSec || this.songBuffer.duration;
+                this.songSource.start(0, s, d);
+                console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
 
-            // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
-            const fadeStart = Math.max(0, d - 3);
-            const fadeStartCtx = this.ctx.currentTime + fadeStart;
-            this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
-            this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
+                // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
+                const fadeStart = Math.max(0, d - 3);
+                const fadeStartCtx = this.ctx.currentTime + fadeStart;
+                this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
+                this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
 
-            // When the segment naturally ends -> trigger level complete (victory)
-            this.songSource.onended = () => {
-                if (gameState === STATE.GAME) completeLevel();
-            };
+                // When the segment naturally ends -> trigger level complete (victory)
+                this.songSource.onended = () => {
+                    if (gameState === STATE.GAME) completeLevel();
+                };
+            } catch (err) {
+                console.error('[AudioEngine] Error in playSong:', err);
+            }
         },
         stopSong: function () {
             if (this.songSource) {
+                try { this.songSource.onended = null; } catch (e) { }
                 try { this.songSource.stop(); } catch (e) { }
                 try { this.songSource.disconnect(); } catch (e) { }
                 this.songSource = null;
+            }
+            if (this.filterNode) {
+                try { this.filterNode.disconnect(); } catch (e) { }
+                this.filterNode = null;
+            }
+            if (this.musicGain) {
+                try { this.musicGain.disconnect(); } catch (e) { }
+                this.musicGain = null;
             }
         },
 
@@ -2989,7 +3037,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             if (uiBackBtn) uiBackBtn.onclick = null;
 
             AudioEngine.stopSong();
-            if (AudioEngine.ctx) AudioEngine.ctx.close();
+            AudioEngine.isInit = false;
             if (socket) {
                 try {
                     socket.close();

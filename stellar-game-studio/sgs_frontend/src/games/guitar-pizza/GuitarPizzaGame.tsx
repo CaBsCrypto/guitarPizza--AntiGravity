@@ -934,7 +934,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     // Profile & Lead Capture State
     const [chefName, setChefName] = useState(() => {
-        try { return localStorage.getItem('gp_chef_name') || "Chef Don"; } catch { return "Chef Don"; }
+        try { return localStorage.getItem('gp_chef_name') || ""; } catch { return ""; }
     });
     const [xHandle, setXHandle] = useState(() => {
         try { return localStorage.getItem('gp_x_handle') || ""; } catch { return ""; }
@@ -945,6 +945,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     const [playerEmail, setPlayerEmail] = useState(() => {
         try { return localStorage.getItem('gp_player_email') || ""; } catch { return ""; }
     });
+    const [formErrors, setFormErrors] = useState<{ chefName?: string; playerEmail?: string }>({});
     const [isSavingScore, setIsSavingScore] = useState(false);
     const [isScoreSaved, setIsScoreSaved] = useState(false);
     const [lastScore, setLastScore] = useState<number>(0);
@@ -2397,16 +2398,20 @@ Ganador: ${payload.winnerAddress}`);
 
 
     const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
-
     const selectedSongRef = useRef(selectedSong);
-
     useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
+    const autoStartOnSongChangeRef = useRef(false);
 
     // ── Audio Preview for Song Picker ──────────────────────────────────────────
     const [previewingSongId, setPreviewingSongId] = useState<string | null>(null);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+    const previewTimerRef = useRef<any>(null);
 
     const stopPreviewAudio = useCallback(() => {
+        if (previewTimerRef.current) {
+            clearTimeout(previewTimerRef.current);
+            previewTimerRef.current = null;
+        }
         if (previewAudioRef.current) {
             try {
                 previewAudioRef.current.pause();
@@ -2419,31 +2424,37 @@ Ganador: ${payload.winnerAddress}`);
     }, []);
 
     const playSongPreview = useCallback((song: Song) => {
+        // Toggle off if already previewing this song
+        if (previewingSongId === song.id && previewAudioRef.current) {
+            stopPreviewAudio();
+            return;
+        }
+
         stopPreviewAudio();
         if (isMutedRef.current || !song.available) return;
 
         try {
-            const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
-            const relative = songPath(song).replace(/^\/+/, '');
-            const audioSrc = `${base}/${relative}`.replace('//', '/');
+            const base = (import.meta.env.BASE_URL || '/');
+            const cleanBase = base.endsWith('/') ? base : `${base}/`;
+            const cleanRel = songPath(song).replace(/^\/+/, '');
+            const audioSrc = `${cleanBase}${cleanRel}`.replace(/\/+/g, '/');
 
             const audio = new Audio(encodeURI(audioSrc));
-            audio.volume = 0.5;
+            audio.volume = 0.55;
 
-            if (song.start && song.start > 0) {
-                audio.addEventListener('loadedmetadata', () => {
-                    try {
-                        audio.currentTime = song.start;
-                    } catch (e) {}
-                }, { once: true });
-            }
+            // Start from song.start safely once audio is ready
+            audio.addEventListener('canplay', () => {
+                if (song.start && song.start > 0 && audio.currentTime < song.start) {
+                    try { audio.currentTime = song.start; } catch (e) {}
+                }
+            }, { once: true });
 
             audio.addEventListener('play', () => {
                 setPreviewingSongId(song.id);
             });
 
             audio.addEventListener('ended', () => {
-                setPreviewingSongId(null);
+                stopPreviewAudio();
             });
 
             audio.addEventListener('pause', () => {
@@ -2460,11 +2471,28 @@ Ganador: ${payload.winnerAddress}`);
                 });
             }
             previewAudioRef.current = audio;
+
+            // Auto stop preview after 15 seconds with gentle fade
+            previewTimerRef.current = setTimeout(() => {
+                if (previewAudioRef.current) {
+                    let vol = previewAudioRef.current.volume;
+                    const fadeInterval = setInterval(() => {
+                        vol = Math.max(0, vol - 0.1);
+                        if (previewAudioRef.current) previewAudioRef.current.volume = vol;
+                        if (vol <= 0) {
+                            clearInterval(fadeInterval);
+                            stopPreviewAudio();
+                        }
+                    }, 100);
+                } else {
+                    stopPreviewAudio();
+                }
+            }, 15000);
         } catch (e) {
             console.warn('[SongPicker] Failed to play preview audio:', e);
             setPreviewingSongId(null);
         }
-    }, [stopPreviewAudio]);
+    }, [previewingSongId, stopPreviewAudio]);
 
     // Play preview when opening songpicker or stop when leaving
     useEffect(() => {
@@ -2694,85 +2722,77 @@ Ganador: ${payload.winnerAddress}`);
 
 
     // Called when the player clicks "Cook Again" on the results screen.
-
     // Hides the results panel, resets UI state, starts a new on-chain session
-
     // (async, non-blocking), then tells the engine to begin a fresh game.
-
     const handleCookAgain = async () => {
-
         const results = document.getElementById('results');
-
         if (results) results.style.display = 'none';
 
         setIsVerifying(false);
-
         setProofStatus('none');
-
         setOnChainScore(null);
-
         setLbSubmitStatus('none');
-
-
+        setIsScoreSaved(false);
+        setFormErrors({});
 
         // Start the game immediately — don't block on the on-chain call
-
         if (engineRef.current?.startGame) {
-
             engineRef.current.startGame();
-
         }
-
-
 
         // Open a fresh on-chain session in the background
-
         const localSessionId = Math.floor(Math.random() * 1000000);
-
         onChainSessionIdRef.current = localSessionId;
-
         try {
-
             const signer = getContractSignerRef.current();
-
             const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
-
             onChainSessionIdRef.current = startResult.sessionId;
-
             addLog(`[GuitarPizza] On-chain session ready (replay): ${startResult.sessionId}`);
-
         } catch {
-
             console.warn("[GuitarPizza] No wallet for replay on-chain session — skipping.");
-
         }
-
     };
-
-
 
     const handleNextLevel = () => {
-
-        // Unlock Level 2
-
+        // Unlock Level 2 (Rare Pizzas - Hard Mode)
         const song2 = SONGS.find(s => s.id === 'rare-pizzas');
-
         if (song2) {
-
             song2.available = true;
-
+            selectedSongRef.current = song2;
             setSelectedSong(song2);
-
         }
 
-        handleCookAgain(); // uses the new selectedSong in the next init
+        const results = document.getElementById('results');
+        if (results) results.style.display = 'none';
 
+        setIsVerifying(false);
+        setProofStatus('none');
+        setOnChainScore(null);
+        setLbSubmitStatus('none');
+        setIsScoreSaved(false);
+        setFormErrors({});
+
+        // Mark flag to automatically begin gameplay as soon as the Level 2 song finishes mounting
+        autoStartOnSongChangeRef.current = true;
+
+        if (engineRef.current?.cleanup) {
+            try { engineRef.current.cleanup(); } catch (e) {}
+            engineRef.current = null;
+        }
+
+        // Register on-chain session for level 2
+        const localSessionId = Math.floor(Math.random() * 1000000);
+        onChainSessionIdRef.current = localSessionId;
+        try {
+            const signer = getContractSignerRef.current();
+            StellarContractService.startGame(userAddress, localSessionId, 2, signer, 1).then(startResult => {
+                onChainSessionIdRef.current = startResult.sessionId;
+                addLog(`[GuitarPizza] On-chain session ready (Level 2): ${startResult.sessionId}`);
+            }).catch(() => {});
+        } catch {}
     };
 
-
-
     // Load leaderboard on mount
-
     useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
 
 
@@ -3083,32 +3103,19 @@ Ganador: ${payload.winnerAddress}`);
                         setIsVerifying(false);
                         setProofStatus('none');
 
-                        // Enviar score automáticamente en segundo plano a la API
+                        setIsScoreSaved(false);
+                        setFormErrors({});
+
+                        // Refresh leaderboard cache in background without marking user manual save
                         const engineStats = (inputLog as any)?.stats ?? {};
                         const hits = engineStats.totalHits ?? 0;
                         const perfects = engineStats.perfectHits ?? 0;
                         const pizzas = engineStats.pizzasCompleted ?? 0;
 
                         try {
-                            SpicyCrustService.submitScore({
-                                playerExternalId: userAddress || 'guest_player',
-                                nickname: chefName || localStorage.getItem('gp_chef_name') || 'Chef Don',
-                                email: playerEmail || localStorage.getItem('gp_player_email') || undefined,
-                                score: finalScore,
-                                metadata: {
-                                    songId: selectedSong.id,
-                                    songTitle: selectedSong.title,
-                                    difficulty: selectedSong.difficulty === 3 ? 'Hard' : (selectedSong.difficulty === 2 ? 'Medium' : 'Easy'),
-                                    hits: hits,
-                                    perfectHits: perfects,
-                                    pizzas: pizzas
-                                }
-                            }).then(() => {
-                                setIsScoreSaved(true);
-                                loadLeaderboard();
-                            });
+                            loadLeaderboard();
                         } catch (e) {
-                            console.warn('[GuitarPizza] Background submit score error:', e);
+                            console.warn('[GuitarPizza] Refresh leaderboard error:', e);
                         }
 
                         if (isPvp) {
@@ -3119,25 +3126,25 @@ Ganador: ${payload.winnerAddress}`);
                         onGameComplete(finalScore);
                     }, resolvedSongUrl, t);
 
-
-
                     if (typeof result === 'function') {
-
                         engineRef.current = { cleanup: result, setVolume: () => { } };
-
                     } else {
-
                         engineRef.current = result;
-
                     }
 
-
-
                     setStatus('');
-
                     setBooting(false);
-
                     addLog("[GuitarPizza] Game initialized successfully.");
+
+                    // If Level 2 transition was requested, auto start the game immediately
+                    if (autoStartOnSongChangeRef.current) {
+                        autoStartOnSongChangeRef.current = false;
+                        setTimeout(() => {
+                            if (engineRef.current?.startGame) {
+                                engineRef.current.startGame();
+                            }
+                        }, 200);
+                    }
 
                 } catch (e) {
 
@@ -3246,70 +3253,61 @@ Ganador: ${payload.winnerAddress}`);
     return (
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
             {/* Game Container */}
-            <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
-                {/* Floating Game Controls (Settings & Fullscreen) */}
-                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 30, display: 'flex', gap: '8px' }}>
-                    <button
-                        onClick={toggleGameFullscreen}
-                        className="settings-btn gp-fs-btn"
-                        title={isGameFullscreen ? (language === 'es' ? 'Salir de pantalla completa' : 'Exit fullscreen') : (language === 'es' ? 'Pantalla completa' : 'Fullscreen')}
-                        aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                        style={{ fontSize: '1.2rem', lineHeight: 1, background: 'rgba(10,7,5,0.7)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                    >
-                        {isGameFullscreen ? '⊠' : '⛶'}
-                    </button>
-                    <button 
-                        onClick={() => setShowSettings(true)} 
-                        className="settings-btn" 
-                        title="Settings"
-                        style={{ background: 'rgba(10,7,5,0.7)', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                    >
-                        <Settings size={20} />
-                    </button>
-                </div>
+            <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, height: '100%', padding: '0.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%', boxSizing: 'border-box' }}>
+                {/* Global Portal Link: Volver a SpicyCrust */}
+                <a
+                    href="https://spicycrust.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        zIndex: 100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        background: 'rgba(20, 5, 5, 0.85)',
+                        border: '1.5px solid #8B0000',
+                        borderRadius: '20px',
+                        color: '#FFF8DC',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold',
+                        textDecoration: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(8px)',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                        fontFamily: "'Special Elite', monospace"
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#DAA520'; e.currentTarget.style.color = '#DAA520'; e.currentTarget.style.transform = 'scale(1.04)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#8B0000'; e.currentTarget.style.color = '#FFF8DC'; e.currentTarget.style.transform = 'scale(1)'; }}
+                    title={language === 'es' ? 'Volver a SpicyCrust.com' : 'Back to SpicyCrust.com'}
+                >
+                    <span style={{ fontSize: '0.95rem' }}>🍕</span>
+                    <span>{language === 'es' ? 'SpicyCrust' : 'SpicyCrust'}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--ph-gold)' }}>↗</span>
+                </a>
 
                 <div
                     id="game-device-screen"
                     className="game-container game-frame"
                     ref={containerRef}
                     style={{
-                        width: isGameFullscreen ? '100vw' : 'min(100%, calc((100vh - 2rem) * 9 / 16))',
-                        height: isGameFullscreen ? '100vh' : 'auto',
+                        height: '100%',
+                        maxHeight: '100%',
+                        maxWidth: '100%',
+                        width: 'auto',
                         aspectRatio: '9/16',
                         position: 'relative',
                         overflow: 'hidden',
-                        border: isGameFullscreen ? 'none' : '8px solid #000',
-                        borderRadius: isGameFullscreen ? '0' : '20px',
-                        boxShadow: isGameFullscreen ? 'none' : '0 0 50px rgba(0,0,0,0.5)',
+                        border: '5px solid #1a0808',
+                        borderRadius: '20px',
+                        boxShadow: '0 0 40px rgba(0,0,0,0.85), 0 0 15px rgba(212,175,55,0.2)',
+                        boxSizing: 'border-box'
                     }}
                 >
-                    {/* ── Floating fullscreen FAB inside the game screen ── */}
-                    <button
-                        onClick={toggleGameFullscreen}
-                        aria-label={isGameFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-                        style={{
-                            position: 'absolute',
-                            top: '10px',
-                            right: '10px',
-                            zIndex: 9999,
-                            width: '36px',
-                            height: '36px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'rgba(10, 4, 2, 0.75)',
-                            border: '1.5px solid rgba(204, 41, 41, 0.5)',
-                            borderRadius: '8px',
-                            color: '#F5EDE0',
-                            fontSize: '1.1rem',
-                            cursor: 'pointer',
-                            backdropFilter: 'blur(6px)',
-                            opacity: 0.8,
-                            lineHeight: 1,
-                        }}
-                    >
-                        {isGameFullscreen ? '⊠' : '⛶'}
-                    </button>
 
 
 
@@ -3366,10 +3364,12 @@ Ganador: ${payload.winnerAddress}`);
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '2.5rem 1.5rem',
+                            padding: 'clamp(0.8rem, 2.5vh, 1.8rem) clamp(0.8rem, 2vw, 1.4rem)',
+                            boxSizing: 'border-box',
                             zIndex: 1500,
                             textAlign: 'center',
-                            overflow: 'hidden'
+                            overflowY: 'auto',
+                            gap: 'clamp(0.4rem, 1.5vh, 1rem)'
                         }}>
                             <style>{`
                                 @keyframes floatSlow {
@@ -3398,11 +3398,11 @@ Ganador: ${payload.winnerAddress}`);
                             <div style={{
                                 width: '100%',
                                 borderBottom: '2px double rgba(212, 175, 55, 0.5)',
-                                paddingBottom: '0.5rem',
+                                paddingBottom: '0.3rem',
                                 color: '#d4af37',
-                                fontSize: '0.75rem',
+                                fontSize: 'clamp(0.6rem, 1.4vh, 0.75rem)',
                                 fontFamily: 'monospace',
-                                letterSpacing: '0.3em',
+                                letterSpacing: '0.25em',
                                 fontWeight: 'bold',
                                 textTransform: 'uppercase',
                                 textShadow: '0 0 8px rgba(212, 175, 55, 0.4)',
@@ -3416,10 +3416,10 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 alignItems: 'center', 
-                                gap: '0.6rem',
+                                gap: '0.4rem',
                                 zIndex: 10,
                                 border: '2px solid rgba(212, 175, 55, 0.4)',
-                                padding: '1.2rem 1.5rem',
+                                padding: 'clamp(0.6rem, 1.6vh, 1rem) clamp(0.8rem, 2vw, 1.3rem)',
                                 borderRadius: '16px',
                                 background: 'rgba(10, 7, 5, 0.88)',
                                 backdropFilter: 'blur(8px)',
@@ -3427,12 +3427,12 @@ Ganador: ${payload.winnerAddress}`);
                             }}>
                                 <h1 style={{
                                     fontFamily: 'Bangers, cursive',
-                                    fontSize: 'clamp(3rem, 7vh, 4.2rem)',
+                                    fontSize: 'clamp(2.2rem, 5.5vh, 3.6rem)',
                                     lineHeight: '0.9',
                                     color: '#e74c3c',
                                     animation: 'cleanGlow 3s infinite ease-in-out',
                                     letterSpacing: '0.06em',
-                                    margin: '0 0 0.3rem 0',
+                                    margin: '0 0 0.15rem 0',
                                     textRendering: 'optimizeLegibility',
                                     WebkitFontSmoothing: 'antialiased'
                                 }}>
@@ -3441,25 +3441,25 @@ Ganador: ${payload.winnerAddress}`);
                                 
                                 <div style={{
                                     display: 'inline-block',
-                                    padding: '0.25rem 0.8rem',
+                                    padding: '0.15rem 0.6rem',
                                     background: 'rgba(212, 175, 55, 0.15)',
                                     border: '1px solid #d4af37',
                                     borderRadius: '50px',
-                                    fontSize: '0.65rem',
+                                    fontSize: '0.6rem',
                                     fontFamily: 'monospace',
                                     color: '#ffcc00',
                                     fontWeight: 'bold',
-                                    letterSpacing: '0.15em',
-                                    marginBottom: '0.1rem'
+                                    letterSpacing: '0.12em',
+                                    marginBottom: '0.05rem'
                                 }}>
                                     ARCADE EDITION
                                 </div>
 
                                 <p style={{
                                     fontFamily: '"Special Elite", monospace',
-                                    fontSize: '0.88rem',
+                                    fontSize: 'clamp(0.72rem, 1.8vh, 0.88rem)',
                                     color: '#f5efe6',
-                                    letterSpacing: '0.1em',
+                                    letterSpacing: '0.08em',
                                     margin: 0,
                                     textShadow: '0 2px 4px rgba(0,0,0,0.8)'
                                 }}>
@@ -3472,27 +3472,27 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '0.4rem',
+                                gap: '0.2rem',
                                 position: 'relative',
                                 zIndex: 10
                             }}>
                                 <div style={{
-                                    fontSize: '5.2rem',
+                                    fontSize: 'clamp(2.8rem, 7vh, 4.4rem)',
                                     filter: 'drop-shadow(0 0 20px rgba(212, 175, 55, 0.7))',
                                     cursor: 'pointer',
                                     transition: 'transform 0.2s ease',
-                                    userSelect: 'none'
+                                    userSelect: 'none',
+                                    lineHeight: 1
                                 }} 
                                 onClick={() => setView('lobby')}
                                 >
                                     🍕
                                 </div>
                                 <div style={{
-                                    fontSize: '1.2rem',
+                                    fontSize: 'clamp(0.9rem, 2vh, 1.15rem)',
                                     color: '#fff',
-                                    marginTop: '-6px',
                                     display: 'flex',
-                                    gap: '0.5rem',
+                                    gap: '0.4rem',
                                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
                                 }}>
                                     🎸 🔪 🍷
@@ -3505,19 +3505,19 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '0.8rem',
+                                gap: 'clamp(0.4rem, 1.2vh, 0.75rem)',
                                 zIndex: 10
                             }}>
                                 <button
                                     onClick={() => setView('lobby')}
                                     className="primary-btn"
                                     style={{
-                                        width: '88%',
+                                        width: '90%',
                                         maxWidth: '280px',
-                                        padding: '1rem',
-                                        fontSize: '1.15rem',
+                                        padding: 'clamp(0.65rem, 1.6vh, 0.95rem)',
+                                        fontSize: 'clamp(0.95rem, 2.2vh, 1.15rem)',
                                         fontFamily: 'var(--font-display)',
-                                        letterSpacing: '0.08em',
+                                        letterSpacing: '0.06em',
                                         fontWeight: 'bold',
                                         animation: 'cleanButtonPulse 2s infinite ease-in-out',
                                         background: 'linear-gradient(135deg, #d4af37, #c0392b)',
@@ -3538,16 +3538,16 @@ Ganador: ${payload.winnerAddress}`);
                                         background: 'rgba(39,174,96,0.12)',
                                         border: '1px solid rgba(39,174,96,0.35)',
                                         borderRadius: '10px',
-                                        padding: '0.45rem 0.85rem',
-                                        fontSize: '0.65rem',
+                                        padding: '0.35rem 0.75rem',
+                                        fontSize: '0.62rem',
                                         fontFamily: 'monospace',
                                         color: '#27ae60',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '0.5rem',
+                                        gap: '0.4rem',
                                         maxWidth: '240px',
                                     }}>
-                                        <span style={{ fontSize: '0.9rem' }}>✅</span>
+                                        <span style={{ fontSize: '0.85rem' }}>✅</span>
                                         <div>
                                             <div style={{ fontWeight: 'bold', letterSpacing: '0.04em' }}>
                                                 {language === 'es' ? 'WALLET CONECTADA' : 'WALLET CONNECTED'}
@@ -3557,7 +3557,7 @@ Ganador: ${payload.winnerAddress}`);
                                             </div>
                                         </div>
                                         {checkInStreak > 0 && (
-                                            <div style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#d4af37', fontSize: '0.75rem' }}>
+                                            <div style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#d4af37', fontSize: '0.7rem' }}>
                                                 🔥 {checkInStreak}
                                             </div>
                                         )}
@@ -3567,17 +3567,17 @@ Ganador: ${payload.winnerAddress}`);
                                         background: 'rgba(212,175,55,0.1)',
                                         border: '1px dashed rgba(212,175,55,0.5)',
                                         borderRadius: '10px',
-                                        padding: '0.45rem 0.85rem',
-                                        fontSize: '0.65rem',
+                                        padding: '0.35rem 0.75rem',
+                                        fontSize: '0.62rem',
                                         fontFamily: 'monospace',
                                         color: '#d4af37',
                                         maxWidth: '240px',
                                         textAlign: 'center',
-                                        lineHeight: '1.4',
+                                        lineHeight: '1.3',
                                     }}>
                                         🔑 {language === 'es'
-                                            ? 'Conecta una wallet Stellar para ganar $SLICE y NFTs on-chain'
-                                            : 'Connect a Stellar wallet to earn $SLICE & on-chain NFTs'}
+                                            ? 'Conecta una wallet Avalanche para ganar $SLICE y NFTs'
+                                            : 'Connect an Avalanche wallet to earn $SLICE & NFTs'}
                                     </div>
                                 )}
 
@@ -3585,8 +3585,8 @@ Ganador: ${payload.winnerAddress}`);
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    gap: '1rem',
-                                    marginTop: '0.1rem',
+                                    gap: '0.8rem',
+                                    marginTop: '0.05rem',
                                 }}>
                                     {[
                                         { icon: '🎸', label: language === 'es' ? 'Ritmo' : 'Rhythm' },
@@ -3594,20 +3594,20 @@ Ganador: ${payload.winnerAddress}`);
                                         { icon: '🏆', label: language === 'es' ? 'Ranking' : 'Ranking' },
                                         { icon: '⚔️', label: 'PvP' },
                                     ].map(f => (
-                                        <div key={f.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                            <span style={{ fontSize: '1.1rem' }}>{f.icon}</span>
-                                            <span style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</span>
+                                        <div key={f.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                                            <span style={{ fontSize: '0.95rem' }}>{f.icon}</span>
+                                            <span style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</span>
                                         </div>
                                     ))}
                                 </div>
 
                                 <div style={{
-                                    fontSize: '0.48rem',
+                                    fontSize: '0.45rem',
                                     color: 'rgba(255,255,255,0.22)',
                                     fontFamily: 'monospace',
-                                    marginTop: '0.1rem'
+                                    marginTop: '0.05rem'
                                 }}>
-                                    ARCADE EDITION • STELLAR
+                                    ARCADE EDITION • FUJI
                                 </div>
                             </div>
                         </div>
@@ -4150,15 +4150,10 @@ Ganador: ${payload.winnerAddress}`);
 
 
                         {/* PERSISTENT LOBBY BACKGROUND */}
-
                         <div className="lobby-content" style={{
-
                             transition: 'all 0.3s ease',
-
                             filter: view !== 'lobby' ? 'blur(8px) brightness(0.6)' : 'none',
-
                             pointerEvents: view !== 'lobby' ? 'none' : 'auto',
-
                             transform: view !== 'lobby' ? 'scale(0.95)' : 'scale(1)',
                             width: '100%',
                             height: '100%',
@@ -4166,28 +4161,30 @@ Ganador: ${payload.winnerAddress}`);
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '1rem',
-                            padding: '1.5rem 1rem',
+                            gap: 'clamp(0.6rem, 2vh, 1.2rem)',
+                            padding: '1rem 0.85rem',
                             boxSizing: 'border-box',
                             position: 'relative',
+                            overflowY: 'auto',
+                            WebkitOverflowScrolling: 'touch',
                             zIndex: 1
                         }}>
 
-                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0' }}>
-                                <h1 className="main-logo" style={{ fontSize: 'clamp(2.4rem, 6vh, 3.2rem)', margin: 0, lineHeight: 0.95 }}>
+                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0', transform: 'scale(1.05)', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}>
+                                <h1 className="main-logo" style={{ fontSize: 'clamp(2.7rem, 6.8vh, 3.9rem)', margin: 0, lineHeight: 0.9, letterSpacing: '1px' }}>
                                     RHYTHM<br />SLICE
                                 </h1>
                                 <div style={{
-                                    marginTop: '0.4rem',
+                                    marginTop: '0.35rem',
                                     background: '#8B0000',
                                     color: '#FFF8DC',
-                                    padding: '0.2rem 0.8rem',
+                                    padding: '0.2rem 0.85rem',
                                     borderRadius: '6px',
-                                    fontSize: '0.72rem',
+                                    fontSize: 'clamp(0.65rem, 1.4vh, 0.78rem)',
                                     fontWeight: 'bold',
                                     letterSpacing: '2px',
-                                    border: '1px solid rgba(212, 175, 55, 0.5)',
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                    border: '1.5px solid rgba(212, 175, 55, 0.65)',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                                     textTransform: 'uppercase'
                                 }}>
                                     🍕 PIZZA KITCHEN 🍕
@@ -4197,14 +4194,14 @@ Ganador: ${payload.winnerAddress}`);
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '0.75rem',
-                                width: '92%',
+                                gap: 'clamp(0.35rem, 1vh, 0.65rem)',
+                                width: '95%',
                                 maxWidth: '340px',
                                 background: 'rgba(18, 6, 6, 0.72)',
                                 backdropFilter: 'blur(10px)',
                                 border: '1.5px solid rgba(212, 175, 55, 0.35)',
-                                borderRadius: '18px',
-                                padding: '1rem 0.9rem',
+                                borderRadius: '16px',
+                                padding: 'clamp(0.55rem, 1.2vh, 0.85rem) clamp(0.55rem, 1.2vw, 0.8rem)',
                                 boxSizing: 'border-box',
                                 boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(212, 175, 55, 0.08)'
                             }}>
@@ -4215,8 +4212,8 @@ Ganador: ${payload.winnerAddress}`);
                                     style={{
                                         opacity: engineRef.current ? 1 : 0.6,
                                         cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                        fontSize: '1.15rem',
-                                        padding: '0.85rem 1rem',
+                                        fontSize: 'clamp(0.95rem, 2.2vh, 1.15rem)',
+                                        padding: 'clamp(0.55rem, 1.4vh, 0.8rem) 0.8rem',
                                         width: '100%',
                                         background: 'linear-gradient(135deg, #27ae60 0%, #1e824c 100%)',
                                         border: '2px solid #2ecc71',
@@ -4237,7 +4234,7 @@ Ganador: ${payload.winnerAddress}`);
                                     onClick={() => setView('songpicker')}
                                     title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
                                     className="lobby-song-selector-btn"
-                                    style={{ width: '100%', margin: 0, boxSizing: 'border-box' }}
+                                    style={{ width: '100%', margin: 0, boxSizing: 'border-box', padding: 'clamp(0.35rem, 0.8vh, 0.5rem) 0.6rem' }}
                                 >
                                     <div style={{
                                         animation: 'vinyl-spin 2s linear infinite',
@@ -4245,7 +4242,7 @@ Ganador: ${payload.winnerAddress}`);
                                         display: 'flex',
                                         flexShrink: 0
                                     }}>
-                                        <svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                        <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                                             <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
                                             {[38, 33, 28, 23].map(r => (
                                                 <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
@@ -4258,57 +4255,53 @@ Ganador: ${payload.winnerAddress}`);
                                         </svg>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2, overflow: 'hidden' }}>
-                                        <span style={{ fontSize: '0.88rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textShadow: '0 0 5px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                                        <span style={{ fontSize: 'clamp(0.75rem, 1.8vh, 0.88rem)', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.04em', textShadow: '0 0 5px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
                                             {selectedSong.title}
                                         </span>
-                                        <span style={{ fontSize: '0.55rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 'bold' }}>
+                                        <span style={{ fontSize: 'clamp(0.48rem, 1vh, 0.55rem)', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 'bold' }}>
                                             {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
                                         </span>
                                     </div>
                                 </button>
 
-                                <div className="grid grid-cols-2 gap-2 w-full">
-                                    <button
-                                        className="secondary-btn lobby-nav-btn"
-                                        style={{ position: 'relative', overflow: 'hidden', padding: '0.55rem 0.4rem' }}
-                                        onClick={() => setView('store')}
-                                    >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>🛒</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.market}</span>
-                                        </div>
-                                    </button>
+                                {/* Highlighted Leaderboard / Ranking Button */}
+                                <button
+                                    className="secondary-btn lobby-nav-btn"
+                                    style={{
+                                        width: '100%',
+                                        border: '1.5px solid rgba(212, 175, 55, 0.7)',
+                                        background: 'linear-gradient(135deg, rgba(40, 20, 10, 0.9) 0%, rgba(20, 8, 8, 0.95) 100%)',
+                                        padding: 'clamp(0.4rem, 1vh, 0.6rem) 0.6rem',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 0 10px rgba(212, 175, 55, 0.15)'
+                                    }}
+                                    onClick={() => { loadLeaderboard(); setView('leaderboard'); }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
+                                        <span className="btn-icon" style={{ fontSize: 'clamp(1rem, 2.2vh, 1.25rem)' }}>🏆</span>
+                                        <span className="btn-text" style={{ fontSize: 'clamp(0.75rem, 1.6vh, 0.9rem)', color: 'var(--ph-gold)', fontWeight: 'bold', letterSpacing: '0.05em' }}>{t.ranking}</span>
+                                    </div>
+                                </button>
 
+                                <div className="grid grid-cols-2 gap-1.5 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{ border: '1.5px solid rgba(212, 175, 55, 0.6)', padding: '0.55rem 0.4rem' }}
-                                        onClick={() => { loadLeaderboard(); setView('leaderboard'); }}
-                                    >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>🏆</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: 'var(--ph-gold)' }}>{t.ranking}</span>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        className="secondary-btn lobby-nav-btn"
-                                        style={{ padding: '0.55rem 0.4rem' }}
+                                        style={{ padding: 'clamp(0.35rem, 0.8vh, 0.5rem) 0.35rem' }}
                                         onClick={() => setShowSettings(true)}
                                     >
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>⚙️</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.setup}</span>
+                                            <span className="btn-icon" style={{ fontSize: 'clamp(0.95rem, 2vh, 1.15rem)' }}>⚙️</span>
+                                            <span className="btn-text" style={{ fontSize: 'clamp(0.6rem, 1.3vh, 0.72rem)' }}>{t.setup}</span>
                                         </div>
                                     </button>
 
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{ padding: '0.55rem 0.4rem' }}
+                                        style={{ padding: 'clamp(0.35rem, 0.8vh, 0.5rem) 0.35rem' }}
                                         onClick={() => setView('howto')}
                                     >
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.15rem' }}>📜</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem' }}>{t.rules}</span>
+                                            <span className="btn-icon" style={{ fontSize: 'clamp(0.95rem, 2vh, 1.15rem)' }}>📜</span>
+                                            <span className="btn-text" style={{ fontSize: 'clamp(0.6rem, 1.3vh, 0.72rem)' }}>{t.rules}</span>
                                         </div>
                                     </button>
                                 </div>
@@ -4324,80 +4317,51 @@ Ganador: ${payload.winnerAddress}`);
 
 
                         {/* ── SONG PICKER (MAFIA EDITION) ─────────────────────────────── */}
-
                         {(view === 'songpicker' || closingView === 'songpicker') && (
-
                             <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
-
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
                                     background: '#FFF8E7',
-                                    border: '6px solid #8B0000',
+                                    border: '5px solid #8B0000',
                                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
                                     color: '#333',
                                     borderRadius: '16px',
-                                    paddingTop: '1.2rem',
-                                    paddingBottom: '1.2rem',
-                                    paddingLeft: '1.2rem',
-                                    paddingRight: '1.2rem',
-                                    height: '92%',
-                                    maxHeight: '92%',
+                                    padding: '0.75rem 0.85rem',
+                                    height: '96%',
+                                    maxHeight: '96%',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     boxSizing: 'border-box'
                                 }}>
 
                                     <div className="modal-header" style={{
-
-                                        borderBottom: '3px dashed #8B0000',
-
-                                        paddingBottom: '1.2rem',
-
-                                        marginBottom: '0.5rem'
-
+                                        borderBottom: '2px dashed #8B0000',
+                                        paddingBottom: '0.4rem',
+                                        marginBottom: '0.3rem'
                                     }}>
-
                                         <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
-
                                             background: '#8B0000',
-
                                             color: 'white',
-
                                             border: '2px solid #5C0000',
-
+                                            width: '32px',
+                                            height: '32px',
                                             flexShrink: 0
-
                                         }}>
-
-                                            <ArrowLeft size={20} />
-
+                                            <ArrowLeft size={18} />
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 5px', minWidth: 0 }}>
-
-                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.4rem' }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
-
-                                            <div style={{ fontSize: '0.75rem', color: '#27AE60', fontWeight: 'bold', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
-
+                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.25rem', lineHeight: 1 }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
+                                            <div style={{ fontSize: '0.68rem', color: '#27AE60', fontWeight: 'bold', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
                                         </div>
-
-
-
                                     </div>
 
-
-
-                                    <div style={{ flex: '1 1 auto', minHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem', marginTop: '0.6rem' }}>
-
+                                    <div style={{ flex: '1 1 auto', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem', paddingRight: '0.3rem', marginTop: '0.3rem' }}>
                                         {SONGS.map((song) => {
-
                                             const isSelected = selectedSong.id === song.id;
-
-                                            const mins = Math.floor(song.duration / 60);
-
-                                            const secs = Math.floor(song.duration % 60);
+                                            const mins = Math.floor((song.duration || 80) / 60);
+                                            const secs = Math.floor((song.duration || 80) % 60);
 
                                             return (
-
                                                 <button
                                                     key={song.id}
                                                     disabled={!song.available}
@@ -4405,123 +4369,74 @@ Ganador: ${payload.winnerAddress}`);
                                                         setSelectedSong(song);
                                                         playSongPreview(song);
                                                     }}
-
                                                     style={{
-
                                                         display: 'flex',
-
-                                                        alignItems: 'flex-start',
-
-                                                        gap: '0.5rem',
-                                                        padding: '0.5rem 0.7rem',
+                                                        alignItems: 'center',
+                                                        gap: '0.45rem',
+                                                        padding: '0.35rem 0.55rem',
                                                         borderRadius: '8px',
-
                                                         border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
-
                                                         background: isSelected ? 'rgba(39, 174, 96, 0.1)' : '#fff',
-
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
-
                                                         opacity: song.available ? 1 : 0.6,
-
                                                         textAlign: 'left',
-
                                                         color: '#333',
-
                                                         width: '100%',
-
-                                                        transition: 'all 0.2s ease',
-
-                                                        boxShadow: isSelected ? '0 4px 12px rgba(39, 174, 96, 0.2)' : '0 2px 4px rgba(0,0,0,0.02)'
-
+                                                        transition: 'all 0.15s ease',
+                                                        boxShadow: isSelected ? '0 3px 8px rgba(39, 174, 96, 0.18)' : '0 1px 3px rgba(0,0,0,0.03)'
                                                     }}
-
                                                     onMouseEnter={(e) => {
-
                                                         if (!isSelected && song.available) {
-
                                                             e.currentTarget.style.background = '#F9F5EB';
-
-                                                            e.currentTarget.style.transform = 'translateY(-2px)';
-
+                                                            e.currentTarget.style.transform = 'translateY(-1px)';
                                                             e.currentTarget.style.borderColor = '#D0B488';
-
                                                         }
-
                                                     }}
-
                                                     onMouseLeave={(e) => {
-
                                                         if (!isSelected && song.available) {
-
                                                             e.currentTarget.style.background = '#fff';
-
                                                             e.currentTarget.style.transform = 'translateY(0)';
-
                                                             e.currentTarget.style.borderColor = '#E0D4B8';
-
                                                         }
-
                                                     }}
-
                                                 >
-
                                                     {/* Track number or Pizza Slice */}
-
-                                                    <div style={{ width: '40px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '0.2rem' }}>
-
+                                                    <div style={{ width: '32px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         {isSelected ? (
-
-                                                            <div style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
-
+                                                            <div style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
                                                         ) : (
-
-                                                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: song.available ? '#8B0000' : '#aaa', fontWeight: 'bold' }}>
-
+                                                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: song.available ? '#8B0000' : '#aaa', fontWeight: 'bold' }}>
                                                                 {song.available ? `#${song.index}` : '🔒'}
-
                                                             </span>
-
                                                         )}
-
                                                     </div>
 
-
-
                                                     {/* Info */}
-
-                                                    <div style={{ flex: 1, minWidth: 0, paddingRight: '0.4rem', paddingTop: '0.2rem' }}>
-
+                                                    <div style={{ flex: 1, minWidth: 0, paddingRight: '0.2rem' }}>
                                                         <div style={{
-
                                                             fontWeight: '900',
-
-                                                            fontSize: isSelected ? '0.95rem' : '0.85rem', // Smaller fonts
-
+                                                            fontSize: isSelected ? '0.88rem' : '0.82rem',
                                                             color: isSelected ? '#27AE60' : '#8B0000',
-
                                                             textTransform: 'uppercase',
-
                                                             lineHeight: '1.15',
-
                                                             letterSpacing: '0.02em',
-
                                                             transition: 'all 0.2s ease'
                                                         }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                                                                <span>{song.title}</span>
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</span>
                                                                 {previewingSongId === song.id && (
                                                                     <span style={{
-                                                                        fontSize: '0.6rem',
+                                                                        fontSize: '0.55rem',
                                                                         background: '#27AE60',
                                                                         color: '#fff',
-                                                                        padding: '1px 6px',
+                                                                        padding: '1px 5px',
                                                                         borderRadius: '4px',
                                                                         fontWeight: 'bold',
                                                                         letterSpacing: '0.04em',
                                                                         display: 'inline-flex',
                                                                         alignItems: 'center',
-                                                                        gap: '3px',
+                                                                        gap: '2px',
+                                                                        flexShrink: 0,
                                                                         animation: 'pulse 1.2s infinite'
                                                                     }}>
                                                                         🔊 {language === 'es' ? 'SONANDO' : 'PLAYING'}
@@ -4531,150 +4446,100 @@ Ganador: ${payload.winnerAddress}`);
                                                         </div>
 
                                                         <div style={{
-                                                            fontSize: '0.7rem',
+                                                            fontSize: '0.66rem',
                                                             color: isSelected ? '#14532D' : '#666',
-                                                            marginTop: '3px',
+                                                            marginTop: '1px',
                                                             fontWeight: '600',
-                                                            lineHeight: '1.15'
+                                                            lineHeight: '1.15',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap'
                                                         }}>
                                                             {song.artist}
                                                         </div>
 
-                                                        {/* Difficulty Stars */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '5px' }}>
-                                                            {[1, 2, 3].map(star => (
-                                                                <span
-                                                                    key={star}
-                                                                    style={{
-                                                                        fontSize: '0.65rem',
-                                                                        opacity: star <= song.difficulty ? 1 : 0.2,
-                                                                        filter: star <= song.difficulty
-                                                                            ? (song.difficulty === 3 ? 'drop-shadow(0 0 3px #ff4444)' : 'drop-shadow(0 0 2px #d4af37)')
-                                                                            : 'none',
-                                                                        transition: 'all 0.2s',
-                                                                    }}
-                                                                >
-                                                                    {song.difficulty === 3 ? '💀' : '🍕'}
+                                                        {/* Difficulty Stars & PB in compact row */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                                                {[1, 2, 3].map(star => (
+                                                                    <span
+                                                                        key={star}
+                                                                        style={{
+                                                                            fontSize: '0.58rem',
+                                                                            opacity: star <= song.difficulty ? 1 : 0.2,
+                                                                            filter: star <= song.difficulty
+                                                                                ? (song.difficulty === 3 ? 'drop-shadow(0 0 3px #ff4444)' : 'drop-shadow(0 0 2px #d4af37)')
+                                                                                : 'none',
+                                                                            transition: 'all 0.2s',
+                                                                        }}
+                                                                    >
+                                                                        {song.difficulty === 3 ? '💀' : '🍕'}
+                                                                    </span>
+                                                                ))}
+                                                                <span style={{
+                                                                    fontSize: '0.48rem',
+                                                                    fontFamily: 'monospace',
+                                                                    marginLeft: '2px',
+                                                                    color: song.difficulty === 3 ? '#cc3333' : song.difficulty === 2 ? '#c0852a' : '#27ae60',
+                                                                    fontWeight: 'bold',
+                                                                    letterSpacing: '0.02em',
+                                                                }}>
+                                                                    {song.difficulty === 1
+                                                                        ? (language === 'es' ? 'FÁCIL' : 'EASY')
+                                                                        : song.difficulty === 2
+                                                                            ? (language === 'es' ? 'MEDIO' : 'MEDIUM')
+                                                                            : (language === 'es' ? 'DIFÍCIL' : 'HARD')}
                                                                 </span>
-                                                            ))}
-                                                            <span style={{
-                                                                fontSize: '0.52rem',
-                                                                fontFamily: 'monospace',
-                                                                marginLeft: '3px',
-                                                                color: song.difficulty === 3 ? '#cc3333' : song.difficulty === 2 ? '#c0852a' : '#27ae60',
-                                                                fontWeight: 'bold',
-                                                                letterSpacing: '0.03em',
-                                                            }}>
-                                                                {song.difficulty === 1
-                                                                    ? (language === 'es' ? 'FÁCIL' : 'EASY')
-                                                                    : song.difficulty === 2
-                                                                        ? (language === 'es' ? 'MEDIO' : 'MEDIUM')
-                                                                        : (language === 'es' ? 'DIFÍCIL' : 'HARD')}
-                                                            </span>
-                                                        </div>
+                                                            </div>
 
-                                                        {/* Personal Best */}
-                                                        {personalBests[song.id] ? (
-                                                            <div style={{
-                                                                fontSize: '0.52rem',
-                                                                fontFamily: 'monospace',
-                                                                marginTop: '3px',
-                                                                color: '#8B6914',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '3px',
-                                                            }}>
-                                                                <span>🏆</span>
-                                                                <span style={{ fontWeight: 'bold' }}>{personalBests[song.id].toLocaleString()}</span>
-                                                                <span style={{ opacity: 0.7 }}>{language === 'es' ? 'pts récord' : 'pts best'}</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{
-                                                                fontSize: '0.5rem',
-                                                                fontFamily: 'monospace',
-                                                                marginTop: '3px',
-                                                                color: 'rgba(0,0,0,0.25)',
-                                                                fontStyle: 'italic',
-                                                            }}>
-                                                                {language === 'es' ? '— sin récord aún' : '— no record yet'}
-                                                            </div>
-                                                        )}
+                                                            {personalBests[song.id] ? (
+                                                                <div style={{
+                                                                    fontSize: '0.48rem',
+                                                                    fontFamily: 'monospace',
+                                                                    color: '#8B6914',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '2px',
+                                                                }}>
+                                                                    <span>🏆</span>
+                                                                    <span style={{ fontWeight: 'bold' }}>{personalBests[song.id].toLocaleString()}</span>
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
 
                                                     </div>
 
-
-
                                                     {/* Right side stats */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', gap: '6px', flexShrink: 0, paddingTop: '0.2rem' }}>
-
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '2px', flexShrink: 0 }}>
                                                         {/* BPM Badge */}
                                                         <div style={{
-                                                            fontSize: '0.7rem',
+                                                            fontSize: '0.6rem',
                                                             fontWeight: '900',
                                                             background: isSelected ? '#27AE60' : '#EAE3D1',
                                                             color: isSelected ? 'white' : '#666',
-                                                            padding: '2px 6px',
+                                                            padding: '1px 5px',
                                                             border: isSelected ? '1px solid #1E8449' : '1px solid #D1C5AD',
-                                                            borderRadius: '6px',
-                                                            letterSpacing: '0.05em',
-                                                            boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.3)' : 'none'
+                                                            borderRadius: '5px',
+                                                            letterSpacing: '0.04em',
+                                                            boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.2)' : 'none'
                                                         }}>
                                                             {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
                                                         </div>
 
                                                         {/* Duration */}
                                                         <div style={{
-                                                            fontSize: '0.9rem',
-                                                            fontFamily: 'var(--font-mono)',
-                                                            color: isSelected ? '#1E8449' : '#333',
+                                                            fontSize: '0.72rem',
+                                                            fontFamily: 'var(--font-mono, monospace)',
+                                                            color: isSelected ? '#1E8449' : '#555',
                                                             fontWeight: 'bold'
                                                         }}>
                                                             {mins}:{secs.toString().padStart(2, '0')}
                                                         </div>
-
-                                                        {/* New Record indicator (only when selected and PB exists) */}
-                                                        {isSelected && personalBests[song.id] && (
-                                                            <div style={{
-                                                                background: 'linear-gradient(135deg, rgba(212,175,55,0.2), rgba(212,175,55,0.05))',
-                                                                border: '1px solid rgba(212,175,55,0.5)',
-                                                                borderRadius: '6px',
-                                                                padding: '3px 6px',
-                                                                textAlign: 'center',
-                                                            }}>
-                                                                <div style={{ fontSize: '0.5rem', color: '#8B6914', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                                                                    🏆 BEST
-                                                                </div>
-                                                                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#8B6914', fontFamily: 'monospace' }}>
-                                                                    {personalBests[song.id].toLocaleString()}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Play Count placeholder — shows '▶ Beat it' for no-record songs when selected */}
-                                                        {isSelected && !personalBests[song.id] && song.available && (
-                                                            <div style={{
-                                                                fontSize: '0.52rem',
-                                                                fontFamily: 'monospace',
-                                                                color: '#8B0000',
-                                                                fontWeight: 'bold',
-                                                                letterSpacing: '0.04em',
-                                                                border: '1px dashed rgba(139,0,0,0.4)',
-                                                                borderRadius: '5px',
-                                                                padding: '2px 5px',
-                                                                textAlign: 'center',
-                                                            }}>
-                                                                ▶ {language === 'es' ? 'SIN RÉCORD' : 'NO RECORD'}
-                                                            </div>
-                                                        )}
-
                                                     </div>
 
                                                 </button>
-
                                             );
-
                                         })}
-
                                     </div>
 
 
@@ -6663,7 +6528,7 @@ Ganador: ${payload.winnerAddress}`);
 
                             <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
 
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', width: '100%', padding: 'clamp(0.6rem, 1.5vh, 1rem)', boxSizing: 'border-box' }}>
 
                                     <div className="modal-header">
 
@@ -6779,7 +6644,7 @@ Ganador: ${payload.winnerAddress}`);
                                                 {leaderboard.map((entry, i) => {
                                                     const medals = ['🥇', '🥈', '🥉'];
                                                     const medal = medals[i] ?? `#${i + 1}`;
-                                                    const displayName = entry.nickname || (entry.player_id && entry.player_id.length >= 10 ? `${entry.player_id.slice(0, 6)}…${entry.player_id.slice(-4)}` : 'Chef Anon');
+                                                    const displayName = entry.nickname || (entry.player_id && entry.player_id.length >= 10 ? `${entry.player_id.slice(0, 6)}…${entry.player_id.slice(-4)}` : (entry.player_id || 'Chef Anon'));
                                                     const isMe = entry.nickname === chefName || (userAddress && entry.player_id === userAddress);
                                                     const songName = entry.metadata?.songTitle || entry.metadata?.song_id || '';
 
@@ -6787,24 +6652,39 @@ Ganador: ${payload.winnerAddress}`);
                                                         <div key={i} style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            gap: '0.75rem',
-                                                            padding: '0.75rem 0.5rem',
+                                                            justifyContent: 'space-between',
+                                                            gap: '0.5rem',
+                                                            padding: '0.65rem 0.5rem',
                                                             borderBottom: '1px solid #E0D4B8',
                                                             background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
                                                             borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
+                                                            width: '100%',
+                                                            boxSizing: 'border-box'
                                                         }}>
-                                                            <span style={{ fontSize: '1.25rem', minWidth: '2.2rem', textAlign: 'center' }}>{medal}</span>
-                                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontSize: '0.95rem', fontWeight: isMe ? 'bold' : '600', fontFamily: "'Special Elite', monospace", color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontSize: '1.15rem', width: '2rem', minWidth: '2rem', textAlign: 'center', flexShrink: 0 }}>{medal}</span>
+                                                            <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                                <div
+                                                                    title={displayName}
+                                                                    style={{
+                                                                        fontSize: 'clamp(0.85rem, 2vh, 0.95rem)',
+                                                                        fontWeight: isMe ? 'bold' : '600',
+                                                                        fontFamily: "'Special Elite', monospace",
+                                                                        color: isMe ? '#27ae60' : '#8B0000',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis',
+                                                                        whiteSpace: 'nowrap',
+                                                                        width: '100%'
+                                                                    }}
+                                                                >
                                                                     {displayName}{isMe ? ' (tú)' : ''}
                                                                 </div>
                                                                 {songName && (
-                                                                    <div style={{ fontSize: '0.7rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    <div style={{ fontSize: '0.7rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
                                                                         🎵 {songName}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                                                            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2vh, 1rem)', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace', flexShrink: 0, textAlign: 'right', marginLeft: '0.5rem' }}>
                                                                 {Number(entry.score).toLocaleString()} pts
                                                             </div>
                                                         </div>
@@ -8293,16 +8173,17 @@ Ganador: ${payload.winnerAddress}`);
                         justifyContent: 'flex-start',
                         overflowY: 'auto',
                         WebkitOverflowScrolling: 'touch',
-                        padding: '1rem 0.5rem',
+                        touchAction: 'pan-y',
+                        padding: '0.6rem 0.5rem 2.5rem 0.5rem',
                         boxSizing: 'border-box'
                     }}>
 
                         {/* Popup Card (Receipt Theme V3) */}
                         <div style={{
-                            width: '90%',
+                            width: '92%',
                             maxWidth: '340px',
                             minHeight: 'fit-content',
-                            margin: '2rem 0',
+                            margin: '0.4rem auto 2.5rem auto',
                             background: 'transparent',
                             /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
                             backgroundImage: `
@@ -8317,7 +8198,7 @@ Ganador: ${payload.winnerAddress}`);
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'flex-start',
-                            padding: '1rem 1.25rem',
+                            padding: '0.85rem 1.15rem',
                             color: '#111',
                             position: 'relative',
                             /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
@@ -8325,46 +8206,46 @@ Ganador: ${payload.winnerAddress}`);
                         }}>
 
                             {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '10px 0', flex: 1 }}>
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '6px 0', flex: 1 }}>
 
                                 {/* Header Section */}
-                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.6rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '1.6rem', color: '#8B0000', margin: '0 0 0.25rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '1.5rem', color: '#8B0000', margin: '0 0 0.2rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                         LA FAMIGLIA
                                     </h2>
-                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.85rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.8rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                         {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
                                     </div>
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '0.6rem' }}></div>
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '0.5rem' }}></div>
                                 </div>
 
                                 {/* Score Content */}
                                 <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
 
-                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.1rem', marginBottom: '0.5rem', color: '#111' }}>
+                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.05rem', marginBottom: '0.4rem', color: '#111' }}>
                                         <span>{t.score.toUpperCase()}</span>
-                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.35rem' }}>0</span>
+                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>0</span>
                                     </div>
 
-                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1rem', marginBottom: '0.5rem', color: '#444' }}>
+                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.95rem', marginBottom: '0.4rem', color: '#444' }}>
                                         <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
-                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.15rem' }}>0</span>
+                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>0</span>
                                     </div>
 
-                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '0.6rem 0' }}></div>
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '0.45rem 0' }}></div>
 
                                     {/* Huge Grade Stamp */}
-                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.5rem 0' }}>
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.35rem 0' }}>
                                         <div className="grade" id="resGrade" style={{
-                                            fontSize: 'clamp(3rem, 7vh, 4.2rem)',
+                                            fontSize: 'clamp(2.6rem, 6vh, 3.8rem)',
                                             fontFamily: "'Bangers', cursive",
                                             fontWeight: 'bold',
                                             color: '#cc0000',
                                             opacity: 0.85,
                                             transform: 'rotate(-5deg)',
-                                            border: '4px solid #cc0000',
+                                            border: '3.5px solid #cc0000',
                                             borderRadius: '10px',
-                                            padding: '0 1.2rem',
+                                            padding: '0 1rem',
                                             lineHeight: 1.1,
                                             boxShadow: 'inset 0 0 0 2px #FDFDFD, inset 0 0 0 4px #cc0000', // Double border effect
                                         }}>S</div>
@@ -8372,37 +8253,58 @@ Ganador: ${payload.winnerAddress}`);
 
 
                                     {/* Chef Name & Optional Email Lead Capture */}
-                                    <div style={{ width: '100%', marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', borderTop: '1px dashed #ccc', paddingTop: '0.5rem' }}>
+                                    <div style={{ width: '100%', marginTop: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', borderTop: '1px dashed #ccc', paddingTop: '0.45rem' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                👨‍🍳 {language === 'es' ? 'Nombre del Chef:' : 'Chef Nickname:'}
-                                            </label>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: formErrors.chefName ? '#c0392b' : '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                    👨‍🍳 {language === 'es' ? 'Nombre del Chef *:' : 'Chef Nickname *:'}
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span style={{ fontSize: '0.62rem', color: chefName.length >= 16 ? '#c0392b' : '#777', fontWeight: chefName.length >= 16 ? 'bold' : 'normal', fontFamily: 'monospace' }}>
+                                                        {chefName.length}/16
+                                                    </span>
+                                                    <span style={{ fontSize: '0.62rem', color: formErrors.chefName ? '#c0392b' : '#888', fontWeight: formErrors.chefName ? 'bold' : 'normal' }}>
+                                                        {language === 'es' ? '(Requerido)' : '(Required)'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                             <input
                                                 type="text"
-                                                maxLength={24}
+                                                maxLength={16}
                                                 value={chefName}
                                                 onChange={(e) => {
-                                                    setChefName(e.target.value);
-                                                    try { localStorage.setItem('gp_chef_name', e.target.value); } catch {}
+                                                    const val = e.target.value.slice(0, 16);
+                                                    setChefName(val);
+                                                    if (formErrors.chefName) {
+                                                        setFormErrors(prev => ({ ...prev, chefName: undefined }));
+                                                    }
+                                                    try { localStorage.setItem('gp_chef_name', val); } catch {}
                                                     setIsScoreSaved(false);
                                                 }}
-                                                placeholder={language === 'es' ? 'Tu Apodo / Nickname' : 'Your Nickname'}
+                                                placeholder={language === 'es' ? 'Ingresa tu Apodo' : 'Enter your Nickname'}
                                                 style={{
                                                     width: '100%',
-                                                    padding: '0.45rem 0.6rem',
+                                                    padding: '0.4rem 0.55rem',
                                                     background: '#fff',
-                                                    border: '1.5px solid #8B0000',
+                                                    border: formErrors.chefName ? '2px solid #e74c3c' : '1.5px solid #8B0000',
                                                     borderRadius: '6px',
-                                                    fontSize: '0.9rem',
+                                                    fontSize: '0.88rem',
                                                     fontFamily: "'Special Elite', monospace",
                                                     color: '#111',
-                                                    boxSizing: 'border-box'
+                                                    boxSizing: 'border-box',
+                                                    outline: 'none',
+                                                    boxShadow: formErrors.chefName ? '0 0 0 2px rgba(231,76,60,0.2)' : 'none'
                                                 }}
                                             />
+                                            {formErrors.chefName && (
+                                                <span style={{ fontSize: '0.68rem', color: '#c0392b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                                                    ⚠️ {formErrors.chefName}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: formErrors.playerEmail ? '#c0392b' : '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                                 ✉️ {language === 'es' ? 'Email (Opcional):' : 'Email (Optional):'}
                                             </label>
                                             <input
@@ -8410,27 +8312,38 @@ Ganador: ${payload.winnerAddress}`);
                                                 value={playerEmail}
                                                 onChange={(e) => {
                                                     setPlayerEmail(e.target.value);
+                                                    if (formErrors.playerEmail) {
+                                                        setFormErrors(prev => ({ ...prev, playerEmail: undefined }));
+                                                    }
                                                     try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
                                                     setIsScoreSaved(false);
                                                 }}
                                                 placeholder={language === 'es' ? 'correo@ejemplo.com' : 'email@example.com'}
                                                 style={{
                                                     width: '100%',
-                                                    padding: '0.45rem 0.6rem',
+                                                    padding: '0.4rem 0.55rem',
                                                     background: '#fff',
-                                                    border: '1.5px solid #ccc',
+                                                    border: formErrors.playerEmail ? '2px solid #e74c3c' : '1.5px solid #ccc',
                                                     borderRadius: '6px',
-                                                    fontSize: '0.85rem',
+                                                    fontSize: '0.82rem',
                                                     fontFamily: "'Special Elite', monospace",
                                                     color: '#111',
-                                                    boxSizing: 'border-box'
+                                                    boxSizing: 'border-box',
+                                                    outline: 'none',
+                                                    boxShadow: formErrors.playerEmail ? '0 0 0 2px rgba(231,76,60,0.2)' : 'none'
                                                 }}
                                             />
-                                            <span style={{ fontSize: '0.66rem', color: '#666', fontStyle: 'italic', lineHeight: 1.25, marginTop: '1px' }}>
-                                                {language === 'es'
-                                                    ? '✉️ Opcional: ingresa tu correo para recibir noticias y actualizaciones exclusivas de Rhythm Slice.'
-                                                    : '✉️ Optional: enter your email to receive news and updates on Rhythm Slice.'}
-                                            </span>
+                                            {formErrors.playerEmail ? (
+                                                <span style={{ fontSize: '0.68rem', color: '#c0392b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                                                    ⚠️ {formErrors.playerEmail}
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.64rem', color: '#666', fontStyle: 'italic', lineHeight: 1.2, marginTop: '1px' }}>
+                                                    {language === 'es'
+                                                        ? '✉️ Opcional: ingresa tu correo para recibir noticias y actualizaciones exclusivas.'
+                                                        : '✉️ Optional: enter your email for exclusive updates.'}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <button
@@ -8442,12 +8355,46 @@ Ganador: ${payload.winnerAddress}`);
                                                         : '⚠️ Score points by playing the track to qualify for the leaderboard.');
                                                     return;
                                                 }
+
+                                                // Validar campos obligatorios y formato
+                                                const errors: { chefName?: string; playerEmail?: string } = {};
+                                                const trimmedChef = chefName.trim();
+                                                if (!trimmedChef) {
+                                                    errors.chefName = language === 'es'
+                                                        ? 'Por favor ingresa tu apodo de chef para guardar tu puntuación.'
+                                                        : 'Please enter your chef nickname to save your score.';
+                                                } else if (trimmedChef.length < 2) {
+                                                    errors.chefName = language === 'es'
+                                                        ? 'El apodo debe tener al menos 2 caracteres.'
+                                                        : 'Nickname must be at least 2 characters.';
+                                                } else if (trimmedChef.length > 16) {
+                                                    errors.chefName = language === 'es'
+                                                        ? 'El apodo no puede exceder los 16 caracteres.'
+                                                        : 'Nickname cannot exceed 16 characters.';
+                                                }
+
+                                                const trimmedEmail = playerEmail.trim();
+                                                if (trimmedEmail) {
+                                                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                                    if (!emailRegex.test(trimmedEmail)) {
+                                                        errors.playerEmail = language === 'es'
+                                                            ? 'Ingresa un formato de correo válido (ej: chef@pizza.com).'
+                                                            : 'Please enter a valid email address (e.g. chef@pizza.com).';
+                                                    }
+                                                }
+
+                                                if (Object.keys(errors).length > 0) {
+                                                    setFormErrors(errors);
+                                                    return;
+                                                }
+
+                                                setFormErrors({});
                                                 setIsSavingScore(true);
                                                 try {
                                                     await SpicyCrustService.submitScore({
                                                         playerExternalId: userAddress || 'guest_player',
-                                                        nickname: chefName || 'Chef Don',
-                                                        email: playerEmail || undefined,
+                                                        nickname: trimmedChef,
+                                                        email: trimmedEmail || undefined,
                                                         score: scoreToSave,
                                                         metadata: {
                                                             songId: selectedSong.id,

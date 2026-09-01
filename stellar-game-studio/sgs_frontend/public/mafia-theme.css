@@ -799,12 +799,14 @@ button {
     /* Cream parchment */
     width: 100%;
     max-width: 500px;
-    height: 85%;
+    height: 90%;
+    max-height: 95%;
     /* Sheet style with rounded top */
-    border-radius: 20px 20px 0 0;
-    border: 6px solid #8B0000;
+    border-radius: 18px 18px 0 0;
+    border: 5px solid #8B0000;
     border-bottom: none;
-    padding: 1.5rem;
+    padding: clamp(0.75rem, 2vh, 1.25rem);
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(139, 0, 0, 0.05);
@@ -812,32 +814,34 @@ button {
     color: #333;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
+    overflow-y: auto;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    border-bottom: 3px dashed #8B0000;
-    padding-bottom: 1rem;
+    margin-bottom: clamp(0.6rem, 1.5vh, 1.2rem);
+    border-bottom: 2px dashed #8B0000;
+    padding-bottom: clamp(0.4rem, 1vh, 0.8rem);
 }
 
 .modal-title {
     font-family: var(--font-title);
-    font-size: 1.8rem;
+    font-size: clamp(1.2rem, 3.2vh, 1.7rem);
     color: #8B0000;
     text-transform: uppercase;
     text-shadow: none;
     /* Strip text shadows */
     margin: 0;
+    line-height: 1.1;
 }
 
 .back-btn-circle {
     background: #8B0000;
     color: white;
-    width: 40px;
-    height: 40px;
+    width: clamp(30px, 4vh, 38px);
+    height: clamp(30px, 4vh, 38px);
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -845,8 +849,9 @@ button {
     border: 2px solid #5C0000;
     cursor: pointer;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: clamp(0.9rem, 2vh, 1.15rem);
     transition: transform 0.2s;
+    flex-shrink: 0;
 }
 
 .back-btn-circle:active {
