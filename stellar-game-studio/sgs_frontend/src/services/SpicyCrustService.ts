@@ -91,6 +91,7 @@ export class SpicyCrustService {
       signature: params.signature,
       metadata: {
         ...(params.metadata || {}),
+        chain: typeof localStorage !== 'undefined' ? (localStorage.getItem('gp_active_chain') || 'avalanche') : 'avalanche',
         timestamp: Date.now()
       }
     };

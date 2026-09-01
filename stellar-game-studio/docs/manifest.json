@@ -1,0 +1,30 @@
+{
+  "name": "Rhythm Slice — Guitar Pizza",
+  "short_name": "GuitarPizza",
+  "description": "The Mafia Rhythm Pizza Game on Stellar",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080808",
+  "theme_color": "#D4AF37",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "game/assets/Benny.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "game/assets/benny_transparent.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "game/assets/golden_oven_pixel_1780007767331.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@stellar/stellar-sdk": "^14.4.2"
+    "@privy-io/server-auth": "^1.18.0",
+    "viem": "^2.55.15"
   }
 }

@@ -1,4 +1,5 @@
 import { WalletStandalone } from './WalletStandalone';
+import { ChainSwitcher } from './ChainSwitcher';
 import type { Page } from '../types/navigation';
 import './Layout.css';
 
@@ -13,15 +14,29 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
     <div className={`rs-shell ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>
       <header className="rs-header">
 
-        {/* Brand — left */}
-        <button className="rs-brand" onClick={() => onNavigate('home')} type="button" title="Volver al Inicio">
-          <span className="rs-brand-title">RHYTHM SLICE</span>
-          <span className="rs-brand-tagline">VERIFICHIAMO. NON FIDIAMO.</span>
-        </button>
+        {/* Brand & SpicyCrust Portal Link — left */}
+        <div className="rs-header-left">
+          <a
+            href="https://spicycrust.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rs-spicycrust-btn"
+            title="Volver a SpicyCrust.com / Ver más juegos"
+          >
+            <span className="rs-spicycrust-icon">🍕</span>
+            <span className="rs-spicycrust-text">Volver a SpicyCrust</span>
+            <span className="rs-spicycrust-arrow">↗</span>
+          </a>
+
+          <button className="rs-brand" onClick={() => onNavigate('home')} type="button" title="Volver al Inicio">
+            <span className="rs-brand-title">RHYTHM SLICE</span>
+            <span className="rs-brand-tagline">VERIFICHIAMO. NON FIDIAMO.</span>
+          </button>
+        </div>
 
         {/* Right controls */}
         <div className="rs-header-right">
-          <span className="rs-network-pill">● EN DESARROLLO</span>
+          <ChainSwitcher />
           <WalletStandalone />
           {currentPage !== 'game' && (
             <button

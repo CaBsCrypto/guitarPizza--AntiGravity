@@ -9,10 +9,12 @@ import { ProofGenerator } from '../../zk/ProofGenerator';
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
 
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT, CONTRACT_IDS } from '../../services/StellarContractService';
+import { AvalancheContractService } from '../../services/AvalancheContractService';
 import { multiplayerService } from '../../services/MultiplayerService';
 import { useFriendsStore } from '../../store/friendsSlice';
 
 import { useWallet } from '@/hooks/useWallet';
+import { useSafePrivy, useSafeWallets } from '@/hooks/useSafePrivy';
 
 import { Buffer } from 'buffer';
 
@@ -190,13 +192,8 @@ const TRANSLATIONS = {
 
         engineLevelComplete: '🎉 ¡NIVEL COMPLETADO!',
 
-        engineServiceEnded: 'SERVICIO FINALIZADO',
-        gamepadTitle: 'CONTROL / GAMEPAD (XBOX)',
-        gamepadDesc: 'Soporte plug-and-play para controles de Xbox / PC / PlayStation.',
-        gamepadAutoDetect: 'DETECCIÓN AUTOMÁTICA',
-        gamepadPause: 'Pausa',
-        gamepadBack: 'Volver / Menú',
-        keyboardAlts: 'Teclas alternativas: D, F, J, K o Flechas ⬅️ ⬇️ ⬆️ ➡️'
+        engineServiceEnded: 'SERVICIO FINALIZADO'
+
     },
 
     en: {
@@ -309,13 +306,8 @@ const TRANSLATIONS = {
 
         engineLevelComplete: '🎉 LEVEL COMPLETE!',
 
-        engineServiceEnded: 'SERVICE ENDED',
-        gamepadTitle: 'GAMEPAD / CONTROLLER (XBOX)',
-        gamepadDesc: 'Plug-and-play support for Xbox / PC / PlayStation controllers.',
-        gamepadAutoDetect: 'AUTO-DETECTED',
-        gamepadPause: 'Pause',
-        gamepadBack: 'Back / Menu',
-        keyboardAlts: 'Alternative keys: D, F, J, K or Arrow Keys ⬅️ ⬇️ ⬆️ ➡️'
+        engineServiceEnded: 'SERVICE ENDED'
+
     }
 
 };
@@ -337,6 +329,199 @@ const getDaysBetween = (date1Str: string, date2Str: string) => {
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
 };
+
+interface OnboardingModalProps {
+  showOnboarding: boolean;
+  onboardingStep: number;
+  setOnboardingStep: React.Dispatch<React.SetStateAction<number>>;
+  language: 'es' | 'en';
+  dismissOnboarding: () => void;
+}
+
+function OnboardingModal({
+  showOnboarding,
+  onboardingStep,
+  setOnboardingStep,
+  language,
+  dismissOnboarding,
+}: OnboardingModalProps) {
+  if (!showOnboarding) return null;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'rgba(10,0,0,0.88)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      {/* Card */}
+      <div
+        style={{
+          background: 'linear-gradient(160deg, #1a0000 0%, #0d0000 100%)',
+          border: '2px solid #d4af37',
+          borderRadius: '20px',
+          padding: '2rem 1.5rem 1.5rem',
+          maxWidth: '320px',
+          width: '100%',
+          boxShadow: '0 30px 60px rgba(0,0,0,0.8), 0 0 40px rgba(212,175,55,0.15)',
+          textAlign: 'center',
+          position: 'relative',
+        }}
+      >
+        {/* Gold accent top line */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: '20%',
+            right: '20%',
+            height: '3px',
+            background: 'linear-gradient(90deg, transparent, #d4af37, transparent)',
+            borderRadius: '0 0 3px 3px',
+          }}
+        />
+
+        {/* Step dots */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '1.5rem' }}>
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              style={{
+                width: i === onboardingStep ? '20px' : '7px',
+                height: '7px',
+                borderRadius: '4px',
+                background: i === onboardingStep ? '#d4af37' : 'rgba(212,175,55,0.25)',
+                transition: 'all 0.3s ease',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Step content */}
+        {onboardingStep === 0 && (
+          <>
+            <div style={{ fontSize: '3rem', marginBottom: '0.8rem', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>🎸🍕</div>
+            <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '0.06em', marginBottom: '0.6rem', textTransform: 'uppercase' }}>
+              {language === 'es' ? 'Bienvenido, Mafioso' : 'Welcome, Mafioso'}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#ccc', lineHeight: '1.55', fontFamily: 'var(--font-body)' }}>
+              {language === 'es'
+                ? 'Guitar Pizza es un juego de ritmo on-chain. Cocina pizzas al ritmo de la música, acumula puntos y gana recompensas reales en la blockchain de Stellar.'
+                : 'Guitar Pizza is an on-chain rhythm game. Cook pizzas to the beat, rack up points, and earn real rewards on the Stellar blockchain.'}
+            </div>
+          </>
+        )}
+
+        {onboardingStep === 1 && (
+          <>
+            <div style={{ fontSize: '3rem', marginBottom: '0.8rem', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>⛓️🏆</div>
+            <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '0.06em', marginBottom: '0.6rem', textTransform: 'uppercase' }}>
+              {language === 'es' ? 'Gana $SLICE & NFTs' : 'Earn $SLICE & NFTs'}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#ccc', lineHeight: '1.55', fontFamily: 'var(--font-body)' }}>
+              {language === 'es'
+                ? 'Cada partida te acerca a tokens $SLICE y NFTs de ingredientes raros. Completa misiones diarias, rompe récords y gana Tickets de Torneo.'
+                : 'Every session brings you closer to $SLICE tokens and rare ingredient NFTs. Complete daily quests, break records, and earn Tournament Tickets.'}
+            </div>
+            {/* Mini reward showcase */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.8rem', marginTop: '0.8rem' }}>
+              {['🍄 Truffle', '🍇 Grape', '🎟️ Ticket', '🔥 Streak'].map((label) => (
+                <div key={label} style={{ fontSize: '0.55rem', color: '#d4af37', fontFamily: 'monospace', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.2rem' }}>{label.split(' ')[0]}</div>
+                  <div style={{ opacity: 0.7 }}>{label.split(' ')[1]}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {onboardingStep === 2 && (
+          <>
+            <div style={{ fontSize: '3rem', marginBottom: '0.8rem', filter: 'drop-shadow(0 0 12px rgba(212,175,55,0.4))' }}>🔑✨</div>
+            <div style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', color: '#d4af37', letterSpacing: '0.06em', marginBottom: '0.6rem', textTransform: 'uppercase' }}>
+              {language === 'es' ? 'Conecta tu Wallet' : 'Connect your Wallet'}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#ccc', lineHeight: '1.55', fontFamily: 'var(--font-body)' }}>
+              {language === 'es'
+                ? 'Conecta una wallet Stellar (Freighter, Albedo, xBull) para guardar tus logros on-chain. ¡Puedes jugar sin wallet, pero no ganarás tokens!'
+                : 'Connect a Stellar wallet (Freighter, Albedo, xBull) to save your achievements on-chain. You can play without one, but you won\'t earn tokens!'}
+            </div>
+            <div style={{ marginTop: '1rem', fontSize: '0.6rem', fontFamily: 'monospace', color: '#888', border: '1px dashed rgba(212,175,55,0.3)', borderRadius: '8px', padding: '0.5rem' }}>
+              {language === 'es' ? '💡 Red: Stellar Testnet (gratis para probar)' : '💡 Network: Stellar Testnet (free to try)'}
+            </div>
+          </>
+        )}
+
+        {/* Navigation buttons */}
+        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.8rem', justifyContent: 'center' }}>
+          {/* Skip */}
+          <button
+            onClick={dismissOnboarding}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '8px',
+              color: '#888',
+              fontSize: '0.72rem',
+              fontFamily: 'monospace',
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              letterSpacing: '0.05em',
+            }}
+          >
+            {language === 'es' ? 'Saltar' : 'Skip'}
+          </button>
+
+          {/* Next / Done */}
+          <button
+            onClick={() => {
+              if (onboardingStep < 2) {
+                setOnboardingStep((s) => s + 1);
+              } else {
+                dismissOnboarding();
+              }
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #d4af37, #8B6914)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#1a0000',
+              fontSize: '0.78rem',
+              fontWeight: 'bold',
+              fontFamily: 'var(--font-display)',
+              padding: '0.55rem 1.4rem',
+              cursor: 'pointer',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              boxShadow: '0 4px 12px rgba(212,175,55,0.4)',
+            }}
+          >
+            {onboardingStep < 2
+              ? language === 'es'
+                ? 'Siguiente →'
+                : 'Next →'
+              : language === 'es'
+              ? '¡Empezar! 🍕'
+              : "Let's Cook! 🍕"}
+          </button>
+        </div>
+
+        {/* Step counter */}
+        <div style={{ marginTop: '0.8rem', fontSize: '0.52rem', color: 'rgba(255,255,255,0.25)', fontFamily: 'monospace', letterSpacing: '0.06em' }}>
+          {onboardingStep + 1} / 3 — GUITAR PIZZA • ARCADE EDITION
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompleteProp, onBack, embed = false }: GuitarPizzaGameProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -403,6 +588,43 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     useEffect(() => { getContractSignerRef.current = getContractSigner; }, [getContractSigner]);
 
 
+    // Privy & Avalanche Onboarding State
+    const { login: privyLogin, authenticated: privyAuthenticated, getAccessToken } = useSafePrivy();
+    const { wallets } = useSafeWallets();
+    const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+    // Auto-mint Starter Oven NFT #0 upon first Privy login on Avalanche
+    useEffect(() => {
+        if (privyAuthenticated && userAddress && userAddress.startsWith('0x')) {
+            const hasClaimed = localStorage.getItem(`gp_starter_claimed_${userAddress}`);
+            if (!hasClaimed) {
+                (async () => {
+                    let token: string | null = null;
+                    try {
+                        if (typeof getAccessToken === 'function') {
+                            token = await getAccessToken();
+                        }
+                    } catch (e) {}
+
+                    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                    fetch('/api/drop-oven', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ playerAddress: userAddress, style: 6 })
+                    }).then(res => res.json()).then(data => {
+                        if (data.success) {
+                            localStorage.setItem(`gp_starter_claimed_${userAddress}`, 'true');
+                            localStorage.setItem('gp_starter_oven', JSON.stringify({ tokenId: data.tokenId || 1, styleId: 6 }));
+                            window.dispatchEvent(new Event('collection-updated'));
+                        }
+                    }).catch(e => console.error("Starter oven auto-mint error:", e));
+                })();
+            }
+        }
+    }, [privyAuthenticated, userAddress]);
+
     // UI State
 
     const [showSettings, setShowSettings] = useState(false);
@@ -421,7 +643,18 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     const t = TRANSLATIONS[language];
 
+    // New Player Onboarding — shows once on first visit
+    const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+        try { return !localStorage.getItem('gp_onboarding_done'); }
+        catch { return false; }
+    });
 
+    const [onboardingStep, setOnboardingStep] = useState(0);
+
+    const dismissOnboarding = () => {
+        setShowOnboarding(false);
+        try { localStorage.setItem('gp_onboarding_done', '1'); } catch { /* noop */ }
+    };
 
 
 
@@ -701,7 +934,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     // Profile & Lead Capture State
     const [chefName, setChefName] = useState(() => {
-        try { return localStorage.getItem('gp_chef_name') || "Chef Don"; } catch { return "Chef Don"; }
+        try { return localStorage.getItem('gp_chef_name') || ""; } catch { return ""; }
     });
     const [xHandle, setXHandle] = useState(() => {
         try { return localStorage.getItem('gp_x_handle') || ""; } catch { return ""; }
@@ -712,6 +945,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     const [playerEmail, setPlayerEmail] = useState(() => {
         try { return localStorage.getItem('gp_player_email') || ""; } catch { return ""; }
     });
+    const [formErrors, setFormErrors] = useState<{ chefName?: string; playerEmail?: string }>({});
     const [isSavingScore, setIsSavingScore] = useState(false);
     const [isScoreSaved, setIsScoreSaved] = useState(false);
     const [lastScore, setLastScore] = useState<number>(0);
@@ -1181,65 +1415,52 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             const fetchOnChainData = async () => {
                 if (document.hidden) return; // Skip if tab is inactive
                 try {
-                    const [balance, staked, tickets, lpBal, stakedLpBal, onChainCheckIn, lpLastHarvestVal] = await Promise.all([
-                        StellarContractService.getSliceBalance(userAddress),
-                        StellarContractService.getStakedBalance(userAddress),
-                        StellarContractService.getTournamentTickets(userAddress),
-                        StellarContractService.getDefindexLpBalance(userAddress),
-                        StellarContractService.getLpStakedBalance(userAddress),
-                        StellarContractService.getDailyCheckIn(userAddress),
-                        StellarContractService.getLpStakingLastHarvest(userAddress),
-                        fetchRefrigeratorData()
-                    ]);
+                    if (userAddress.startsWith('0x')) {
+                        const [sliceBal, stakeInfo, userSlots, ingredientBals] = await Promise.all([
+                            AvalancheContractService.getSliceBalance(userAddress as any),
+                            AvalancheContractService.getStakeInfo(userAddress as any),
+                            AvalancheContractService.getUserSlots(userAddress as any),
+                            AvalancheContractService.getIngredientBalances(userAddress as any)
+                        ]);
 
-                    setSliceBalance(balance);
-                    setStakedSlice(staked);
-                    setTicketBalance(tickets);
-                    setDefindexLpBalance(lpBal);
-                    setStakedLp(stakedLpBal);
-                    setLpLastHarvest(lpLastHarvestVal);
+                        setSliceBalance(sliceBal);
+                        setStakedSlice(stakeInfo.amount);
+                        setIngredients(ingredientBals);
 
-                    if (onChainCheckIn) {
-                        const dateStr = onChainCheckIn.lastCheckinTimestamp > 0 
-                            ? new Date(onChainCheckIn.lastCheckinTimestamp * 1000).toISOString().split('T')[0]
-                            : '';
-                        if (dateStr) {
-                            setLastCheckInDate(dateStr);
-                            localStorage.setItem('gp_last_check_in_date', dateStr);
-                        }
-                        setCheckInStreak(onChainCheckIn.streak);
-                        localStorage.setItem('gp_check_in_streak', onChainCheckIn.streak.toString());
-                    }
-
-                    if (view === 'oven') {
-                        // Fetch slot states in parallel from Soroban PizzaBaking contract
-                        const updatedSlots = [...ovenSlots];
-                        const slotPromises = updatedSlots.map(async (slot) => {
-                            const onChainSlot = await StellarContractService.getBakingSlot(userAddress, slot.id);
-                            if (onChainSlot) {
+                        if (view === 'oven' && userSlots.length > 0) {
+                            const updated = userSlots.map(s => {
+                                const isFinished = s.startTime > 0 && Date.now() >= (s.startTime + s.duration) * 1000;
                                 return {
-                                    id: slot.id,
-                                    isLocked: onChainSlot.locked,
-                                    status: (onChainSlot.locked 
-                                        ? 'idle' 
-                                        : (onChainSlot.startTime === 0 
-                                            ? 'idle' 
-                                            : (Date.now() >= onChainSlot.startTime + onChainSlot.duration 
-                                                ? 'completed' 
-                                                : 'baking'))) as 'idle' | 'baking' | 'completed',
-                                    pizzaType: (onChainSlot.recipeId === 1 
-                                        ? 'margherita' 
-                                        : (onChainSlot.recipeId === 2 ? 'pepperoni' : (onChainSlot.recipeId === 3 ? 'special' : (onChainSlot.recipeId === 4 ? 'tartufo' : (onChainSlot.recipeId === 5 ? 'dolce' : (onChainSlot.recipeId === 6 ? 'mafia' : null)))))) as 'margherita' | 'pepperoni' | 'special' | 'tartufo' | 'dolce' | 'mafia' | null,
-                                    startTime: onChainSlot.startTime,
-                                    duration: onChainSlot.duration,
-                                    ovenNftId: onChainSlot.ovenNftId,
-                                    basePayout: onChainSlot.basePayout
+                                    id: s.slotId,
+                                    isLocked: s.isLocked,
+                                    status: (s.isLocked ? 'idle' : (s.startTime === 0 ? 'idle' : (isFinished ? 'completed' : 'baking'))) as 'idle' | 'baking' | 'completed',
+                                    pizzaType: (s.recipeId === 1 ? 'margherita' : (s.recipeId === 2 ? 'pepperoni' : (s.recipeId === 3 ? 'special' : (s.recipeId === 4 ? 'tartufo' : (s.recipeId === 5 ? 'dolce' : (s.recipeId === 6 ? 'mafia' : null)))))) as any,
+                                    startTime: s.startTime * 1000,
+                                    duration: s.duration * 1000,
+                                    ovenNftId: s.ovenNftId,
+                                    basePayout: s.basePayout
                                 };
-                            }
-                            return slot;
-                        });
-                        const slotsResults = await Promise.all(slotPromises);
-                        setOvenSlots(slotsResults);
+                            });
+                            setOvenSlots(updated);
+                        }
+                    } else {
+                        const [balance, staked, tickets, lpBal, stakedLpBal, onChainCheckIn, lpLastHarvestVal] = await Promise.all([
+                            StellarContractService.getSliceBalance(userAddress),
+                            StellarContractService.getStakedBalance(userAddress),
+                            StellarContractService.getTournamentTickets(userAddress),
+                            StellarContractService.getDefindexLpBalance(userAddress),
+                            StellarContractService.getLpStakedBalance(userAddress),
+                            StellarContractService.getDailyCheckIn(userAddress),
+                            StellarContractService.getLpStakingLastHarvest(userAddress),
+                            fetchRefrigeratorData()
+                        ]);
+
+                        setSliceBalance(balance);
+                        setStakedSlice(staked);
+                        setTicketBalance(tickets);
+                        setDefindexLpBalance(lpBal);
+                        setStakedLp(stakedLpBal);
+                        setLpLastHarvest(lpLastHarvestVal);
                     }
                 } catch (e) {
                     console.error("Failed to load on-chain balances/oven data", e);
@@ -1968,50 +2189,50 @@ Ganador: ${payload.winnerAddress}`);
 
         if (userAddress) {
 
-            try {
-
-                const recipeId = recipe === 'margherita' ? 1 : (recipe === 'pepperoni' ? 2 : (recipe === 'special' ? 3 : (recipe === 'tartufo' ? 4 : (recipe === 'dolce' ? 5 : 6))));
-
-                const signer = getContractSignerRef.current();
-
-                const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : null;
-
-                const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
-
-                const result = await StellarContractService.startBake(
-
-                    userAddress,
-
-                    slotId,
-
-                    recipeId,
-
-                    rawDurationSec,
-
-                    basePayoutRaw,
-
-                    ovenNftId,
-
-                    fuelType,
-
-                    signer
-
-                );
-
-                if (result.success) {
-
-                    addLog(`🔥 On-chain baking started successfully! Hash: ${result.txHash}`);
-
-                } else {
-
-                    console.warn("Soroban bake transaction failed, using local offline mode");
-
+            if (userAddress.startsWith('0x')) {
+                try {
+                    const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
+                    if (activeWallet) {
+                        const ethereumProvider = await activeWallet.getEthereumProvider();
+                        const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
+                        const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : 0;
+                        const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
+                        const txHash = await AvalancheContractService.startBaking(
+                            walletClient,
+                            userAddress as any,
+                            slotId,
+                            recipeId,
+                            rawDurationSec,
+                            basePayoutRaw,
+                            ovenNftId,
+                            fuelType
+                        );
+                        addLog(`🔥 Avalanche Fuji baking started! Hash: ${txHash}`);
+                    }
+                } catch (avaxErr) {
+                    console.error("Avalanche startBaking error:", avaxErr);
                 }
-
-            } catch (err) {
-
-                console.error("Soroban startBake exception", err);
-
+            } else {
+                try {
+                    const signer = getContractSignerRef.current();
+                    const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : null;
+                    const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
+                    const result = await StellarContractService.startBake(
+                        userAddress,
+                        slotId,
+                        recipeId,
+                        rawDurationSec,
+                        basePayoutRaw,
+                        ovenNftId,
+                        fuelType,
+                        signer
+                    );
+                    if (result.success) {
+                        addLog(`🔥 On-chain baking started successfully! Hash: ${result.txHash}`);
+                    }
+                } catch (err) {
+                    console.error("Soroban startBake exception", err);
+                }
             }
 
         }
@@ -2143,25 +2364,29 @@ Ganador: ${payload.winnerAddress}`);
 
 
         if (userAddress) {
-
-            try {
-
-                const signer = getContractSignerRef.current();
-
-                const result = await StellarContractService.claimBake(userAddress, slotId, signer);
-
-                if (result.success) {
-
-                    addLog(`🍕 Baking slot claim confirmed on-chain!`);
-
+            if (userAddress.startsWith('0x')) {
+                try {
+                    const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
+                    if (activeWallet) {
+                        const ethereumProvider = await activeWallet.getEthereumProvider();
+                        const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
+                        const txHash = await AvalancheContractService.claimPizza(walletClient, userAddress as any, slotId);
+                        addLog(`🍕 Baking slot claim confirmed on Avalanche Fuji! Hash: ${txHash}`);
+                    }
+                } catch (avaxErr) {
+                    console.error("Avalanche claimBake error:", avaxErr);
                 }
-
-            } catch (err) {
-
-                console.error("Failed to claim bake on-chain", err);
-
+            } else {
+                try {
+                    const signer = getContractSignerRef.current();
+                    const result = await StellarContractService.claimBake(userAddress, slotId, signer);
+                    if (result.success) {
+                        addLog(`🍕 Baking slot claim confirmed on-chain!`);
+                    }
+                } catch (err) {
+                    console.error("Failed to claim bake on-chain", err);
+                }
             }
-
         }
 
 
@@ -2173,16 +2398,20 @@ Ganador: ${payload.winnerAddress}`);
 
 
     const [selectedSong, setSelectedSong] = useState<Song>(() => SONGS.find(s => s.available) ?? SONGS[0]);
-
     const selectedSongRef = useRef(selectedSong);
-
     useEffect(() => { selectedSongRef.current = selectedSong; }, [selectedSong]);
+    const autoStartOnSongChangeRef = useRef(false);
 
     // ── Audio Preview for Song Picker ──────────────────────────────────────────
     const [previewingSongId, setPreviewingSongId] = useState<string | null>(null);
     const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+    const previewTimerRef = useRef<any>(null);
 
     const stopPreviewAudio = useCallback(() => {
+        if (previewTimerRef.current) {
+            clearTimeout(previewTimerRef.current);
+            previewTimerRef.current = null;
+        }
         if (previewAudioRef.current) {
             try {
                 previewAudioRef.current.pause();
@@ -2195,31 +2424,37 @@ Ganador: ${payload.winnerAddress}`);
     }, []);
 
     const playSongPreview = useCallback((song: Song) => {
+        // Toggle off if already previewing this song
+        if (previewingSongId === song.id && previewAudioRef.current) {
+            stopPreviewAudio();
+            return;
+        }
+
         stopPreviewAudio();
         if (isMutedRef.current || !song.available) return;
 
         try {
-            const base = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
-            const relative = songPath(song).replace(/^\/+/, '');
-            const audioSrc = `${base}/${relative}`.replace('//', '/');
+            const base = (import.meta.env.BASE_URL || '/');
+            const cleanBase = base.endsWith('/') ? base : `${base}/`;
+            const cleanRel = songPath(song).replace(/^\/+/, '');
+            const audioSrc = `${cleanBase}${cleanRel}`.replace(/\/+/g, '/');
 
             const audio = new Audio(encodeURI(audioSrc));
-            audio.volume = 0.5;
+            audio.volume = 0.55;
 
-            if (song.start && song.start > 0) {
-                audio.addEventListener('loadedmetadata', () => {
-                    try {
-                        audio.currentTime = song.start;
-                    } catch (e) {}
-                }, { once: true });
-            }
+            // Start from song.start safely once audio is ready
+            audio.addEventListener('canplay', () => {
+                if (song.start && song.start > 0 && audio.currentTime < song.start) {
+                    try { audio.currentTime = song.start; } catch (e) {}
+                }
+            }, { once: true });
 
             audio.addEventListener('play', () => {
                 setPreviewingSongId(song.id);
             });
 
             audio.addEventListener('ended', () => {
-                setPreviewingSongId(null);
+                stopPreviewAudio();
             });
 
             audio.addEventListener('pause', () => {
@@ -2236,11 +2471,28 @@ Ganador: ${payload.winnerAddress}`);
                 });
             }
             previewAudioRef.current = audio;
+
+            // Auto stop preview after 15 seconds with gentle fade
+            previewTimerRef.current = setTimeout(() => {
+                if (previewAudioRef.current) {
+                    let vol = previewAudioRef.current.volume;
+                    const fadeInterval = setInterval(() => {
+                        vol = Math.max(0, vol - 0.1);
+                        if (previewAudioRef.current) previewAudioRef.current.volume = vol;
+                        if (vol <= 0) {
+                            clearInterval(fadeInterval);
+                            stopPreviewAudio();
+                        }
+                    }, 100);
+                } else {
+                    stopPreviewAudio();
+                }
+            }, 15000);
         } catch (e) {
             console.warn('[SongPicker] Failed to play preview audio:', e);
             setPreviewingSongId(null);
         }
-    }, [stopPreviewAudio]);
+    }, [previewingSongId, stopPreviewAudio]);
 
     // Play preview when opening songpicker or stop when leaving
     useEffect(() => {
@@ -2470,85 +2722,77 @@ Ganador: ${payload.winnerAddress}`);
 
 
     // Called when the player clicks "Cook Again" on the results screen.
-
     // Hides the results panel, resets UI state, starts a new on-chain session
-
     // (async, non-blocking), then tells the engine to begin a fresh game.
-
     const handleCookAgain = async () => {
-
         const results = document.getElementById('results');
-
         if (results) results.style.display = 'none';
 
         setIsVerifying(false);
-
         setProofStatus('none');
-
         setOnChainScore(null);
-
         setLbSubmitStatus('none');
-
-
+        setIsScoreSaved(false);
+        setFormErrors({});
 
         // Start the game immediately — don't block on the on-chain call
-
         if (engineRef.current?.startGame) {
-
             engineRef.current.startGame();
-
         }
-
-
 
         // Open a fresh on-chain session in the background
-
         const localSessionId = Math.floor(Math.random() * 1000000);
-
         onChainSessionIdRef.current = localSessionId;
-
         try {
-
             const signer = getContractSignerRef.current();
-
             const startResult = await StellarContractService.startGame(userAddress, localSessionId, 1, signer, 1);
-
             onChainSessionIdRef.current = startResult.sessionId;
-
             addLog(`[GuitarPizza] On-chain session ready (replay): ${startResult.sessionId}`);
-
         } catch {
-
             console.warn("[GuitarPizza] No wallet for replay on-chain session — skipping.");
-
         }
-
     };
-
-
 
     const handleNextLevel = () => {
-
-        // Unlock Level 2
-
+        // Unlock Level 2 (Rare Pizzas - Hard Mode)
         const song2 = SONGS.find(s => s.id === 'rare-pizzas');
-
         if (song2) {
-
             song2.available = true;
-
+            selectedSongRef.current = song2;
             setSelectedSong(song2);
-
         }
 
-        handleCookAgain(); // uses the new selectedSong in the next init
+        const results = document.getElementById('results');
+        if (results) results.style.display = 'none';
 
+        setIsVerifying(false);
+        setProofStatus('none');
+        setOnChainScore(null);
+        setLbSubmitStatus('none');
+        setIsScoreSaved(false);
+        setFormErrors({});
+
+        // Mark flag to automatically begin gameplay as soon as the Level 2 song finishes mounting
+        autoStartOnSongChangeRef.current = true;
+
+        if (engineRef.current?.cleanup) {
+            try { engineRef.current.cleanup(); } catch (e) {}
+            engineRef.current = null;
+        }
+
+        // Register on-chain session for level 2
+        const localSessionId = Math.floor(Math.random() * 1000000);
+        onChainSessionIdRef.current = localSessionId;
+        try {
+            const signer = getContractSignerRef.current();
+            StellarContractService.startGame(userAddress, localSessionId, 2, signer, 1).then(startResult => {
+                onChainSessionIdRef.current = startResult.sessionId;
+                addLog(`[GuitarPizza] On-chain session ready (Level 2): ${startResult.sessionId}`);
+            }).catch(() => {});
+        } catch {}
     };
 
-
-
     // Load leaderboard on mount
-
     useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
 
 
@@ -2647,7 +2891,7 @@ Ganador: ${payload.winnerAddress}`);
 
                     // Append version parameter to bust aggressive browser cache of public assets
 
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=8`.replace('//', '/');
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=6`.replace('//', '/');
 
 
 
@@ -2859,32 +3103,19 @@ Ganador: ${payload.winnerAddress}`);
                         setIsVerifying(false);
                         setProofStatus('none');
 
-                        // Enviar score automáticamente en segundo plano a la API
+                        setIsScoreSaved(false);
+                        setFormErrors({});
+
+                        // Refresh leaderboard cache in background without marking user manual save
                         const engineStats = (inputLog as any)?.stats ?? {};
                         const hits = engineStats.totalHits ?? 0;
                         const perfects = engineStats.perfectHits ?? 0;
                         const pizzas = engineStats.pizzasCompleted ?? 0;
 
                         try {
-                            SpicyCrustService.submitScore({
-                                playerExternalId: userAddress || 'guest_player',
-                                nickname: chefName || localStorage.getItem('gp_chef_name') || 'Chef Don',
-                                email: playerEmail || localStorage.getItem('gp_player_email') || undefined,
-                                score: finalScore,
-                                metadata: {
-                                    songId: selectedSong.id,
-                                    songTitle: selectedSong.title,
-                                    difficulty: selectedSong.difficulty === 3 ? 'Hard' : (selectedSong.difficulty === 2 ? 'Medium' : 'Easy'),
-                                    hits: hits,
-                                    perfectHits: perfects,
-                                    pizzas: pizzas
-                                }
-                            }).then(() => {
-                                setIsScoreSaved(true);
-                                loadLeaderboard();
-                            });
+                            loadLeaderboard();
                         } catch (e) {
-                            console.warn('[GuitarPizza] Background submit score error:', e);
+                            console.warn('[GuitarPizza] Refresh leaderboard error:', e);
                         }
 
                         if (isPvp) {
@@ -2895,25 +3126,25 @@ Ganador: ${payload.winnerAddress}`);
                         onGameComplete(finalScore);
                     }, resolvedSongUrl, t);
 
-
-
                     if (typeof result === 'function') {
-
                         engineRef.current = { cleanup: result, setVolume: () => { } };
-
                     } else {
-
                         engineRef.current = result;
-
                     }
 
-
-
                     setStatus('');
-
                     setBooting(false);
-
                     addLog("[GuitarPizza] Game initialized successfully.");
+
+                    // If Level 2 transition was requested, auto start the game immediately
+                    if (autoStartOnSongChangeRef.current) {
+                        autoStartOnSongChangeRef.current = false;
+                        setTimeout(() => {
+                            if (engineRef.current?.startGame) {
+                                engineRef.current.startGame();
+                            }
+                        }, 200);
+                    }
 
                 } catch (e) {
 
@@ -2998,29 +3229,23 @@ Ganador: ${payload.winnerAddress}`);
 
 
     const handleBackToLobby = () => {
-        // 1. Reset engine state cleanly to STATE.MENU (stops loop, audio, and clears game tracks)
-        if (engineRef.current && typeof (engineRef.current as any).resetToMenu === 'function') {
-            (engineRef.current as any).resetToMenu();
-        } else if (typeof (window as any).resetGuitarPizzaToMenu === 'function') {
-            (window as any).resetGuitarPizzaToMenu();
-        } else {
-            const results = document.getElementById('results');
-            if (results) results.style.display = 'none';
 
-            const overlay = document.getElementById('overlay');
-            if (overlay) overlay.style.display = 'flex';
-        }
+        const results = document.getElementById('results');
 
-        // 2. Ensure the canvas is wiped clean of any residual gameplay or dropped text
-        if (canvasRef.current) {
-            const ctx = canvasRef.current.getContext('2d');
-            if (ctx) {
-                ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            }
-        }
+        if (results) results.style.display = 'none';
+
+
+
+        const overlay = document.getElementById('overlay');
+
+        if (overlay) overlay.style.display = 'flex';
+
+
 
         setView('lobby');
+
         loadLeaderboard(); // refresh after returning from a game
+
     };
 
 
@@ -3028,76 +3253,61 @@ Ganador: ${payload.winnerAddress}`);
     return (
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
             {/* Game Container */}
-            <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%' }}>
+            <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, height: '100%', padding: '0.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%', boxSizing: 'border-box' }}>
+                {/* Global Portal Link: Volver a SpicyCrust */}
+                <a
+                    href="https://spicycrust.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        zIndex: 100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        background: 'rgba(20, 5, 5, 0.85)',
+                        border: '1.5px solid #8B0000',
+                        borderRadius: '20px',
+                        color: '#FFF8DC',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold',
+                        textDecoration: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(8px)',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                        fontFamily: "'Special Elite', monospace"
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#DAA520'; e.currentTarget.style.color = '#DAA520'; e.currentTarget.style.transform = 'scale(1.04)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#8B0000'; e.currentTarget.style.color = '#FFF8DC'; e.currentTarget.style.transform = 'scale(1)'; }}
+                    title={language === 'es' ? 'Volver a SpicyCrust.com' : 'Back to SpicyCrust.com'}
+                >
+                    <span style={{ fontSize: '0.95rem' }}>🍕</span>
+                    <span>{language === 'es' ? 'SpicyCrust' : 'SpicyCrust'}</span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--ph-gold)' }}>↗</span>
+                </a>
 
                 <div
                     id="game-device-screen"
-                    className="game-container game-frame phone-device-frame"
+                    className="game-container game-frame"
                     ref={containerRef}
                     style={{
-                        height: isGameFullscreen ? '100vh' : 'calc(100% - 0.4rem)',
-                        maxHeight: isGameFullscreen ? '100vh' : 'calc(100vh - 62px)',
-                        aspectRatio: '9 / 16',
+                        height: '100%',
+                        maxHeight: '100%',
+                        maxWidth: '100%',
                         width: 'auto',
-                        maxWidth: isGameFullscreen ? '100vw' : 'calc((100vh - 62px) * 9 / 16)',
+                        aspectRatio: '9/16',
                         position: 'relative',
                         overflow: 'hidden',
-                        border: isGameFullscreen ? 'none' : '8px solid #141210',
-                        outline: isGameFullscreen ? 'none' : '2px solid rgba(212, 175, 55, 0.45)',
-                        borderRadius: isGameFullscreen ? '0' : '34px',
-                        boxShadow: isGameFullscreen
-                            ? 'none'
-                            : '0 25px 60px -10px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 0 0 2px #000',
-                        boxSizing: 'border-box',
+                        border: '5px solid #1a0808',
+                        borderRadius: '20px',
+                        boxShadow: '0 0 40px rgba(0,0,0,0.85), 0 0 15px rgba(212,175,55,0.2)',
+                        boxSizing: 'border-box'
                     }}
                 >
-                    {/* ── Smartphone Dynamic Island / Notch ── */}
-                    {!isGameFullscreen && (
-                        <div
-                            className="phone-notch-island"
-                            style={{
-                                position: 'absolute',
-                                top: '8px',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                width: '88px',
-                                height: '18px',
-                                backgroundColor: '#0a0a0a',
-                                borderRadius: '20px',
-                                zIndex: 120,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '0 8px',
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-                                pointerEvents: 'none',
-                                border: '1px solid rgba(255,255,255,0.08)'
-                            }}
-                        >
-                            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#182438', border: '1px solid #333' }} />
-                            <div style={{ width: '32px', height: '3px', borderRadius: '2px', background: '#222' }} />
-                            <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#0e1820' }} />
-                        </div>
-                    )}
-
-                    {/* ── Smartphone Home Indicator Bar ── */}
-                    {!isGameFullscreen && (
-                        <div
-                            className="phone-home-indicator"
-                            style={{
-                                position: 'absolute',
-                                bottom: '6px',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                width: '90px',
-                                height: '4px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.45)',
-                                borderRadius: '2px',
-                                zIndex: 120,
-                                pointerEvents: 'none'
-                            }}
-                        />
-                    )}
 
 
 
@@ -3154,10 +3364,12 @@ Ganador: ${payload.winnerAddress}`);
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            padding: '2.5rem 1.5rem',
+                            padding: 'clamp(0.8rem, 2.5vh, 1.8rem) clamp(0.8rem, 2vw, 1.4rem)',
+                            boxSizing: 'border-box',
                             zIndex: 1500,
                             textAlign: 'center',
-                            overflow: 'hidden'
+                            overflowY: 'auto',
+                            gap: 'clamp(0.4rem, 1.5vh, 1rem)'
                         }}>
                             <style>{`
                                 @keyframes floatSlow {
@@ -3186,11 +3398,11 @@ Ganador: ${payload.winnerAddress}`);
                             <div style={{
                                 width: '100%',
                                 borderBottom: '2px double rgba(212, 175, 55, 0.5)',
-                                paddingBottom: '0.5rem',
+                                paddingBottom: '0.3rem',
                                 color: '#d4af37',
-                                fontSize: '0.75rem',
+                                fontSize: 'clamp(0.6rem, 1.4vh, 0.75rem)',
                                 fontFamily: 'monospace',
-                                letterSpacing: '0.3em',
+                                letterSpacing: '0.25em',
                                 fontWeight: 'bold',
                                 textTransform: 'uppercase',
                                 textShadow: '0 0 8px rgba(212, 175, 55, 0.4)',
@@ -3204,10 +3416,10 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 alignItems: 'center', 
-                                gap: '0.6rem',
+                                gap: '0.4rem',
                                 zIndex: 10,
                                 border: '2px solid rgba(212, 175, 55, 0.4)',
-                                padding: '1.2rem 1.5rem',
+                                padding: 'clamp(0.6rem, 1.6vh, 1rem) clamp(0.8rem, 2vw, 1.3rem)',
                                 borderRadius: '16px',
                                 background: 'rgba(10, 7, 5, 0.88)',
                                 backdropFilter: 'blur(8px)',
@@ -3215,12 +3427,12 @@ Ganador: ${payload.winnerAddress}`);
                             }}>
                                 <h1 style={{
                                     fontFamily: 'Bangers, cursive',
-                                    fontSize: 'clamp(3rem, 7vh, 4.2rem)',
+                                    fontSize: 'clamp(2.2rem, 5.5vh, 3.6rem)',
                                     lineHeight: '0.9',
                                     color: '#e74c3c',
                                     animation: 'cleanGlow 3s infinite ease-in-out',
                                     letterSpacing: '0.06em',
-                                    margin: '0 0 0.3rem 0',
+                                    margin: '0 0 0.15rem 0',
                                     textRendering: 'optimizeLegibility',
                                     WebkitFontSmoothing: 'antialiased'
                                 }}>
@@ -3229,25 +3441,25 @@ Ganador: ${payload.winnerAddress}`);
                                 
                                 <div style={{
                                     display: 'inline-block',
-                                    padding: '0.25rem 0.8rem',
+                                    padding: '0.15rem 0.6rem',
                                     background: 'rgba(212, 175, 55, 0.15)',
                                     border: '1px solid #d4af37',
                                     borderRadius: '50px',
-                                    fontSize: '0.65rem',
+                                    fontSize: '0.6rem',
                                     fontFamily: 'monospace',
                                     color: '#ffcc00',
                                     fontWeight: 'bold',
-                                    letterSpacing: '0.15em',
-                                    marginBottom: '0.1rem'
+                                    letterSpacing: '0.12em',
+                                    marginBottom: '0.05rem'
                                 }}>
                                     ARCADE EDITION
                                 </div>
 
                                 <p style={{
                                     fontFamily: '"Special Elite", monospace',
-                                    fontSize: '0.88rem',
+                                    fontSize: 'clamp(0.72rem, 1.8vh, 0.88rem)',
                                     color: '#f5efe6',
-                                    letterSpacing: '0.1em',
+                                    letterSpacing: '0.08em',
                                     margin: 0,
                                     textShadow: '0 2px 4px rgba(0,0,0,0.8)'
                                 }}>
@@ -3260,27 +3472,27 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '0.4rem',
+                                gap: '0.2rem',
                                 position: 'relative',
                                 zIndex: 10
                             }}>
                                 <div style={{
-                                    fontSize: '5.2rem',
+                                    fontSize: 'clamp(2.8rem, 7vh, 4.4rem)',
                                     filter: 'drop-shadow(0 0 20px rgba(212, 175, 55, 0.7))',
                                     cursor: 'pointer',
                                     transition: 'transform 0.2s ease',
-                                    userSelect: 'none'
+                                    userSelect: 'none',
+                                    lineHeight: 1
                                 }} 
                                 onClick={() => setView('lobby')}
                                 >
                                     🍕
                                 </div>
                                 <div style={{
-                                    fontSize: '1.2rem',
+                                    fontSize: 'clamp(0.9rem, 2vh, 1.15rem)',
                                     color: '#fff',
-                                    marginTop: '-6px',
                                     display: 'flex',
-                                    gap: '0.5rem',
+                                    gap: '0.4rem',
                                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
                                 }}>
                                     🎸 🔪 🍷
@@ -3293,19 +3505,19 @@ Ganador: ${payload.winnerAddress}`);
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '0.8rem',
+                                gap: 'clamp(0.4rem, 1.2vh, 0.75rem)',
                                 zIndex: 10
                             }}>
                                 <button
                                     onClick={() => setView('lobby')}
                                     className="primary-btn"
                                     style={{
-                                        width: '88%',
+                                        width: '90%',
                                         maxWidth: '280px',
-                                        padding: '1rem',
-                                        fontSize: '1.15rem',
+                                        padding: 'clamp(0.65rem, 1.6vh, 0.95rem)',
+                                        fontSize: 'clamp(0.95rem, 2.2vh, 1.15rem)',
                                         fontFamily: 'var(--font-display)',
-                                        letterSpacing: '0.08em',
+                                        letterSpacing: '0.06em',
                                         fontWeight: 'bold',
                                         animation: 'cleanButtonPulse 2s infinite ease-in-out',
                                         background: 'linear-gradient(135deg, #d4af37, #c0392b)',
@@ -3320,12 +3532,61 @@ Ganador: ${payload.winnerAddress}`);
                                 >
                                     🍕 {language === 'es' ? 'ENTRAR A LA COCINA' : 'ENTER KITCHEN'} 🍕
                                 </button>
+                                {/* Wallet Status / New Player Hint */}
+                                {userAddress ? (
+                                    <div style={{
+                                        background: 'rgba(39,174,96,0.12)',
+                                        border: '1px solid rgba(39,174,96,0.35)',
+                                        borderRadius: '10px',
+                                        padding: '0.35rem 0.75rem',
+                                        fontSize: '0.62rem',
+                                        fontFamily: 'monospace',
+                                        color: '#27ae60',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
+                                        maxWidth: '240px',
+                                    }}>
+                                        <span style={{ fontSize: '0.85rem' }}>✅</span>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', letterSpacing: '0.04em' }}>
+                                                {language === 'es' ? 'WALLET CONECTADA' : 'WALLET CONNECTED'}
+                                            </div>
+                                            <div style={{ color: '#88cc88', opacity: 0.8 }}>
+                                                {userAddress.slice(0, 6)}…{userAddress.slice(-4)}
+                                            </div>
+                                        </div>
+                                        {checkInStreak > 0 && (
+                                            <div style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#d4af37', fontSize: '0.7rem' }}>
+                                                🔥 {checkInStreak}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        background: 'rgba(212,175,55,0.1)',
+                                        border: '1px dashed rgba(212,175,55,0.5)',
+                                        borderRadius: '10px',
+                                        padding: '0.35rem 0.75rem',
+                                        fontSize: '0.62rem',
+                                        fontFamily: 'monospace',
+                                        color: '#d4af37',
+                                        maxWidth: '240px',
+                                        textAlign: 'center',
+                                        lineHeight: '1.3',
+                                    }}>
+                                        🔑 {language === 'es'
+                                            ? 'Conecta una wallet Avalanche para ganar $SLICE y NFTs'
+                                            : 'Connect an Avalanche wallet to earn $SLICE & NFTs'}
+                                    </div>
+                                )}
+
                                 {/* Feature Icons Row */}
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    gap: '1rem',
-                                    marginTop: '0.1rem',
+                                    gap: '0.8rem',
+                                    marginTop: '0.05rem',
                                 }}>
                                     {[
                                         { icon: '🎸', label: language === 'es' ? 'Ritmo' : 'Rhythm' },
@@ -3333,20 +3594,20 @@ Ganador: ${payload.winnerAddress}`);
                                         { icon: '🏆', label: language === 'es' ? 'Ranking' : 'Ranking' },
                                         { icon: '⚔️', label: 'PvP' },
                                     ].map(f => (
-                                        <div key={f.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                                            <span style={{ fontSize: '1.1rem' }}>{f.icon}</span>
-                                            <span style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</span>
+                                        <div key={f.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                                            <span style={{ fontSize: '0.95rem' }}>{f.icon}</span>
+                                            <span style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</span>
                                         </div>
                                     ))}
                                 </div>
 
                                 <div style={{
-                                    fontSize: '0.48rem',
+                                    fontSize: '0.45rem',
                                     color: 'rgba(255,255,255,0.22)',
                                     fontFamily: 'monospace',
-                                    marginTop: '0.1rem'
+                                    marginTop: '0.05rem'
                                 }}>
-                                    ARCADE EDITION • STELLAR
+                                    ARCADE EDITION • FUJI
                                 </div>
                             </div>
                         </div>
@@ -3519,141 +3780,327 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                                <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.2rem', WebkitOverflowScrolling: 'touch' }}>
-                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: 'clamp(0.6rem, 2vw, 0.9rem)', borderRadius: '12px', marginBottom: 'clamp(0.7rem, 2vw, 1rem)', border: '1px solid #E0D4B8' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 1.5vw, 0.8rem)' }}>
-                                            <Globe size={18} color="#8B0000" />
-                                            <span style={{ fontSize: 'clamp(0.9rem, 2.8vw, 1.05rem)', fontWeight: 'bold', color: '#8B0000' }}>{t.language}</span>
+                                <div style={{ flex: 1, overflowY: 'auto' }}>
+
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+
+                                            <Globe size={20} color="#8B0000" />
+
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.language}</span>
+
                                         </div>
-                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+
                                             <button
+
                                                 onClick={() => setLanguage('es')}
+
                                                 style={{
-                                                    padding: 'clamp(0.4rem, 1.2vw, 0.55rem) clamp(0.75rem, 2vw, 1rem)',
+
+                                                    padding: '0.5rem 1rem',
+
                                                     borderRadius: '8px',
+
                                                     border: '1px solid #D0B488',
+
                                                     background: language === 'es' ? 'var(--color-accent)' : '#F9F5EB',
+
                                                     color: language === 'es' ? '#fff' : '#333',
+
                                                     fontWeight: 'bold',
-                                                    fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)',
+
                                                     cursor: 'pointer'
+
                                                 }}
+
                                             >ES</button>
+
                                             <button
+
                                                 onClick={() => setLanguage('en')}
+
                                                 style={{
-                                                    padding: 'clamp(0.4rem, 1.2vw, 0.55rem) clamp(0.75rem, 2vw, 1rem)',
+
+                                                    padding: '0.5rem 1rem',
+
                                                     borderRadius: '8px',
+
                                                     border: '1px solid #D0B488',
+
                                                     background: language === 'en' ? 'var(--color-accent)' : '#F9F5EB',
+
                                                     color: language === 'en' ? '#fff' : '#333',
+
                                                     fontWeight: 'bold',
-                                                    fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)',
+
                                                     cursor: 'pointer'
+
                                                 }}
+
                                             >EN</button>
+
                                         </div>
+
                                     </div>
 
-                                    <div style={{ marginBottom: 'clamp(0.8rem, 2.2vw, 1.2rem)', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.35rem', color: '#8B0000', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', fontWeight: 'bold' }}>{t.chefName}</label>
+
+
+                                    <div style={{ marginBottom: '1.5rem', width: '100%' }}>
+
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.chefName}</label>
+
                                         <input
+
                                             type="text"
+
                                             value={chefName}
+
                                             onChange={(e) => setChefName(e.target.value)}
-                                            style={{ width: '100%', padding: 'clamp(0.55rem, 1.8vw, 0.75rem)', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', boxSizing: 'border-box' }}
+
+                                            style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
+
                                         />
+
                                     </div>
 
-                                    <div style={{ marginBottom: 'clamp(0.8rem, 2.2vw, 1.2rem)', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.35rem', color: '#8B0000', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', fontWeight: 'bold' }}>{t.xHandle}</label>
+
+
+                                    <div style={{ marginBottom: '1.5rem', width: '100%' }}>
+
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.xHandle}</label>
+
                                         <input
+
                                             type="text"
+
                                             value={xHandle}
+
                                             onChange={(e) => setXHandle(e.target.value)}
-                                            style={{ width: '100%', padding: 'clamp(0.55rem, 1.8vw, 0.75rem)', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', boxSizing: 'border-box' }}
+
+                                            style={{ width: '100%', padding: '0.8rem', background: '#F9F5EB', border: '1px solid #D0B488', color: '#333', borderRadius: '8px', fontSize: '1rem' }}
+
                                         />
+
                                     </div>
 
-                                    <div style={{ marginBottom: 'clamp(0.8rem, 2.2vw, 1.2rem)', width: '100%' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.35rem', color: '#8B0000', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', fontWeight: 'bold' }}>{t.wallet}</label>
-                                        <div style={{ padding: 'clamp(0.55rem, 1.8vw, 0.75rem)', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: 'clamp(0.78rem, 2.2vw, 0.88rem)', wordBreak: 'break-all', color: '#27ae60' }}>
+
+
+                                    <div style={{ marginBottom: '1.5rem', width: '100%' }}>
+
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#8B0000', fontSize: '0.9rem', fontWeight: 'bold' }}>{t.wallet}</label>
+
+                                        <div style={{ padding: '0.8rem', background: 'rgba(46, 204, 113, 0.1)', border: '1px solid #2ecc71', borderRadius: '8px', fontSize: '0.9rem', wordBreak: 'break-all', color: '#27ae60' }}>
+
                                             {userAddress ? `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}` : "Not Connected"}
+
                                         </div>
+
                                     </div>
 
-                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: 'clamp(0.6rem, 2vw, 0.9rem)', borderRadius: '12px', marginBottom: 'clamp(0.7rem, 2vw, 1rem)', border: '1px solid #E0D4B8' }}>
-                                        <span style={{ fontSize: 'clamp(0.9rem, 2.8vw, 1.05rem)', fontWeight: 'bold', color: '#8B0000' }}>{t.volume}</span>
-                                        <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 'clamp(38px, 9vw, 46px)', height: 'clamp(38px, 9vw, 46px)', padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0, cursor: 'pointer', border: 'none' }}>
-                                            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} color="#FFF" />}
+
+
+                                    <div className="settings-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F9F5EB', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #E0D4B8' }}>
+
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#8B0000' }}>{t.volume}</span>
+
+                                        <button onClick={toggleAudio} className="settings-btn" style={{ background: isMuted ? '#bdc3c7' : 'var(--ph-green)', borderRadius: '50%', width: 50, height: 50, padding: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 0 }}>
+
+                                            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} color="#FFF" />}
+
                                         </button>
+
                                     </div>
+
+
 
                                     {/* ── MY TXs HISTORY ───────────────────────────────── */}
-                                    <div style={{ marginBottom: '0.6rem', width: '100%' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                            <span style={{ fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)', fontWeight: 'bold', color: '#8B0000' }}>⛓ {t.myTxs}</span>
-                                            <span style={{ fontSize: '0.72rem', color: '#999' }}>({txHistory.length})</span>
+
+                                    <div style={{ marginBottom: '1rem', width: '100%' }}>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+
+                                            <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#8B0000' }}>⛓ {t.myTxs}</span>
+
+                                            <span style={{ fontSize: '0.75rem', color: '#999' }}>({txHistory.length})</span>
+
                                         </div>
 
+
+
                                         {txHistory.length === 0 ? (
-                                            <div style={{ textAlign: 'center', color: '#8B0000', fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', padding: '0.8rem', background: '#F9F5EB', borderRadius: '8px', border: '1px dashed #D0B488' }}>
+
+                                            <div style={{ textAlign: 'center', color: '#8B0000', fontSize: '0.85rem', padding: '1rem', background: '#F9F5EB', borderRadius: '8px', border: '1px dashed #D0B488' }}>
+
                                                 {t.noTxs}
+
                                             </div>
+
                                         ) : (
-                                            <div style={{ overflowX: 'auto', maxHeight: '170px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #E0D4B8', WebkitOverflowScrolling: 'touch' }}>
-                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.68rem, 2vw, 0.76rem)' }}>
+
+                                            <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #E0D4B8' }}>
+
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+
                                                     <thead>
-                                                        <tr style={{ background: '#E0D4B8', color: '#8B0000', textAlign: 'left', position: 'sticky', top: 0 }}>
-                                                            <th style={{ padding: '0.35rem 0.5rem', fontWeight: 'bold' }}>Type</th>
-                                                            <th style={{ padding: '0.35rem 0.4rem', fontWeight: 'bold', textAlign: 'right' }}>Score</th>
-                                                            <th style={{ padding: '0.35rem 0.4rem', fontWeight: 'bold' }}>Date</th>
-                                                            <th style={{ padding: '0.35rem 0.5rem', fontWeight: 'bold' }}>TX</th>
+
+                                                        <tr style={{ background: '#E0D4B8', color: '#8B0000', textAlign: 'left' }}>
+
+                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>Type</th>
+
+                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold', textAlign: 'right' }}>Score</th>
+
+                                                            <th style={{ padding: '0.4rem 0.4rem', fontWeight: 'bold' }}>Date</th>
+
+                                                            <th style={{ padding: '0.4rem 0.6rem', fontWeight: 'bold' }}>TX</th>
+
                                                         </tr>
+
                                                     </thead>
+
                                                     <tbody>
+
                                                         {txHistory.map((tx, i) => {
-                                                            const shortHash = `${tx.hash.slice(0, 5)}…${tx.hash.slice(-5)}`;
+
+                                                            const shortHash = `${tx.hash.slice(0, 6)}…${tx.hash.slice(-6)}`;
+
                                                             const d = new Date(tx.timestamp);
+
                                                             const dateStr = `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+
                                                             return (
+
                                                                 <tr key={i} style={{ borderTop: '1px solid #E0D4B8', background: i % 2 === 0 ? '#FFF8E7' : '#F9F5EB' }}>
-                                                                    <td style={{ padding: '0.35rem 0.5rem', color: '#333', whiteSpace: 'nowrap' }}>
+
+                                                                    <td style={{ padding: '0.4rem 0.6rem', color: '#333', whiteSpace: 'nowrap' }}>
+
                                                                         {tx.type === 'Score Submit' ? (language === 'es' ? 'Envío Puntaje' : 'Score Submit') : tx.type}
+
                                                                     </td>
-                                                                    <td style={{ padding: '0.35rem 0.4rem', color: '#8B0000', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
+                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#8B0000', textAlign: 'right', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+
                                                                         {tx.score.toLocaleString()}
+
                                                                     </td>
-                                                                    <td style={{ padding: '0.35rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
+
+                                                                    <td style={{ padding: '0.4rem 0.4rem', color: '#888', whiteSpace: 'nowrap' }}>
+
                                                                         {dateStr}
+
                                                                     </td>
-                                                                    <td style={{ padding: '0.35rem 0.5rem', whiteSpace: 'nowrap' }}>
+
+                                                                    <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap' }}>
+
                                                                         <a
+
                                                                             href={`${EXPLORER_BASE}/${tx.hash}`}
+
                                                                             target="_blank"
+
                                                                             rel="noopener noreferrer"
-                                                                            style={{ color: '#2980b9', textDecoration: 'none', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+
+                                                                            style={{ color: '#2980b9', textDecoration: 'none', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+
                                                                             title={tx.hash}
+
                                                                         >
+
                                                                             {shortHash} 🔗
+
                                                                         </a>
+
                                                                     </td>
+
                                                                 </tr>
+
                                                             );
+
                                                         })}
+
                                                     </tbody>
+
                                                 </table>
+
                                             </div>
+
                                         )}
+
                                     </div>
+
+
+
                                 </div>
 
-                                <button className="primary-btn" onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: 'clamp(0.5rem, 1.5vw, 0.8rem)', padding: 'clamp(0.65rem, 2vw, 0.85rem)', fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)' }}>{t.backToCooking}</button>
+
+
+                                <button className="primary-btn" onClick={() => setShowSettings(false)} style={{ width: '100%', marginTop: '1rem', padding: '1rem', fontSize: '1rem' }}>{t.backToCooking}</button>
 
                             </div>
 
                         </div>
 
+                    )}
+
+                    {/* Onboarding & Starter Oven Gift Modal */}
+                    {showOnboardingModal && (
+                        <div className="modal-backdrop" onClick={() => setShowOnboardingModal(false)} style={{ zIndex: 999 }}>
+                            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', textAlign: 'center', background: 'linear-gradient(135deg, #2b0b0b, #150303)', border: '2px solid #e84142', borderRadius: '16px', padding: '1.5rem', color: '#FFF8E7' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕🔥</div>
+                                <h2 style={{ color: '#FFD700', fontFamily: 'var(--font-display)', margin: '0 0 0.5rem 0', fontSize: '1.4rem' }}>
+                                    {language === 'es' ? '¡Bienvenido a la Cocina Mafia!' : 'Welcome to the Mafia Kitchen!'}
+                                </h2>
+                                <p style={{ fontSize: '0.9rem', color: '#e0d4b8', marginBottom: '1rem', lineHeight: '1.4' }}>
+                                    {language === 'es' 
+                                        ? 'Has completado tu primera receta de prueba. Conéctate con Privy en Avalanche para desbloquear tu Horno Starter NFT #0 de regalo, guardar tu historial de cocina y ganar tokens $SLICE on-chain.'
+                                        : 'You completed your first test recipe! Connect with Privy on Avalanche to claim your free Starter Oven NFT #0, track your cooking history, and earn $SLICE on-chain.'}
+                                </p>
+                                <div style={{ background: 'rgba(232, 65, 66, 0.15)', border: '1px dashed #e84142', borderRadius: '12px', padding: '0.8rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                                    <img src="/game/assets/nfts/brick_oven_pixel.png?v=2" alt="Starter Oven" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+                                    <div style={{ textAlign: 'left' }}>
+                                        <div style={{ fontWeight: 'bold', color: '#FFD700', fontSize: '0.85rem' }}>Horno Starter Mafia #0</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#4CAF50' }}>+1.5x Multiplier On-Chain (Avalanche)</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    <button
+                                        onClick={() => {
+                                            setShowOnboardingModal(false);
+                                            privyLogin();
+                                        }}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #e84142, #b82e2f)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '10px',
+                                            padding: '0.75rem 1.2rem',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.95rem',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 15px rgba(232, 65, 66, 0.4)'
+                                        }}
+                                    >
+                                        🔺 {language === 'es' ? 'CONECTAR PRIVY & RECLAMAR HORNO' : 'CONNECT PRIVY & CLAIM OVEN'}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowOnboardingModal(false)}
+                                        style={{
+                                            background: 'transparent',
+                                            color: '#bbb',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            borderRadius: '8px',
+                                            padding: '0.5rem',
+                                            fontSize: '0.8rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {language === 'es' ? 'Continuar como Chef Invitado' : 'Continue as Guest Chef'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
 
@@ -3703,15 +4150,10 @@ Ganador: ${payload.winnerAddress}`);
 
 
                         {/* PERSISTENT LOBBY BACKGROUND */}
-
                         <div className="lobby-content" style={{
-
                             transition: 'all 0.3s ease',
-
                             filter: view !== 'lobby' ? 'blur(8px) brightness(0.6)' : 'none',
-
                             pointerEvents: view !== 'lobby' ? 'none' : 'auto',
-
                             transform: view !== 'lobby' ? 'scale(0.95)' : 'scale(1)',
                             width: '100%',
                             height: '100%',
@@ -3719,28 +4161,30 @@ Ganador: ${payload.winnerAddress}`);
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '1rem',
-                            padding: '1.5rem 1rem',
+                            gap: 'clamp(0.6rem, 2vh, 1.2rem)',
+                            padding: '1rem 0.85rem',
                             boxSizing: 'border-box',
                             position: 'relative',
+                            overflowY: 'auto',
+                            WebkitOverflowScrolling: 'touch',
                             zIndex: 1
                         }}>
 
-                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0' }}>
-                                <h1 className="main-logo" style={{ fontSize: 'clamp(2.4rem, 6vh, 3.2rem)', margin: 0, lineHeight: 0.95 }}>
+                            <div className="logo-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0', transform: 'scale(1.05)', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}>
+                                <h1 className="main-logo" style={{ fontSize: 'clamp(2.7rem, 6.8vh, 3.9rem)', margin: 0, lineHeight: 0.9, letterSpacing: '1px' }}>
                                     RHYTHM<br />SLICE
                                 </h1>
                                 <div style={{
-                                    marginTop: '0.4rem',
+                                    marginTop: '0.35rem',
                                     background: '#8B0000',
                                     color: '#FFF8DC',
-                                    padding: '0.2rem 0.8rem',
+                                    padding: '0.2rem 0.85rem',
                                     borderRadius: '6px',
-                                    fontSize: '0.72rem',
+                                    fontSize: 'clamp(0.65rem, 1.4vh, 0.78rem)',
                                     fontWeight: 'bold',
                                     letterSpacing: '2px',
-                                    border: '1px solid rgba(212, 175, 55, 0.5)',
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                                    border: '1.5px solid rgba(212, 175, 55, 0.65)',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                                     textTransform: 'uppercase'
                                 }}>
                                     🍕 PIZZA KITCHEN 🍕
@@ -3750,43 +4194,17 @@ Ganador: ${payload.winnerAddress}`);
                             <div style={{
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '0.7rem',
-                                width: '94%',
-                                maxWidth: '345px',
-                                background: 'linear-gradient(180deg, rgba(28, 12, 10, 0.92) 0%, rgba(12, 5, 4, 0.96) 100%)',
-                                backdropFilter: 'blur(12px)',
-                                border: '2px solid rgba(212, 175, 55, 0.55)',
-                                borderRadius: '20px',
-                                padding: '0.85rem 0.85rem',
+                                gap: 'clamp(0.35rem, 1vh, 0.65rem)',
+                                width: '95%',
+                                maxWidth: '340px',
+                                background: 'rgba(18, 6, 6, 0.72)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1.5px solid rgba(212, 175, 55, 0.35)',
+                                borderRadius: '16px',
+                                padding: 'clamp(0.55rem, 1.2vh, 0.85rem) clamp(0.55rem, 1.2vw, 0.8rem)',
                                 boxSizing: 'border-box',
-                                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 20px rgba(212, 175, 55, 0.12)'
+                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(212, 175, 55, 0.08)'
                             }}>
-                                {/* Chef Rank & High Score Badge */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    background: 'rgba(0, 0, 0, 0.45)',
-                                    border: '1px solid rgba(212, 175, 55, 0.3)',
-                                    borderRadius: '10px',
-                                    padding: '0.35rem 0.65rem',
-                                    fontSize: '0.68rem',
-                                    fontFamily: 'monospace'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                        <span style={{ color: '#FFD700', fontWeight: 'bold' }}>
-                                            {personalBests[selectedSong.id] && personalBests[selectedSong.id] > 50000 ? '⭐ MAESTRO' : (personalBests[selectedSong.id] && personalBests[selectedSong.id] > 20000 ? '🍕 CHEF' : '🍕 PIZZAIOLO')}
-                                        </span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <span style={{ color: '#aaa' }}>RECORD:</span>
-                                        <span style={{ color: '#2ECC71', fontWeight: 'bold' }}>
-                                            {personalBests[selectedSong.id] ? `${personalBests[selectedSong.id].toLocaleString()} PTS` : '0 PTS'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Juicy 3D Arcade CTA Button */}
                                 <button
                                     id="startBtn"
                                     onClick={() => handleStartGame()}
@@ -3794,143 +4212,96 @@ Ganador: ${payload.winnerAddress}`);
                                     style={{
                                         opacity: engineRef.current ? 1 : 0.6,
                                         cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                        fontSize: '1.2rem',
-                                        padding: '0.85rem 1rem',
+                                        fontSize: 'clamp(0.95rem, 2.2vh, 1.15rem)',
+                                        padding: 'clamp(0.55rem, 1.4vh, 0.8rem) 0.8rem',
                                         width: '100%',
-                                        background: 'linear-gradient(180deg, #2ecc71 0%, #27ae60 50%, #1e824c 100%)',
-                                        border: '2px solid #58d68d',
+                                        background: 'linear-gradient(135deg, #27ae60 0%, #1e824c 100%)',
+                                        border: '2px solid #2ecc71',
                                         color: '#fff',
-                                        borderRadius: '14px',
-                                        fontWeight: '900',
-                                        letterSpacing: '1.5px',
-                                        boxShadow: '0 5px 0 #145a32, 0 10px 20px rgba(39, 174, 96, 0.45)',
+                                        borderRadius: '12px',
+                                        fontWeight: 'bold',
+                                        letterSpacing: '1px',
+                                        boxShadow: '0 4px 14px rgba(39, 174, 96, 0.45)',
                                         textTransform: 'uppercase',
-                                        fontFamily: 'var(--font-title)',
-                                        transform: 'translateY(0)',
-                                        transition: 'all 0.1s ease',
-                                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                                        fontFamily: 'var(--font-title)'
                                     }}
-                                    onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #145a32, 0 4px 10px rgba(39, 174, 96, 0.4)'; }}
-                                    onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #145a32, 0 10px 20px rgba(39, 174, 96, 0.45)'; }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                        <span>🍕</span>
-                                        <span>{engineRef.current ? (language === 'es' ? '¡JUEGA AHORA!' : 'PLAY NOW!') : `🔥 ${t.heatingUp}`}</span>
-                                        <span>🎸</span>
-                                    </div>
+                                    {engineRef.current ? `🔥 ${t.fireUp}` : `🔥 ${t.heatingUp}`}
                                 </button>
 
-                                {/* Vinyl Track Selector */}
+                                {/* Vibrant Vinyl Music Selector */}
                                 <button
                                     onClick={() => setView('songpicker')}
                                     title={language === 'es' ? 'Cambiar Canción' : 'Change Song'}
                                     className="lobby-song-selector-btn"
-                                    style={{
-                                        width: '100%',
-                                        margin: 0,
-                                        boxSizing: 'border-box',
-                                        background: 'linear-gradient(180deg, rgba(35, 18, 15, 0.9) 0%, rgba(20, 10, 8, 0.95) 100%)',
-                                        border: '1.5px solid rgba(212, 175, 55, 0.45)',
-                                        borderRadius: '12px',
-                                        padding: '0.55rem 0.75rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        cursor: 'pointer'
-                                    }}
+                                    style={{ width: '100%', margin: 0, boxSizing: 'border-box', padding: 'clamp(0.35rem, 0.8vh, 0.5rem) 0.6rem' }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                                        <div style={{
-                                            position: 'relative',
-                                            width: '32px',
-                                            height: '32px',
-                                            animation: 'vinyl-spin 3s linear infinite',
-                                            filter: 'drop-shadow(0 0 6px rgba(218,165,32,0.7))',
-                                            display: 'flex',
-                                            flexShrink: 0
-                                        }}>
-                                            <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="50" cy="50" r="49" fill="#140A0A" stroke="#DAA520" strokeWidth="3" />
-                                                {[38, 32, 26].map(r => (
-                                                    <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#8B0000" strokeWidth="2" strokeOpacity="0.5" />
-                                                ))}
-                                                <circle cx="50" cy="50" r="18" fill="#DAA520" />
-                                                <circle cx="50" cy="50" r="6" fill="#140A0A" />
-                                            </svg>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', overflow: 'hidden' }}>
-                                            <span style={{ fontSize: '0.88rem', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textShadow: '0 0 6px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }}>
-                                                {selectedSong.title}
-                                            </span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
-                                                <span style={{ fontSize: '0.54rem', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 'bold' }}>
-                                                    {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
-                                                </span>
-                                                <span style={{ fontSize: '0.52rem', background: 'rgba(218,165,32,0.25)', color: '#FFD700', padding: '1px 5px', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 'bold' }}>
-                                                    {selectedSong.bpm ?? 120} BPM
-                                                </span>
-                                            </div>
-                                        </div>
+                                    <div style={{
+                                        animation: 'vinyl-spin 2s linear infinite',
+                                        filter: 'drop-shadow(0 0 8px rgba(218,165,32,0.6))',
+                                        display: 'flex',
+                                        flexShrink: 0
+                                    }}>
+                                        <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="50" cy="50" r="49" fill="#1A0D0D" stroke="#DAA520" strokeWidth="2" strokeOpacity="0.8" />
+                                            {[38, 33, 28, 23].map(r => (
+                                                <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="#CD5C5C" strokeWidth="1.5" strokeOpacity="0.4" />
+                                            ))}
+                                            <circle cx="50" cy="50" r="21" fill="#4A0E0E" />
+                                            <circle cx="50" cy="50" r="20" fill="#DAA520" />
+                                            <circle cx="50" cy="50" r="20" fill="none" stroke="#FFF8DC" strokeWidth="1" />
+                                            <circle cx="50" cy="50" r="4.5" fill="#FFF8DC" />
+                                            <path d="M 62 18 A 38 38 0 0 1 82 38" stroke="rgba(218,165,32,0.8)" strokeWidth="4" fill="none" strokeLinecap="round" />
+                                        </svg>
                                     </div>
-                                    {/* Animated Equalizer */}
-                                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2.5px', height: '14px', flexShrink: 0, paddingRight: '2px' }}>
-                                        <span style={{ width: '3px', height: '8px', background: '#DAA520', borderRadius: '1px' }} />
-                                        <span style={{ width: '3px', height: '14px', background: '#2ECC71', borderRadius: '1px' }} />
-                                        <span style={{ width: '3px', height: '6px', background: '#E74C3C', borderRadius: '1px' }} />
-                                        <span style={{ width: '3px', height: '11px', background: '#DAA520', borderRadius: '1px' }} />
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 2, overflow: 'hidden' }}>
+                                        <span style={{ fontSize: 'clamp(0.75rem, 1.8vh, 0.88rem)', color: '#FFF8DC', fontFamily: 'var(--font-display)', letterSpacing: '0.04em', textShadow: '0 0 5px rgba(255,248,220,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+                                            {selectedSong.title}
+                                        </span>
+                                        <span style={{ fontSize: 'clamp(0.48rem, 1vh, 0.55rem)', color: '#DAA520', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 'bold' }}>
+                                            {language === 'es' ? '🎵 CAMBIAR PISTA' : '🎵 CHANGE TRACK'}
+                                        </span>
                                     </div>
                                 </button>
 
-                                {/* 3 Nav Buttons (Ranking, Setup, Rules) */}
-                                <div className="grid grid-cols-3 gap-2 w-full">
-                                    <button
-                                        className="secondary-btn lobby-nav-btn"
-                                        style={{
-                                            border: '1.5px solid rgba(212, 175, 55, 0.7)',
-                                            padding: '0.6rem 0.4rem',
-                                            background: 'linear-gradient(180deg, #241410 0%, #120907 100%)',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
-                                        }}
-                                        onClick={() => { loadLeaderboard(); setView('leaderboard'); }}
-                                    >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '2px' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.2rem', filter: 'drop-shadow(0 2px 4px rgba(218,165,32,0.4))' }}>🏆</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: 'var(--ph-gold)', fontWeight: 'bold' }}>{t.ranking}</span>
-                                        </div>
-                                    </button>
+                                {/* Highlighted Leaderboard / Ranking Button */}
+                                <button
+                                    className="secondary-btn lobby-nav-btn"
+                                    style={{
+                                        width: '100%',
+                                        border: '1.5px solid rgba(212, 175, 55, 0.7)',
+                                        background: 'linear-gradient(135deg, rgba(40, 20, 10, 0.9) 0%, rgba(20, 8, 8, 0.95) 100%)',
+                                        padding: 'clamp(0.4rem, 1vh, 0.6rem) 0.6rem',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 0 10px rgba(212, 175, 55, 0.15)'
+                                    }}
+                                    onClick={() => { loadLeaderboard(); setView('leaderboard'); }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
+                                        <span className="btn-icon" style={{ fontSize: 'clamp(1rem, 2.2vh, 1.25rem)' }}>🏆</span>
+                                        <span className="btn-text" style={{ fontSize: 'clamp(0.75rem, 1.6vh, 0.9rem)', color: 'var(--ph-gold)', fontWeight: 'bold', letterSpacing: '0.05em' }}>{t.ranking}</span>
+                                    </div>
+                                </button>
 
+                                <div className="grid grid-cols-2 gap-1.5 w-full">
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{
-                                            border: '1.5px solid rgba(212, 175, 55, 0.4)',
-                                            padding: '0.6rem 0.4rem',
-                                            background: 'linear-gradient(180deg, #241410 0%, #120907 100%)',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
-                                        }}
+                                        style={{ padding: 'clamp(0.35rem, 0.8vh, 0.5rem) 0.35rem' }}
                                         onClick={() => setShowSettings(true)}
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '2px' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.2rem' }}>⚙️</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: '#FFF8DC' }}>{t.setup}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                            <span className="btn-icon" style={{ fontSize: 'clamp(0.95rem, 2vh, 1.15rem)' }}>⚙️</span>
+                                            <span className="btn-text" style={{ fontSize: 'clamp(0.6rem, 1.3vh, 0.72rem)' }}>{t.setup}</span>
                                         </div>
                                     </button>
 
                                     <button
                                         className="secondary-btn lobby-nav-btn"
-                                        style={{
-                                            border: '1.5px solid rgba(212, 175, 55, 0.4)',
-                                            padding: '0.6rem 0.4rem',
-                                            background: 'linear-gradient(180deg, #241410 0%, #120907 100%)',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
-                                        }}
+                                        style={{ padding: 'clamp(0.35rem, 0.8vh, 0.5rem) 0.35rem' }}
                                         onClick={() => setView('howto')}
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '2px' }}>
-                                            <span className="btn-icon" style={{ fontSize: '1.2rem' }}>📜</span>
-                                            <span className="btn-text" style={{ fontSize: '0.72rem', color: '#FFF8DC' }}>{t.rules}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                                            <span className="btn-icon" style={{ fontSize: 'clamp(0.95rem, 2vh, 1.15rem)' }}>📜</span>
+                                            <span className="btn-text" style={{ fontSize: 'clamp(0.6rem, 1.3vh, 0.72rem)' }}>{t.rules}</span>
                                         </div>
                                     </button>
                                 </div>
@@ -3947,107 +4318,48 @@ Ganador: ${payload.winnerAddress}`);
 
                         {/* ── SONG PICKER (MAFIA EDITION) ─────────────────────────────── */}
                         {(view === 'songpicker' || closingView === 'songpicker') && (
-                            <div
-                                className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`}
-                                onClick={() => closeModalWithAnimation('lobby')}
-                                style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    background: 'rgba(0, 0, 0, 0.65)',
-                                    zIndex: 3000,
+                            <div className={`modal-backdrop ${closingView === 'songpicker' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                                    background: '#FFF8E7',
+                                    border: '5px solid #8B0000',
+                                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
+                                    color: '#333',
+                                    borderRadius: '16px',
+                                    padding: '0.75rem 0.85rem',
+                                    height: '96%',
+                                    maxHeight: '96%',
                                     display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    padding: '0.5rem',
+                                    flexDirection: 'column',
                                     boxSizing: 'border-box'
-                                }}
-                            >
-                                <div
-                                    className="modal-content"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                        background: '#FFF8E7',
-                                        border: '4px solid #8B0000',
-                                        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(139, 0, 0, 0.05)',
-                                        color: '#333',
-                                        borderRadius: '20px',
-                                        padding: '0.85rem 0.9rem',
-                                        width: '96%',
-                                        maxWidth: '360px',
-                                        height: '90%',
-                                        maxHeight: '90%',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        boxSizing: 'border-box',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    {/* Header */}
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            borderBottom: '2px dashed #8B0000',
-                                            paddingBottom: '0.45rem',
-                                            marginBottom: '0.45rem',
+                                }}>
+
+                                    <div className="modal-header" style={{
+                                        borderBottom: '2px dashed #8B0000',
+                                        paddingBottom: '0.4rem',
+                                        marginBottom: '0.3rem'
+                                    }}>
+                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')} style={{
+                                            background: '#8B0000',
+                                            color: 'white',
+                                            border: '2px solid #5C0000',
+                                            width: '32px',
+                                            height: '32px',
                                             flexShrink: 0
-                                        }}
-                                    >
-                                        <div
-                                            className="back-btn-circle"
-                                            onClick={() => closeModalWithAnimation('lobby')}
-                                            style={{
-                                                background: '#8B0000',
-                                                color: 'white',
-                                                border: '2px solid #5C0000',
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '50%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                flexShrink: 0
-                                            }}
-                                        >
+                                        }}>
                                             <ArrowLeft size={18} />
                                         </div>
 
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                            <h2 style={{ margin: 0, color: '#8B0000', fontFamily: 'var(--font-display)', fontSize: '1.25rem', lineHeight: 1.1, fontWeight: 'bold' }}>
-                                                🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}
-                                            </h2>
-                                            <div style={{ fontSize: '0.68rem', color: '#27AE60', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>
-                                                {language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}
-                                            </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, padding: '0 5px', minWidth: 0 }}>
+                                            <h2 className="modal-title" style={{ margin: 0, whiteSpace: 'nowrap', color: '#8B0000', fontFamily: 'var(--font-display)', textShadow: 'none', fontSize: '1.25rem', lineHeight: 1 }}>🍕 {language === 'es' ? 'EL MENÚ' : 'THE MENU'}</h2>
+                                            <div style={{ fontSize: '0.68rem', color: '#27AE60', fontWeight: 'bold', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{language === 'es' ? 'Recetas Secretas' : 'Secret Recipes'}</div>
                                         </div>
-
-                                        <div style={{ width: '32px', flexShrink: 0 }} />
                                     </div>
 
-                                    {/* Scrollable Song List */}
-                                    <div
-                                        style={{
-                                            flex: '1 1 0%',
-                                            minHeight: 0,
-                                            overflowY: 'auto',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: '0.5rem',
-                                            paddingRight: '0.2rem',
-                                            margin: '0.2rem 0'
-                                        }}
-                                    >
+                                    <div style={{ flex: '1 1 auto', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem', paddingRight: '0.3rem', marginTop: '0.3rem' }}>
                                         {SONGS.map((song) => {
                                             const isSelected = selectedSong.id === song.id;
-                                            const mins = Math.floor(song.duration / 60);
-                                            const secs = Math.floor(song.duration % 60);
-                                            const isPlayingPreview = previewingSongId === song.id;
+                                            const mins = Math.floor((song.duration || 80) / 60);
+                                            const secs = Math.floor((song.duration || 80) % 60);
 
                                             return (
                                                 <button
@@ -4060,88 +4372,85 @@ Ganador: ${payload.winnerAddress}`);
                                                     style={{
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '0.6rem',
-                                                        padding: '0.55rem 0.7rem',
-                                                        borderRadius: '12px',
-                                                        border: isSelected ? '2px solid #27AE60' : '1.5px solid #E2D7BE',
-                                                        background: isSelected
-                                                            ? 'linear-gradient(135deg, rgba(39, 174, 96, 0.12) 0%, rgba(218, 165, 32, 0.08) 100%)'
-                                                            : '#FFFFFF',
+                                                        gap: '0.45rem',
+                                                        padding: '0.35rem 0.55rem',
+                                                        borderRadius: '8px',
+                                                        border: isSelected ? '2px solid #27AE60' : '1px solid #E0D4B8',
+                                                        background: isSelected ? 'rgba(39, 174, 96, 0.1)' : '#fff',
                                                         cursor: song.available ? 'pointer' : 'not-allowed',
-                                                        opacity: song.available ? 1 : 0.55,
+                                                        opacity: song.available ? 1 : 0.6,
                                                         textAlign: 'left',
                                                         color: '#333',
                                                         width: '100%',
                                                         transition: 'all 0.15s ease',
-                                                        boxShadow: isSelected
-                                                            ? '0 4px 14px rgba(39, 174, 96, 0.22)'
-                                                            : '0 2px 4px rgba(0,0,0,0.03)',
-                                                        position: 'relative',
-                                                        flexShrink: 0,
-                                                        boxSizing: 'border-box'
+                                                        boxShadow: isSelected ? '0 3px 8px rgba(39, 174, 96, 0.18)' : '0 1px 3px rgba(0,0,0,0.03)'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!isSelected && song.available) {
+                                                            e.currentTarget.style.background = '#F9F5EB';
+                                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                                            e.currentTarget.style.borderColor = '#D0B488';
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!isSelected && song.available) {
+                                                            e.currentTarget.style.background = '#fff';
+                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                            e.currentTarget.style.borderColor = '#E0D4B8';
+                                                        }
                                                     }}
                                                 >
-                                                    {/* Left Recipe / Slice Icon */}
-                                                    <div style={{ width: '34px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                                    {/* Track number or Pizza Slice */}
+                                                    <div style={{ width: '32px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                                         {isSelected ? (
-                                                            <div style={{ fontSize: '1.55rem', filter: 'drop-shadow(0 2px 4px rgba(39,174,96,0.35))' }}>🍕</div>
+                                                            <div style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>🍕</div>
                                                         ) : (
-                                                            <div style={{
-                                                                width: '30px',
-                                                                height: '30px',
-                                                                borderRadius: '50%',
-                                                                background: '#F9F5EB',
-                                                                border: '1.5px solid #D4AF37',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                fontFamily: 'monospace',
-                                                                fontSize: '0.78rem',
-                                                                color: '#8B0000',
-                                                                fontWeight: 'bold'
-                                                            }}>
+                                                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: song.available ? '#8B0000' : '#aaa', fontWeight: 'bold' }}>
                                                                 {song.available ? `#${song.index}` : '🔒'}
-                                                            </div>
+                                                            </span>
                                                         )}
                                                     </div>
 
-                                                    {/* Center Recipe Info */}
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                    {/* Info */}
+                                                    <div style={{ flex: 1, minWidth: 0, paddingRight: '0.2rem' }}>
                                                         <div style={{
                                                             fontWeight: '900',
                                                             fontSize: isSelected ? '0.88rem' : '0.82rem',
-                                                            color: isSelected ? '#1E8449' : '#8B0000',
+                                                            color: isSelected ? '#27AE60' : '#8B0000',
                                                             textTransform: 'uppercase',
                                                             lineHeight: '1.15',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '5px'
+                                                            letterSpacing: '0.02em',
+                                                            transition: 'all 0.2s ease'
                                                         }}>
-                                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</span>
-                                                            {isPlayingPreview && (
-                                                                <span style={{
-                                                                    fontSize: '0.52rem',
-                                                                    background: '#27AE60',
-                                                                    color: '#fff',
-                                                                    padding: '1px 5px',
-                                                                    borderRadius: '3px',
-                                                                    fontWeight: 'bold',
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '2px',
-                                                                    animation: 'pulse 1.2s infinite',
-                                                                    flexShrink: 0
-                                                                }}>
-                                                                    🔊 {language === 'es' ? 'EN VIVO' : 'LIVE'}
-                                                                </span>
-                                                            )}
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</span>
+                                                                {previewingSongId === song.id && (
+                                                                    <span style={{
+                                                                        fontSize: '0.55rem',
+                                                                        background: '#27AE60',
+                                                                        color: '#fff',
+                                                                        padding: '1px 5px',
+                                                                        borderRadius: '4px',
+                                                                        fontWeight: 'bold',
+                                                                        letterSpacing: '0.04em',
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '2px',
+                                                                        flexShrink: 0,
+                                                                        animation: 'pulse 1.2s infinite'
+                                                                    }}>
+                                                                        🔊 {language === 'es' ? 'SONANDO' : 'PLAYING'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         <div style={{
-                                                            fontSize: '0.68rem',
+                                                            fontSize: '0.66rem',
                                                             color: isSelected ? '#14532D' : '#666',
                                                             marginTop: '1px',
                                                             fontWeight: '600',
+                                                            lineHeight: '1.15',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
                                                             whiteSpace: 'nowrap'
@@ -4149,234 +4458,278 @@ Ganador: ${payload.winnerAddress}`);
                                                             {song.artist}
                                                         </div>
 
-                                                        {/* Difficulty & Record Row */}
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
-                                                            <span style={{
-                                                                fontSize: '0.52rem',
-                                                                padding: '1px 5px',
-                                                                borderRadius: '3px',
-                                                                fontWeight: 'bold',
-                                                                background: song.difficulty === 3 ? 'rgba(231,76,60,0.12)' : song.difficulty === 2 ? 'rgba(218,165,32,0.12)' : 'rgba(39,174,96,0.12)',
-                                                                color: song.difficulty === 3 ? '#C0392B' : song.difficulty === 2 ? '#B7950B' : '#1E8449',
-                                                                border: song.difficulty === 3 ? '1px solid rgba(231,76,60,0.25)' : song.difficulty === 2 ? '1px solid rgba(218,165,32,0.25)' : '1px solid rgba(39,174,96,0.25)',
-                                                                fontFamily: 'monospace'
-                                                            }}>
-                                                                {song.difficulty === 1 ? '🍕 ' + (language === 'es' ? 'SUAVE' : 'EASY') : song.difficulty === 2 ? '🍕🍕 ' + (language === 'es' ? 'CLÁSICA' : 'MEDIUM') : '🔥 ' + (language === 'es' ? 'DIABLO' : 'EXPERT')}
-                                                            </span>
+                                                        {/* Difficulty Stars & PB in compact row */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                                                {[1, 2, 3].map(star => (
+                                                                    <span
+                                                                        key={star}
+                                                                        style={{
+                                                                            fontSize: '0.58rem',
+                                                                            opacity: star <= song.difficulty ? 1 : 0.2,
+                                                                            filter: star <= song.difficulty
+                                                                                ? (song.difficulty === 3 ? 'drop-shadow(0 0 3px #ff4444)' : 'drop-shadow(0 0 2px #d4af37)')
+                                                                                : 'none',
+                                                                            transition: 'all 0.2s',
+                                                                        }}
+                                                                    >
+                                                                        {song.difficulty === 3 ? '💀' : '🍕'}
+                                                                    </span>
+                                                                ))}
+                                                                <span style={{
+                                                                    fontSize: '0.48rem',
+                                                                    fontFamily: 'monospace',
+                                                                    marginLeft: '2px',
+                                                                    color: song.difficulty === 3 ? '#cc3333' : song.difficulty === 2 ? '#c0852a' : '#27ae60',
+                                                                    fontWeight: 'bold',
+                                                                    letterSpacing: '0.02em',
+                                                                }}>
+                                                                    {song.difficulty === 1
+                                                                        ? (language === 'es' ? 'FÁCIL' : 'EASY')
+                                                                        : song.difficulty === 2
+                                                                            ? (language === 'es' ? 'MEDIO' : 'MEDIUM')
+                                                                            : (language === 'es' ? 'DIFÍCIL' : 'HARD')}
+                                                                </span>
+                                                            </div>
 
                                                             {personalBests[song.id] ? (
-                                                                <span style={{ fontSize: '0.52rem', color: '#8B6914', fontFamily: 'monospace', fontWeight: 'bold' }}>
-                                                                    🏆 {personalBests[song.id].toLocaleString()} pts
-                                                                </span>
+                                                                <div style={{
+                                                                    fontSize: '0.48rem',
+                                                                    fontFamily: 'monospace',
+                                                                    color: '#8B6914',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '2px',
+                                                                }}>
+                                                                    <span>🏆</span>
+                                                                    <span style={{ fontWeight: 'bold' }}>{personalBests[song.id].toLocaleString()}</span>
+                                                                </div>
                                                             ) : null}
                                                         </div>
+
                                                     </div>
 
-                                                    {/* Right side BPM & Time */}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '3px', flexShrink: 0 }}>
+                                                    {/* Right side stats */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: '2px', flexShrink: 0 }}>
+                                                        {/* BPM Badge */}
                                                         <div style={{
-                                                            fontSize: '0.62rem',
+                                                            fontSize: '0.6rem',
                                                             fontWeight: '900',
                                                             background: isSelected ? '#27AE60' : '#EAE3D1',
                                                             color: isSelected ? 'white' : '#666',
                                                             padding: '1px 5px',
                                                             border: isSelected ? '1px solid #1E8449' : '1px solid #D1C5AD',
                                                             borderRadius: '5px',
-                                                            fontFamily: 'monospace'
+                                                            letterSpacing: '0.04em',
+                                                            boxShadow: isSelected ? '0 2px 4px rgba(39,174,96,0.2)' : 'none'
                                                         }}>
                                                             {song.bpm ? `${song.bpm} BPM` : '120 BPM'}
                                                         </div>
+
+                                                        {/* Duration */}
                                                         <div style={{
-                                                            fontSize: '0.75rem',
-                                                            fontFamily: 'monospace',
-                                                            color: isSelected ? '#1E8449' : '#666',
+                                                            fontSize: '0.72rem',
+                                                            fontFamily: 'var(--font-mono, monospace)',
+                                                            color: isSelected ? '#1E8449' : '#555',
                                                             fontWeight: 'bold'
                                                         }}>
                                                             {mins}:{secs.toString().padStart(2, '0')}
                                                         </div>
                                                     </div>
+
                                                 </button>
                                             );
                                         })}
                                     </div>
 
-                                    {/* Compact Ticket HUD & Action Buttons */}
-                                    <div
-                                        style={{
+
+
+                                    {/* Ticket Sync and Actions HUD */}
+                                    {userAddress && userAddress !== 'G_DEMO_USER' && (
+                                        <div style={{
+                                            background: '#F9F5EB',
+                                            border: '1px dashed #D0B488',
+                                            borderRadius: '8px',
+                                            padding: '0.5rem',
+                                            marginTop: '0.5rem',
                                             display: 'flex',
                                             flexDirection: 'column',
-                                            gap: '0.4rem',
-                                            marginTop: '0.4rem',
-                                            paddingTop: '0.4rem',
-                                            borderTop: '2px dashed #E0D4B8',
-                                            flexShrink: 0,
-                                            width: '100%'
-                                        }}
-                                    >
-                                        {/* Ticket Sync Strip (if connected) */}
-                                        {userAddress && userAddress !== 'G_DEMO_USER' && (
-                                            <div style={{
-                                                background: '#F9F5EB',
-                                                border: '1px dashed #D0B488',
-                                                borderRadius: '8px',
-                                                padding: '0.35rem 0.5rem',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                width: '100%',
-                                                boxSizing: 'border-box'
-                                            }}>
-                                                <span style={{ fontSize: '0.72rem', fontWeight: 'bold', color: '#8B0000' }}>
-                                                    🎟️ TICKETS: <span style={{ color: '#27AE60', fontSize: '0.85rem' }}>{ticketBalance}</span>
+                                            gap: '6px',
+                                            width: '100%',
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#8B0000' }}>
+                                                    🎟️ {language === 'es' ? 'MIS TICKETS DE TORNEO:' : 'MY TOURNAMENT TICKETS:'} <span style={{ fontSize: '1.1rem', color: '#27AE60' }}>{ticketBalance}</span>
                                                 </span>
-                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                    <button
-                                                        onClick={async () => {
-                                                            const signer = getContractSignerRef.current();
-                                                            setStatus(language === 'es' ? 'Reclamando Staking...' : 'Claiming Staking...');
-                                                            try {
-                                                                const res = await StellarContractService.claimStakingTickets(userAddress, signer);
-                                                                setStatus('');
-                                                                if (res.success) {
-                                                                    alert(language === 'es' ? '¡Tickets reclamados! 🎉' : 'Tickets claimed! 🎉');
-                                                                    const tickets = await StellarContractService.getTournamentTickets(userAddress);
-                                                                    setTicketBalance(tickets);
-                                                                } else {
-                                                                    alert(`Error: ${res.error}`);
-                                                                }
-                                                            } catch (err: any) {
-                                                                setStatus('');
-                                                                alert(`Error: ${err.message}`);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            padding: '2px 6px',
-                                                            fontSize: '0.62rem',
-                                                            background: '#27AE60',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontWeight: 'bold',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        🎁 {language === 'es' ? 'Staking' : 'Claim'}
-                                                    </button>
-                                                    <button
-                                                        onClick={async () => {
-                                                            const signer = getContractSignerRef.current();
-                                                            setStatus(language === 'es' ? 'Comprando...' : 'Buying...');
-                                                            try {
-                                                                const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
-                                                                setStatus('');
-                                                                if (res.success) {
-                                                                    alert(language === 'es' ? '¡Ticket comprado! 🎟️' : 'Ticket bought! 🎟️');
-                                                                    const tickets = await StellarContractService.getTournamentTickets(userAddress);
-                                                                    setTicketBalance(tickets);
-                                                                    const sliceBal = await StellarContractService.getSliceBalance(userAddress);
-                                                                    setSliceBalance(sliceBal);
-                                                                } else {
-                                                                    alert(`Error: ${res.error}`);
-                                                                }
-                                                            } catch (err: any) {
-                                                                setStatus('');
-                                                                alert(`Error: ${err.message}`);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            padding: '2px 6px',
-                                                            fontSize: '0.62rem',
-                                                            background: '#D4AF37',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontWeight: 'bold',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        🛒 10 $SLICE
-                                                    </button>
-                                                </div>
                                             </div>
-                                        )}
-
-                                        {/* Action Buttons Grid */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '6px', width: '100%' }}>
-                                            <button
-                                                disabled={!engineRef.current}
-                                                onClick={() => {
-                                                    if (engineRef.current) {
-                                                        stopPreviewAudio();
-                                                        setIsPracticeMode(true);
-                                                        setTimeout(() => {
-                                                            closeModalWithAnimation('lobby');
-                                                            handleStartGame();
-                                                        }, 150);
-                                                    }
-                                                }}
-                                                style={{
-                                                    padding: '0.65rem 0.4rem',
-                                                    fontSize: '0.78rem',
-                                                    background: 'linear-gradient(135deg, #2D3748, #4A5568)',
-                                                    color: 'white',
-                                                    border: '1.5px solid #1A202C',
-                                                    borderRadius: '10px',
-                                                    fontWeight: 'bold',
-                                                    cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.04em',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '4px'
-                                                }}
-                                            >
-                                                ⚔️ {language === 'es' ? 'PRÁCTICA' : 'PRACTICE'}
-                                            </button>
-
-                                            <button
-                                                disabled={!engineRef.current}
-                                                onClick={() => {
-                                                    if (engineRef.current) {
-                                                        if (userAddress && userAddress !== 'G_DEMO_USER' && ticketBalance < 1) {
-                                                            alert(language === 'es' ? '⚠️ Necesitas al menos 1 Ticket para jugar en modo competitivo.' : '⚠️ You need at least 1 Ticket to play competitively.');
-                                                            return;
+                                            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                                                <button
+                                                    onClick={async () => {
+                                                        const signer = getContractSignerRef.current();
+                                                        setStatus(language === 'es' ? 'Reclamando Staking...' : 'Claiming Staking...');
+                                                        try {
+                                                            const res = await StellarContractService.claimStakingTickets(userAddress, signer);
+                                                            setStatus('');
+                                                            if (res.success) {
+                                                                alert(language === 'es' ? '¡Tickets de Staking reclamados con éxito! 🎉' : 'Staking tickets successfully claimed! 🎉');
+                                                                const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                                setTicketBalance(tickets);
+                                                            } else {
+                                                                if (res.error === 'SIGNATURE_REJECTED') {
+                                                                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                    alert(`⚠️ Firma rechazada por el usuario.`);
+                                                                } else {
+                                                                    alert(`Error: ${res.error}`);
+                                                                }
+                                                            }
+                                                        } catch (err: any) {
+                                                            setStatus('');
+                                                            if (err.message === 'SIGNATURE_REJECTED') {
+                                                                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                alert(`⚠️ Firma rechazada por el usuario.`);
+                                                            } else {
+                                                                alert(`Error: ${err.message}`);
+                                                            }
                                                         }
-                                                        stopPreviewAudio();
-                                                        setIsPracticeMode(false);
-                                                        setTimeout(() => {
-                                                            closeModalWithAnimation('lobby');
-                                                            handleStartGame();
-                                                        }, 150);
-                                                    }
-                                                }}
-                                                style={{
-                                                    padding: '0.65rem 0.4rem',
-                                                    fontSize: '0.85rem',
-                                                    background: 'linear-gradient(135deg, #8B0000, #B30000)',
-                                                    color: 'white',
-                                                    border: '1.5px solid #5C0000',
-                                                    borderRadius: '10px',
-                                                    fontWeight: 'bold',
-                                                    cursor: engineRef.current ? 'pointer' : 'not-allowed',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    boxShadow: '0 3px 8px rgba(139, 0, 0, 0.4)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '4px'
-                                                }}
-                                            >
-                                                🔥 {engineRef.current ? (language === 'es' ? 'COMPETIR' : 'TOURNAMENT') : `${t.heatingUp}`}
-                                            </button>
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        fontSize: '0.75rem',
+                                                        background: '#27AE60',
+                                                        color: 'white',
+                                                        border: '1px solid #1E8449',
+                                                        borderRadius: '6px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    🎁 {language === 'es' ? 'Reclamar Staking' : 'Claim Staking'}
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        const signer = getContractSignerRef.current();
+                                                        setStatus(language === 'es' ? 'Comprando Ticket...' : 'Buying Ticket...');
+                                                        try {
+                                                            const res = await StellarContractService.buyTournamentTickets(userAddress, 1, signer);
+                                                            setStatus('');
+                                                            if (res.success) {
+                                                                alert(language === 'es' ? '¡Ticket comprado con éxito! 🎟️' : 'Ticket bought successfully! 🎟️');
+                                                                const tickets = await StellarContractService.getTournamentTickets(userAddress);
+                                                                setTicketBalance(tickets);
+                                                                const sliceBal = await StellarContractService.getSliceBalance(userAddress);
+                                                                setSliceBalance(sliceBal);
+                                                            } else {
+                                                                if (res.error === 'SIGNATURE_REJECTED') {
+                                                                    addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                    alert(`⚠️ Firma rechazada por el usuario.`);
+                                                                } else {
+                                                                    alert(`Error: ${res.error}`);
+                                                                }
+                                                            }
+                                                        } catch (err: any) {
+                                                            setStatus('');
+                                                            if (err.message === 'SIGNATURE_REJECTED') {
+                                                                addLog(`⚠️ Transacción cancelada: Firma rechazada por el usuario.`);
+                                                                alert(`⚠️ Firma rechazada por el usuario.`);
+                                                            } else {
+                                                                alert(`Error: ${err.message}`);
+                                                            }
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px',
+                                                        fontSize: '0.75rem',
+                                                        background: '#D4AF37',
+                                                        color: 'white',
+                                                        border: '1px solid #AA8010',
+                                                        borderRadius: '6px',
+                                                        fontWeight: 'bold',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                >
+                                                    🛒 {language === 'es' ? 'Comprar (10 $SLICE)' : 'Buy (10 $SLICE)'}
+                                                </button>
+                                            </div>
                                         </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.6rem', width: '100%' }}>
+                                        <button
+                                            disabled={!engineRef.current}
+                                            onClick={() => {
+                                                if (engineRef.current) {
+                                                    stopPreviewAudio();
+                                                    setIsPracticeMode(true);
+                                                    setTimeout(() => {
+                                                        closeModalWithAnimation('lobby');
+                                                        handleStartGame();
+                                                    }, 150);
+                                                }
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.7rem',
+                                                fontSize: '0.9rem',
+                                                background: 'linear-gradient(135deg, #2D3748, #4A5568)',
+                                                color: 'white',
+                                                border: '2px solid #1A202C',
+                                                borderRadius: '8px',
+                                                fontWeight: 'bold',
+                                                cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em',
+                                            }}
+                                        >
+                                            ⚔️ {language === 'es' ? 'PRÁCTICA LIBRE (GRATIS)' : 'FREE PRACTICE (FREE)'}
+                                        </button>
+
+                                        <button
+                                            disabled={!engineRef.current}
+                                            onClick={() => {
+                                                if (engineRef.current) {
+                                                    if (userAddress && userAddress !== 'G_DEMO_USER' && ticketBalance < 1) {
+                                                        alert(language === 'es' ? '⚠️ Necesitas al menos 1 Ticket para jugar en modo competitivo.' : '⚠️ You need at least 1 Ticket to play competitively.');
+                                                        return;
+                                                    }
+                                                    stopPreviewAudio();
+                                                    setIsPracticeMode(false);
+                                                    setTimeout(() => {
+                                                        closeModalWithAnimation('lobby');
+                                                        handleStartGame();
+                                                    }, 150);
+                                                }
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '1rem',
+                                                fontSize: '1.1rem',
+                                                background: 'linear-gradient(135deg, #8B0000, #B30000)',
+                                                color: 'white',
+                                                border: '2px solid #5C0000',
+                                                borderRadius: '8px',
+                                                fontWeight: 'bold',
+                                                cursor: engineRef.current ? 'pointer' : 'not-allowed',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.08em',
+                                                boxShadow: '0 4px 10px rgba(139, 0, 0, 0.4)',
+                                            }}
+                                        >
+                                            🔥 {engineRef.current ? (language === 'es' ? 'TORNEO COMPETITIVO' : 'COMPETITIVE TOURNAMENT') : `🔥 ${t.heatingUp}`}
+                                        </button>
                                     </div>
+
                                 </div>
+
                             </div>
+
                         )}
 
-{(view === 'store' || closingView === 'store') && (
+
+
+                        {(view === 'store' || closingView === 'store') && (
 
                             <div className={`modal-backdrop ${closingView === 'store' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
 
@@ -5824,106 +6177,86 @@ Ganador: ${payload.winnerAddress}`);
 
                                                                 if (userAddress) {
 
-                                                                    try {
-
-                                                                        const signer = getContractSignerRef.current();
-
-                                                                        const result = await StellarContractService.stakeSlice(userAddress, amt, signer);
-
-                                                                        if (result.success) {
-
-                                                                            setStakedSlice(prev => prev + amt);
-
-                                                                            alert("Staked successfully on-chain!");
-
+                                                                    if (userAddress.startsWith('0x')) {
+                                                                        try {
+                                                                            const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
+                                                                            if (activeWallet) {
+                                                                                const ethereumProvider = await activeWallet.getEthereumProvider();
+                                                                                const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
+                                                                                const txHash = await AvalancheContractService.stakeSlice(walletClient, userAddress as any, amt);
+                                                                                setStakedSlice(prev => prev + amt);
+                                                                                setSliceBalance(prev => Math.max(0, prev - amt));
+                                                                                alert(`🥩 ¡Tokens $SLICE congelados en Avalanche Fuji!\nHash: ${txHash}`);
+                                                                            }
+                                                                        } catch (avaxErr) {
+                                                                            console.error("Avalanche stake error:", avaxErr);
                                                                         }
-
-                                                                    } catch (err) {
-
-                                                                        console.error("Stake on-chain failed", err);
-
+                                                                    } else {
+                                                                        try {
+                                                                            const signer = getContractSignerRef.current();
+                                                                            const result = await StellarContractService.stakeSlice(userAddress, amt, signer);
+                                                                            if (result.success) {
+                                                                                setStakedSlice(prev => prev + amt);
+                                                                                alert("Staked successfully on-chain!");
+                                                                            }
+                                                                        } catch (err) {
+                                                                            console.error("Stake on-chain failed", err);
+                                                                        }
                                                                     }
-
                                                                 } else {
-
-                                                                    // Fallback
-
                                                                     setStakedSlice(prev => prev + amt);
-
                                                                 }
-
                                                             }}
-
                                                             style={{
-
                                                                 flex: 1,
-
                                                                 padding: '0.5rem',
-
                                                                 background: '#27ae60',
-
                                                                 color: 'white',
-
                                                                 border: 'none',
-
                                                                 borderRadius: '6px',
-
                                                                 fontWeight: 'bold',
-
                                                                 fontSize: '0.75rem',
-
                                                                 cursor: 'pointer'
-
                                                             }}
-
                                                         >
-
                                                             🥩 CONGELAR ($SLICE)
-
                                                         </button>
-
                                                         <button 
-
                                                             onClick={async () => {
-
                                                                 const amtStr = prompt(language === 'es' ? '¿Cuánto $SLICE deseas retirar del Horno Clásico?' : 'How much $SLICE do you wish to unstake?');
-
                                                                 if (!amtStr) return;
-
                                                                 const amt = parseFloat(amtStr);
-
                                                                 if (isNaN(amt) || amt <= 0 || amt > stakedSlice) return;
 
-
-
                                                                 if (userAddress) {
-
-                                                                    try {
-
-                                                                        const signer = getContractSignerRef.current();
-
-                                                                        const result = await StellarContractService.unstakeSlice(userAddress, amt, signer);
-
-                                                                        if (result.success) {
-
-                                                                            setStakedSlice(prev => Math.max(0, prev - amt));
-
-                                                                            alert("Unstaked successfully on-chain!");
-
+                                                                    if (userAddress.startsWith('0x')) {
+                                                                        try {
+                                                                            const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
+                                                                            if (activeWallet) {
+                                                                                const ethereumProvider = await activeWallet.getEthereumProvider();
+                                                                                const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
+                                                                                const txHash = await AvalancheContractService.unstakeSlice(walletClient, userAddress as any, amt);
+                                                                                setStakedSlice(prev => Math.max(0, prev - amt));
+                                                                                setSliceBalance(prev => prev + amt);
+                                                                                alert(`🔥 ¡Tokens $SLICE descongelados de Avalanche Fuji!\nHash: ${txHash}`);
+                                                                            }
+                                                                        } catch (avaxErr) {
+                                                                            console.error("Avalanche unstake error:", avaxErr);
                                                                         }
-
-                                                                    } catch (err) {
-
-                                                                        console.error("Unstake on-chain failed", err);
-
+                                                                    } else {
+                                                                        try {
+                                                                            const signer = getContractSignerRef.current();
+                                                                            const result = await StellarContractService.unstakeSlice(userAddress, amt, signer);
+                                                                            if (result.success) {
+                                                                                setStakedSlice(prev => Math.max(0, prev - amt));
+                                                                                alert("Unstaked successfully on-chain!");
+                                                                            }
+                                                                        } catch (err) {
+                                                                            console.error("Unstake on-chain failed", err);
+                                                                        }
                                                                     }
-
                                                                 } else {
-
-                                                                    // Fallback
-
                                                                     setStakedSlice(prev => Math.max(0, prev - amt));
-
                                                                 }
 
                                                             }}
@@ -6195,7 +6528,7 @@ Ganador: ${payload.winnerAddress}`);
 
                             <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
 
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', width: '100%', padding: 'clamp(0.6rem, 1.5vh, 1rem)', boxSizing: 'border-box' }}>
 
                                     <div className="modal-header">
 
@@ -6223,16 +6556,14 @@ Ganador: ${payload.winnerAddress}`);
                                     <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: 'clamp(0.4rem, 1.5vw, 0.8rem)',
-                                        padding: 'clamp(0.4rem, 1.5vw, 0.6rem) clamp(0.5rem, 2vw, 0.9rem)',
-                                        background: 'rgba(0,0,0,0.15)',
-                                        borderRadius: '8px',
-                                        border: '1px solid rgba(139,0,0,0.2)',
+                                        gap: '0.8rem',
+                                        padding: '0.6rem 1rem',
+                                        background: 'rgba(0,0,0,0.2)',
+                                        borderBottom: '1px solid rgba(255,255,255,0.06)',
                                         justifyContent: 'space-between',
-                                        marginBottom: '0.4rem',
-                                        flexWrap: 'wrap'
+                                        marginBottom: '0.5rem'
                                     }}>
-                                        <span style={{ fontSize: 'clamp(0.72rem, 2.2vw, 0.85rem)', color: '#8B0000', fontWeight: 'bold' }}>
+                                        <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold' }}>
                                             {language === 'es' ? 'Filtrar por Canción:' : 'Filter by Song:'}
                                         </span>
                                         <select
@@ -6246,14 +6577,13 @@ Ganador: ${payload.winnerAddress}`);
                                                 background: '#222',
                                                 color: '#fff',
                                                 border: '1px solid #ff3e3e',
-                                                padding: 'clamp(0.3rem, 1vw, 0.45rem) clamp(0.5rem, 1.5vw, 0.75rem)',
-                                                borderRadius: '6px',
-                                                fontSize: 'clamp(0.72rem, 2.2vw, 0.82rem)',
+                                                padding: '0.4rem 0.8rem',
+                                                borderRadius: '4px',
+                                                fontSize: '0.85rem',
                                                 cursor: 'pointer',
                                                 outline: 'none',
                                                 fontWeight: 'bold',
-                                                maxWidth: '100%',
-                                                flex: '1 1 auto'
+                                                maxWidth: '65%'
                                             }}
                                         >
                                             <option value="all">🌟 {language === 'es' ? 'Todas las Canciones' : 'All Songs'}</option>
@@ -6269,10 +6599,10 @@ Ganador: ${payload.winnerAddress}`);
                                     {lbSubmitStatus !== 'none' && (
                                         <div style={{
                                             textAlign: 'center',
-                                            padding: '0.35rem 0.6rem',
-                                            marginBottom: '0.4rem',
+                                            padding: '0.4rem 0.8rem',
+                                            marginBottom: '0.5rem',
                                             borderRadius: '8px',
-                                            fontSize: 'clamp(0.72rem, 2vw, 0.8rem)',
+                                            fontSize: '0.8rem',
                                             fontWeight: 'bold',
                                             background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
                                             color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
@@ -6282,39 +6612,39 @@ Ganador: ${payload.winnerAddress}`);
                                         </div>
                                     )}
 
-                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
                                         {leaderboardLoading ? (
-                                            <div style={{ textAlign: 'center', padding: '1.5rem', color: '#888', fontSize: 'clamp(0.8rem, 2.4vw, 0.9rem)' }}>
+                                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
                                                 <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
                                                 Loading scores...
                                             </div>
                                         ) : leaderboardError ? (
-                                            <div style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                <div style={{ fontSize: '1.8rem', marginBottom: '0.4rem' }}>⚠️</div>
-                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.2rem', fontSize: 'clamp(0.82rem, 2.5vw, 0.92rem)' }}>Could not load scores</div>
-                                                <div style={{ color: '#888', fontSize: 'clamp(0.72rem, 2.2vw, 0.8rem)' }}>{leaderboardError}</div>
-                                                <button className="primary-btn" style={{ marginTop: '0.8rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={() => loadLeaderboard()}>Try Again</button>
+                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
+                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
+                                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
+                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={() => loadLeaderboard()}>Try Again</button>
                                             </div>
                                         ) : leaderboard.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '1.5rem' }}>
-                                                <div style={{ fontSize: '2.5rem', marginBottom: '0.4rem' }}>🍕</div>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.2rem', fontSize: 'clamp(0.88rem, 2.6vw, 1rem)' }}>{t.noScores}</div>
-                                                <div style={{ color: '#888', fontSize: 'clamp(0.78rem, 2.4vw, 0.88rem)' }}>{t.beFirst}</div>
+                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
+                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
                                                 <button
                                                     className="primary-btn"
-                                                    style={{ marginTop: '1.2rem', width: '100%', padding: 'clamp(0.65rem, 2vw, 0.85rem)', fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)' }}
+                                                    style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
                                                     onClick={() => { setView('lobby'); handleStartGame(); }}
                                                 >🔥 FIRE UP OVEN</button>
                                             </div>
                                         ) : (
                                             <div style={{ width: '100%' }}>
-                                                <div style={{ fontSize: 'clamp(0.65rem, 2vw, 0.72rem)', color: '#999', textAlign: 'center', marginBottom: '0.6rem', letterSpacing: '0.08em' }}>
+                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
                                                     🏆 Arcade Leaderboard · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
                                                 </div>
                                                 {leaderboard.map((entry, i) => {
                                                     const medals = ['🥇', '🥈', '🥉'];
                                                     const medal = medals[i] ?? `#${i + 1}`;
-                                                    const displayName = entry.nickname || (entry.player_id && entry.player_id.length >= 10 ? `${entry.player_id.slice(0, 6)}…${entry.player_id.slice(-4)}` : 'Chef Anon');
+                                                    const displayName = entry.nickname || (entry.player_id && entry.player_id.length >= 10 ? `${entry.player_id.slice(0, 6)}…${entry.player_id.slice(-4)}` : (entry.player_id || 'Chef Anon'));
                                                     const isMe = entry.nickname === chefName || (userAddress && entry.player_id === userAddress);
                                                     const songName = entry.metadata?.songTitle || entry.metadata?.song_id || '';
 
@@ -6322,24 +6652,39 @@ Ganador: ${payload.winnerAddress}`);
                                                         <div key={i} style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            gap: 'clamp(0.4rem, 1.8vw, 0.75rem)',
-                                                            padding: 'clamp(0.5rem, 1.8vw, 0.7rem) clamp(0.3rem, 1.2vw, 0.5rem)',
+                                                            justifyContent: 'space-between',
+                                                            gap: '0.5rem',
+                                                            padding: '0.65rem 0.5rem',
                                                             borderBottom: '1px solid #E0D4B8',
                                                             background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
                                                             borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
+                                                            width: '100%',
+                                                            boxSizing: 'border-box'
                                                         }}>
-                                                            <span style={{ fontSize: 'clamp(0.95rem, 3.2vw, 1.25rem)', minWidth: 'clamp(1.6rem, 5vw, 2.2rem)', textAlign: 'center', flexShrink: 0 }}>{medal}</span>
-                                                            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                                                <div style={{ fontSize: 'clamp(0.82rem, 2.6vw, 0.95rem)', fontWeight: isMe ? 'bold' : '600', fontFamily: "'Special Elite', monospace", color: isMe ? '#27ae60' : '#8B0000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            <span style={{ fontSize: '1.15rem', width: '2rem', minWidth: '2rem', textAlign: 'center', flexShrink: 0 }}>{medal}</span>
+                                                            <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                                <div
+                                                                    title={displayName}
+                                                                    style={{
+                                                                        fontSize: 'clamp(0.85rem, 2vh, 0.95rem)',
+                                                                        fontWeight: isMe ? 'bold' : '600',
+                                                                        fontFamily: "'Special Elite', monospace",
+                                                                        color: isMe ? '#27ae60' : '#8B0000',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis',
+                                                                        whiteSpace: 'nowrap',
+                                                                        width: '100%'
+                                                                    }}
+                                                                >
                                                                     {displayName}{isMe ? ' (tú)' : ''}
                                                                 </div>
                                                                 {songName && (
-                                                                    <div style={{ fontSize: 'clamp(0.6rem, 2vw, 0.7rem)', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    <div style={{ fontSize: '0.7rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
                                                                         🎵 {songName}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.82rem, 2.6vw, 1.05rem)', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace', flexShrink: 0 }}>
+                                                            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2vh, 1rem)', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace', flexShrink: 0, textAlign: 'right', marginLeft: '0.5rem' }}>
                                                                 {Number(entry.score).toLocaleString()} pts
                                                             </div>
                                                         </div>
@@ -6349,12 +6694,20 @@ Ganador: ${payload.winnerAddress}`);
                                         )}
                                     </div>
 
+
+
                                     {leaderboard.length > 0 && (
+
                                         <button
+
                                             className="primary-btn"
-                                            style={{ width: '100%', marginTop: 'clamp(0.4rem, 1.5vw, 0.6rem)', padding: 'clamp(0.65rem, 2vw, 0.85rem)', fontSize: 'clamp(0.85rem, 2.6vw, 0.98rem)' }}
+
+                                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
+
                                             onClick={() => { setView('lobby'); handleStartGame(); }}
+
                                         >🔥 {t.challenge}</button>
+
                                     )}
 
                                 </div>
@@ -7411,106 +7764,92 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-                                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.3rem', paddingBottom: '1.5rem', WebkitOverflowScrolling: 'touch' }}>
-                                        <section style={{ marginBottom: 'clamp(1rem, 2.5vw, 1.4rem)' }}>
-                                            <h3 style={{ fontSize: 'clamp(1rem, 3.2vw, 1.2rem)', fontWeight: 'bold', marginBottom: 'clamp(0.5rem, 1.8vw, 0.8rem)', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
+                                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
 
-                                            {/* Keyboard Sub-Section */}
-                                            <div style={{ background: '#FFFDF9', border: '1px solid #E0D4B8', borderRadius: '10px', padding: 'clamp(0.6rem, 2vw, 0.85rem)', marginBottom: 'clamp(0.6rem, 2vw, 0.8rem)' }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.82rem, 2.5vw, 0.9rem)', color: '#8B0000', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    ⌨️ {language === 'es' ? 'TECLADO' : 'KEYBOARD'}
-                                                </div>
-                                                <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#555', margin: '0 0 0.5rem 0' }}>{t.controlsDesc}</p>
-                                                <div style={{ display: 'flex', gap: 'clamp(4px, 1.5vw, 8px)', justifyContent: 'center', marginBottom: '0.5rem' }}>
-                                                    <div className="key-box">A<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🔴</span></div>
-                                                    <div className="key-box">S<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🟡</span></div>
-                                                    <div className="key-box">K<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🥓</span></div>
-                                                    <div className="key-box">L<span style={{ fontSize: '0.65rem', marginTop: '2px' }}>🟣</span></div>
-                                                </div>
-                                                <div style={{ fontSize: 'clamp(0.68rem, 2vw, 0.75rem)', color: '#888', textAlign: 'center' }}>
-                                                    {t.keyboardAlts}
-                                                </div>
+                                        <section style={{ marginBottom: '1.5rem' }}>
+
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>1. {t.controls}</h3>
+
+                                            <p style={{ fontSize: '0.95rem', color: '#444', marginBottom: '0.5rem' }}>{t.controlsDesc}</p>
+
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
+
+                                                <div className="key-box">A<br /><span style={{ fontSize: '0.7rem' }}>🔴</span></div>
+
+                                                <div className="key-box">S<br /><span style={{ fontSize: '0.7rem' }}>🟡</span></div>
+
+                                                <div className="key-box">K<br /><span style={{ fontSize: '0.7rem' }}>🥓</span></div>
+
+                                                <div className="key-box">L<br /><span style={{ fontSize: '0.7rem' }}>🟣</span></div>
+
                                             </div>
 
-                                            {/* Gamepad / Xbox Sub-Section */}
-                                            <div style={{ background: '#1A1815', border: '1.5px solid #2ECC71', borderRadius: '12px', padding: 'clamp(0.6rem, 2vw, 0.85rem)', color: '#FFF', boxShadow: '0 4px 12px rgba(46, 204, 113, 0.15)' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '4px' }}>
-                                                    <span style={{ fontWeight: 'bold', fontSize: 'clamp(0.82rem, 2.5vw, 0.95rem)', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        🎮 {t.gamepadTitle}
-                                                    </span>
-                                                    <span style={{ fontSize: 'clamp(0.62rem, 1.8vw, 0.7rem)', background: 'rgba(46, 204, 113, 0.2)', color: '#2ECC71', border: '1px solid #2ECC71', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold' }}>
-                                                        {t.gamepadAutoDetect}
-                                                    </span>
-                                                </div>
-                                                <p style={{ fontSize: 'clamp(0.74rem, 2.2vw, 0.82rem)', color: '#CCC', margin: '0 0 0.6rem 0' }}>{t.gamepadDesc}</p>
-
-                                                {/* 4 Lanes Grid for Gamepad */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'clamp(3px, 1vw, 6px)', marginBottom: '0.6rem', textAlign: 'center' }}>
-                                                    {/* Lane 1 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#E74C3C', fontWeight: 'bold', marginBottom: '3px' }}>🔴 {language === 'es' ? 'Carril 1' : 'Lane 1'}</div>
-                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#2980B9', color: '#FFF', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>X</div>
-                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ⬅️<br />LT</div>
-                                                    </div>
-                                                    {/* Lane 2 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#F1C40F', fontWeight: 'bold', marginBottom: '3px' }}>🟡 {language === 'es' ? 'Carril 2' : 'Lane 2'}</div>
-                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#27AE60', color: '#FFF', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>A</div>
-                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ⬇️<br />LB</div>
-                                                    </div>
-                                                    {/* Lane 3 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#E67E22', fontWeight: 'bold', marginBottom: '3px' }}>🥓 {language === 'es' ? 'Carril 3' : 'Lane 3'}</div>
-                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#F39C12', color: '#000', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>Y</div>
-                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ⬆️<br />RB</div>
-                                                    </div>
-                                                    {/* Lane 4 */}
-                                                    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: 'clamp(4px, 1vw, 6px) clamp(2px, 0.6vw, 4px)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <div style={{ fontSize: 'clamp(0.56rem, 1.7vw, 0.68rem)', color: '#9B59B6', fontWeight: 'bold', marginBottom: '3px' }}>🟣 {language === 'es' ? 'Carril 4' : 'Lane 4'}</div>
-                                                        <div style={{ width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', background: '#C0392B', color: '#FFF', fontWeight: 'bold', fontSize: 'clamp(0.75rem, 2.2vw, 0.9rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 3px' }}>B</div>
-                                                        <div style={{ fontSize: 'clamp(0.52rem, 1.5vw, 0.65rem)', color: '#AAA' }}>D-Pad ➡️<br />RT</div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Aux Controls */}
-                                                <div style={{ display: 'flex', justifyContent: 'space-around', fontSize: 'clamp(0.68rem, 2vw, 0.75rem)', color: '#CCC', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '5px' }}>
-                                                    <span><strong>Start / ≡ :</strong> {t.gamepadPause}</span>
-                                                    <span><strong>Back / ⧉ :</strong> {t.gamepadBack}</span>
-                                                </div>
-                                            </div>
                                         </section>
 
-                                        <section style={{ marginBottom: 'clamp(1rem, 2.5vw, 1.4rem)' }}>
-                                            <h3 style={{ fontSize: 'clamp(1rem, 3.2vw, 1.2rem)', fontWeight: 'bold', marginBottom: 'clamp(0.5rem, 1.8vw, 0.8rem)', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.6rem, 2vw, 0.9rem)' }}>
-                                                <div style={{ display: 'flex', gap: 'clamp(0.6rem, 2vw, 0.9rem)', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', flexShrink: 0 }}>🎯</div>
+
+
+                                        <section style={{ marginBottom: '1.5rem' }}>
+
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>2. {t.baking}</h3>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+
+                                                    <div style={{ fontSize: '1.5rem' }}>🎯</div>
+
                                                     <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', margin: 0 }}>{t.precision}</p>
-                                                        <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#666', margin: '2px 0 0' }}>{t.precisionDesc}</p>
+
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.precision}</p>
+
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.precisionDesc}</p>
+
                                                     </div>
+
                                                 </div>
-                                                <div style={{ display: 'flex', gap: 'clamp(0.6rem, 2vw, 0.9rem)', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', flexShrink: 0 }}>🔄</div>
+
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+
+                                                    <div style={{ fontSize: '1.5rem' }}>🔄</div>
+
                                                     <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', margin: 0 }}>{t.combo}</p>
-                                                        <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#666', margin: '2px 0 0' }}>{t.comboDesc}</p>
+
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.combo}</p>
+
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.comboDesc}</p>
+
                                                     </div>
+
                                                 </div>
-                                                <div style={{ display: 'flex', gap: 'clamp(0.6rem, 2vw, 0.9rem)', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', flexShrink: 0 }}>📦</div>
+
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+
+                                                    <div style={{ fontSize: '1.5rem' }}>📦</div>
+
                                                     <div>
-                                                        <p style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2.6vw, 0.95rem)', margin: 0 }}>{t.orders}</p>
-                                                        <p style={{ fontSize: 'clamp(0.76rem, 2.2vw, 0.85rem)', color: '#666', margin: '2px 0 0' }}>{t.ordersDesc}</p>
+
+                                                        <p style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: 0 }}>{t.orders}</p>
+
+                                                        <p style={{ fontSize: '0.85rem', color: '#666' }}>{t.ordersDesc}</p>
+
                                                     </div>
+
                                                 </div>
+
                                             </div>
+
                                         </section>
+
+
 
                                         <section>
-                                            <h3 style={{ fontSize: 'clamp(1rem, 3.2vw, 1.2rem)', fontWeight: 'bold', marginBottom: 'clamp(0.5rem, 1.8vw, 0.8rem)', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
-                                            <p style={{ fontSize: 'clamp(0.78rem, 2.4vw, 0.88rem)', color: '#666', margin: 0 }}>{t.rewardsDesc}</p>
+
+                                            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.8rem', color: '#8B0000', borderBottom: '1px solid #E0D4B8', paddingBottom: '0.3rem' }}>3. {t.rewards}</h3>
+
+                                            <p style={{ fontSize: '0.9rem', color: '#666' }}>{t.rewardsDesc}</p>
+
                                         </section>
+
                                     </div>
 
                                 </div>
@@ -7827,343 +8166,366 @@ Ganador: ${payload.winnerAddress}`);
                         maxHeight: '100%',
                         zIndex: 20,
                         // Elegant Glassmorphism: allows the game background to be seen blurred
-                        background: 'rgba(15, 5, 5, 0.72)',
-                        backdropFilter: 'blur(10px)',
+                        background: 'rgba(20, 5, 5, 0.4)',
+                        backdropFilter: 'blur(12px)',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        justifyContent: 'flex-start',
                         overflowY: 'auto',
                         WebkitOverflowScrolling: 'touch',
-                        padding: '1.6rem 0.6rem',
+                        touchAction: 'pan-y',
+                        padding: '0.6rem 0.5rem 2.5rem 0.5rem',
                         boxSizing: 'border-box'
                     }}>
 
-                        {/* Popup Card (Vintage Mafia Receipt - 100% Responsive) */}
+                        {/* Popup Card (Receipt Theme V3) */}
                         <div style={{
-                            width: '100%',
-                            maxWidth: '345px',
-                            maxHeight: '94%',
-                            margin: 'auto 0',
+                            width: '92%',
+                            maxWidth: '340px',
+                            minHeight: 'fit-content',
+                            margin: '0.4rem auto 2.5rem auto',
                             background: 'transparent',
-                            /* Jagged receipt edges: 16px strips at top and bottom with generous padding */
+                            /* The jagged receipt edges logic: 20px strips at top and bottom, full solid area in the middle */
                             backgroundImage: `
-                                radial-gradient(circle at 8px 0, transparent 7px, #FDFDFD 8px),
+                                radial-gradient(circle at 10px 0, transparent 9px, #FDFDFD 10px),
                                 linear-gradient(#FDFDFD, #FDFDFD),
-                                radial-gradient(circle at 8px 100%, transparent 7px, #FDFDFD 8px)
+                                radial-gradient(circle at 10px 100%, transparent 9px, #FDFDFD 10px)
                             `,
-                            backgroundSize: '16px 16px, 100% calc(100% - 30px), 16px 16px',
+                            backgroundSize: '20px 20px, 100% calc(100% - 38px), 20px 20px',
                             backgroundPosition: 'top left, center, bottom left',
                             backgroundRepeat: 'repeat-x, no-repeat, repeat-x',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '1.4rem 1.1rem',
+                            justifyContent: 'flex-start',
+                            padding: '0.85rem 1.15rem',
                             color: '#111',
                             position: 'relative',
-                            boxSizing: 'border-box',
-                            filter: 'drop-shadow(0px 10px 28px rgba(0,0,0,0.7))'
+                            /* A slight sepia tint with drop shadow to make it feel like printed paper against the black backdrop */
+                            filter: 'drop-shadow(0px 8px 16px rgba(0,0,0,0.5))'
                         }}>
 
-                            {/* Inner Content wrapper */}
-                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '6px 0', boxSizing: 'border-box' }}>
+                            {/* Inner Content wrapper to prevent text from crossing the jagged edges */}
+                            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', padding: '6px 0', flex: 1 }}>
 
                                 {/* Header Section */}
-                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.35rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <h2 id="resTitle" style={{ fontFamily: "var(--font-title)", fontSize: '1.25rem', color: '#8B0000', margin: 0, letterSpacing: '1.5px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                                <div style={{ textAlign: 'center', width: '100%', marginBottom: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <h2 style={{ fontFamily: "var(--font-title)", fontSize: '1.5rem', color: '#8B0000', margin: '0 0 0.2rem 0', letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                                         LA FAMIGLIA
                                     </h2>
-                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.72rem', color: '#555', letterSpacing: '0.5px', textTransform: 'uppercase', marginTop: '1px' }}>
+                                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.8rem', color: '#444', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                         {language === 'es' ? 'TICKET #402' : 'RECEIPT #402'}
                                     </div>
-                                    <div style={{ width: '100%', borderBottom: '1.5px dashed #888', marginTop: '0.35rem' }}></div>
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', marginTop: '0.5rem' }}></div>
                                 </div>
 
-                                {/* Score & Grade Row */}
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    width: '100%',
-                                    padding: '0.2rem 0',
-                                    fontFamily: "'Special Elite', monospace"
-                                }}>
-                                    {/* Left: Score & Pizzas */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                            <span style={{ fontSize: '0.75rem', color: '#555', fontWeight: 'bold' }}>{t.score.toUpperCase()}:</span>
-                                            <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.35rem', color: '#111' }}>0</span>
-                                        </div>
-                                        <div id="resPizzas" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                            <span style={{ fontSize: '0.7rem', color: '#666' }}>{language === 'es' ? 'PIZZAS:' : 'PIZZAS:'}</span>
-                                            <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#8B0000' }}>0</span>
-                                        </div>
+                                {/* Score Content */}
+                                <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', width: '100%', fontFamily: "'Special Elite', monospace" }}>
+
+                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '1.05rem', marginBottom: '0.4rem', color: '#111' }}>
+                                        <span>{t.score.toUpperCase()}</span>
+                                        <span id="resScore" style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>0</span>
                                     </div>
 
-                                    {/* Right: Grade Stamp */}
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div id="resPizzas" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.95rem', marginBottom: '0.4rem', color: '#444' }}>
+                                        <span>{language === 'es' ? 'PIZZAS' : 'PIZZAS BAKED'}</span>
+                                        <span id="resPizzasCount" style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>0</span>
+                                    </div>
+
+                                    <div style={{ width: '100%', borderBottom: '2px dashed #888', margin: '0.45rem 0' }}></div>
+
+                                    {/* Huge Grade Stamp */}
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.35rem 0' }}>
                                         <div className="grade" id="resGrade" style={{
-                                            fontSize: '1.9rem',
+                                            fontSize: 'clamp(2.6rem, 6vh, 3.8rem)',
                                             fontFamily: "'Bangers', cursive",
                                             fontWeight: 'bold',
                                             color: '#cc0000',
-                                            opacity: 0.9,
-                                            transform: 'rotate(-4deg)',
-                                            border: '2.5px solid #cc0000',
-                                            borderRadius: '6px',
-                                            padding: '0 0.55rem',
-                                            lineHeight: 1.15,
-                                            boxShadow: 'inset 0 0 0 1px #FDFDFD, inset 0 0 0 2px #cc0000',
+                                            opacity: 0.85,
+                                            transform: 'rotate(-5deg)',
+                                            border: '3.5px solid #cc0000',
+                                            borderRadius: '10px',
+                                            padding: '0 1rem',
+                                            lineHeight: 1.1,
+                                            boxShadow: 'inset 0 0 0 2px #FDFDFD, inset 0 0 0 4px #cc0000', // Double border effect
                                         }}>S</div>
+                                    </div>
+
+
+                                    {/* Chef Name & Optional Email Lead Capture */}
+                                    <div style={{ width: '100%', marginTop: '0.45rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', borderTop: '1px dashed #ccc', paddingTop: '0.45rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: formErrors.chefName ? '#c0392b' : '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                    👨‍🍳 {language === 'es' ? 'Nombre del Chef *:' : 'Chef Nickname *:'}
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <span style={{ fontSize: '0.62rem', color: chefName.length >= 16 ? '#c0392b' : '#777', fontWeight: chefName.length >= 16 ? 'bold' : 'normal', fontFamily: 'monospace' }}>
+                                                        {chefName.length}/16
+                                                    </span>
+                                                    <span style={{ fontSize: '0.62rem', color: formErrors.chefName ? '#c0392b' : '#888', fontWeight: formErrors.chefName ? 'bold' : 'normal' }}>
+                                                        {language === 'es' ? '(Requerido)' : '(Required)'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                maxLength={16}
+                                                value={chefName}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.slice(0, 16);
+                                                    setChefName(val);
+                                                    if (formErrors.chefName) {
+                                                        setFormErrors(prev => ({ ...prev, chefName: undefined }));
+                                                    }
+                                                    try { localStorage.setItem('gp_chef_name', val); } catch {}
+                                                    setIsScoreSaved(false);
+                                                }}
+                                                placeholder={language === 'es' ? 'Ingresa tu Apodo' : 'Enter your Nickname'}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '0.4rem 0.55rem',
+                                                    background: '#fff',
+                                                    border: formErrors.chefName ? '2px solid #e74c3c' : '1.5px solid #8B0000',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.88rem',
+                                                    fontFamily: "'Special Elite', monospace",
+                                                    color: '#111',
+                                                    boxSizing: 'border-box',
+                                                    outline: 'none',
+                                                    boxShadow: formErrors.chefName ? '0 0 0 2px rgba(231,76,60,0.2)' : 'none'
+                                                }}
+                                            />
+                                            {formErrors.chefName && (
+                                                <span style={{ fontSize: '0.68rem', color: '#c0392b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                                                    ⚠️ {formErrors.chefName}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: formErrors.playerEmail ? '#c0392b' : '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                                ✉️ {language === 'es' ? 'Email (Opcional):' : 'Email (Optional):'}
+                                            </label>
+                                            <input
+                                                type="email"
+                                                value={playerEmail}
+                                                onChange={(e) => {
+                                                    setPlayerEmail(e.target.value);
+                                                    if (formErrors.playerEmail) {
+                                                        setFormErrors(prev => ({ ...prev, playerEmail: undefined }));
+                                                    }
+                                                    try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
+                                                    setIsScoreSaved(false);
+                                                }}
+                                                placeholder={language === 'es' ? 'correo@ejemplo.com' : 'email@example.com'}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '0.4rem 0.55rem',
+                                                    background: '#fff',
+                                                    border: formErrors.playerEmail ? '2px solid #e74c3c' : '1.5px solid #ccc',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.82rem',
+                                                    fontFamily: "'Special Elite', monospace",
+                                                    color: '#111',
+                                                    boxSizing: 'border-box',
+                                                    outline: 'none',
+                                                    boxShadow: formErrors.playerEmail ? '0 0 0 2px rgba(231,76,60,0.2)' : 'none'
+                                                }}
+                                            />
+                                            {formErrors.playerEmail ? (
+                                                <span style={{ fontSize: '0.68rem', color: '#c0392b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                                                    ⚠️ {formErrors.playerEmail}
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.64rem', color: '#666', fontStyle: 'italic', lineHeight: 1.2, marginTop: '1px' }}>
+                                                    {language === 'es'
+                                                        ? '✉️ Opcional: ingresa tu correo para recibir noticias y actualizaciones exclusivas.'
+                                                        : '✉️ Optional: enter your email for exclusive updates.'}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={async () => {
+                                                const scoreToSave = lastScoreRef.current || lastScore || 0;
+                                                if (scoreToSave <= 0) {
+                                                    alert(language === 'es'
+                                                        ? '⚠️ Consigue puntos jugando la canción para poder clasificar en el ranking.'
+                                                        : '⚠️ Score points by playing the track to qualify for the leaderboard.');
+                                                    return;
+                                                }
+
+                                                // Validar campos obligatorios y formato
+                                                const errors: { chefName?: string; playerEmail?: string } = {};
+                                                const trimmedChef = chefName.trim();
+                                                if (!trimmedChef) {
+                                                    errors.chefName = language === 'es'
+                                                        ? 'Por favor ingresa tu apodo de chef para guardar tu puntuación.'
+                                                        : 'Please enter your chef nickname to save your score.';
+                                                } else if (trimmedChef.length < 2) {
+                                                    errors.chefName = language === 'es'
+                                                        ? 'El apodo debe tener al menos 2 caracteres.'
+                                                        : 'Nickname must be at least 2 characters.';
+                                                } else if (trimmedChef.length > 16) {
+                                                    errors.chefName = language === 'es'
+                                                        ? 'El apodo no puede exceder los 16 caracteres.'
+                                                        : 'Nickname cannot exceed 16 characters.';
+                                                }
+
+                                                const trimmedEmail = playerEmail.trim();
+                                                if (trimmedEmail) {
+                                                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                                    if (!emailRegex.test(trimmedEmail)) {
+                                                        errors.playerEmail = language === 'es'
+                                                            ? 'Ingresa un formato de correo válido (ej: chef@pizza.com).'
+                                                            : 'Please enter a valid email address (e.g. chef@pizza.com).';
+                                                    }
+                                                }
+
+                                                if (Object.keys(errors).length > 0) {
+                                                    setFormErrors(errors);
+                                                    return;
+                                                }
+
+                                                setFormErrors({});
+                                                setIsSavingScore(true);
+                                                try {
+                                                    await SpicyCrustService.submitScore({
+                                                        playerExternalId: userAddress || 'guest_player',
+                                                        nickname: trimmedChef,
+                                                        email: trimmedEmail || undefined,
+                                                        score: scoreToSave,
+                                                        metadata: {
+                                                            songId: selectedSong.id,
+                                                            songTitle: selectedSong.title,
+                                                            difficulty: selectedSong.difficulty === 3 ? 'Hard' : (selectedSong.difficulty === 2 ? 'Medium' : 'Easy'),
+                                                            timestamp: Date.now()
+                                                        }
+                                                    });
+                                                    setIsScoreSaved(true);
+                                                    loadLeaderboard();
+                                                } catch (err) {
+                                                    console.error('Error guardando score:', err);
+                                                } finally {
+                                                    setIsSavingScore(false);
+                                                }
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.65rem 0.8rem',
+                                                fontSize: '0.9rem',
+                                                fontWeight: 'bold',
+                                                fontFamily: "'Special Elite', monospace",
+                                                background: isScoreSaved ? '#27ae60' : '#8B0000',
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                marginTop: '0.3rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                                            }}
+                                        >
+                                            {isSavingScore ? '⏳ Guardando...' : (isScoreSaved ? '✅ ¡PUNTUACIÓN GUARDADA!' : '💾 GUARDAR EN EL RANKING')}
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div style={{ width: '100%', borderBottom: '1.5px dashed #888', margin: '0.35rem 0' }}></div>
-
-                                {/* Form: Nickname + Email + Save Button (Ink / Stamp Style) */}
-                                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.32rem' }}>
-                                    <input
-                                        type="text"
-                                        maxLength={24}
-                                        value={chefName}
-                                        onChange={(e) => {
-                                            setChefName(e.target.value);
-                                            try { localStorage.setItem('gp_chef_name', e.target.value); } catch {}
-                                            setIsScoreSaved(false);
-                                        }}
-                                        placeholder={language === 'es' ? '👨‍🍳 Nombre del Chef / Nickname' : '👨‍🍳 Chef Nickname'}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.35rem 0.5rem',
-                                            background: '#fff',
-                                            border: '1.5px solid #8B0000',
-                                            borderRadius: '6px',
-                                            fontSize: '0.78rem',
-                                            fontFamily: "'Special Elite', monospace",
-                                            color: '#111',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    />
-
-                                    <input
-                                        type="email"
-                                        value={playerEmail}
-                                        onChange={(e) => {
-                                            setPlayerEmail(e.target.value);
-                                            try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
-                                            setIsScoreSaved(false);
-                                        }}
-                                        placeholder={language === 'es' ? '✉️ Email (Opcional - newsletter)' : '✉️ Email (Optional)'}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.3rem 0.5rem',
-                                            background: '#fff',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '6px',
-                                            fontSize: '0.72rem',
-                                            fontFamily: "'Special Elite', monospace",
-                                            color: '#333',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    />
-
-                                    {/* Distinct Save CTA: Receipt Ink Stamp Blue (#1B3B6F) -> Emerald on Saved */}
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '0.8rem' }}>
                                     <button
-                                        onClick={async () => {
-                                            const scoreToSave = lastScoreRef.current || lastScore || 0;
-                                            if (scoreToSave <= 0) {
-                                                alert(language === 'es'
-                                                    ? '⚠️ Consigue puntos jugando la canción para poder clasificar en el ranking.'
-                                                    : '⚠️ Score points by playing the track to qualify for the leaderboard.');
-                                                return;
-                                            }
-                                            setIsSavingScore(true);
-                                            try {
-                                                await SpicyCrustService.submitScore({
-                                                    playerExternalId: userAddress || 'guest_player',
-                                                    nickname: chefName || 'Chef Don',
-                                                    email: playerEmail || undefined,
-                                                    score: scoreToSave,
-                                                    metadata: {
-                                                        songId: selectedSong.id,
-                                                        songTitle: selectedSong.title,
-                                                        difficulty: selectedSong.difficulty === 3 ? 'Hard' : (selectedSong.difficulty === 2 ? 'Medium' : 'Easy'),
-                                                        timestamp: Date.now()
-                                                    }
-                                                });
-                                                setIsScoreSaved(true);
-                                                loadLeaderboard();
-                                            } catch (err) {
-                                                console.error('Error guardando score:', err);
-                                            } finally {
-                                                setIsSavingScore(false);
-                                            }
+                                        onClick={() => {
+                                            const results = document.getElementById('results');
+                                            if (results) results.style.display = 'none';
+                                            const overlay = document.getElementById('overlay');
+                                            if (overlay) overlay.style.display = 'flex';
+                                            loadLeaderboard();
+                                            setView('leaderboard');
                                         }}
                                         style={{
                                             width: '100%',
-                                            padding: '0.45rem 0.6rem',
-                                            fontSize: '0.8rem',
+                                            padding: '0.75rem 1rem',
+                                            fontSize: '1rem',
                                             fontWeight: 'bold',
                                             fontFamily: "'Special Elite', monospace",
-                                            background: isScoreSaved
-                                                ? '#27ae60'
-                                                : '#1B3B6F',
-                                            color: '#fff',
-                                            border: isScoreSaved
-                                                ? '1.5px solid #1e8449'
-                                                : '1.5px solid #0F2548',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '5px',
-                                            transition: 'all 0.2s ease',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.18)'
-                                        }}
-                                    >
-                                        {isSavingScore ? '⏳ Guardando...' : (isScoreSaved ? '✅ ¡PUNTUACIÓN GUARDADA!' : '💾 GUARDAR MI PUNTUACIÓN')}
-                                    </button>
-                                </div>
-
-                                <div style={{ width: '100%', borderBottom: '1.5px dashed #888', margin: '0.35rem 0' }}></div>
-
-                                {/* Restructured Game Action Buttons */}
-                                <div style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '6px',
-                                    width: '100%',
-                                    marginTop: '0.1rem'
-                                }}>
-                                    {/* Primary Giant 3D Arcade CTA: Play Again (Vibrant Flame Gradient) */}
-                                    <button
-                                        id="restartBtn"
-                                        onClick={handleCookAgain}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.65rem 0.8rem',
-                                            fontSize: '0.95rem',
-                                            fontWeight: 'bold',
-                                            fontFamily: "'Special Elite', monospace",
-                                            background: 'linear-gradient(180deg, #E67E22 0%, #C0392B 100%)',
-                                            border: '2px solid #8E1B0F',
-                                            borderRadius: '8px',
-                                            color: '#FFF',
-                                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                            background: '#D4AF37',
+                                            color: '#1a1005',
+                                            border: 'none',
+                                            borderRadius: '10px',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '6px',
-                                            boxShadow: '0 3px 0 #641209, 0 5px 10px rgba(0,0,0,0.35)',
-                                            textTransform: 'uppercase',
-                                            transition: 'transform 0.1s ease, box-shadow 0.1s ease'
+                                            boxShadow: '0 3px 8px rgba(212,175,55,0.3)'
                                         }}
-                                        onMouseDown={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(2px)';
-                                            e.currentTarget.style.boxShadow = '0 1px 0 #641209, 0 3px 6px rgba(0,0,0,0.3)';
-                                        }}
-                                        onMouseUp={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0px)';
-                                            e.currentTarget.style.boxShadow = '0 3px 0 #641209, 0 5px 10px rgba(0,0,0,0.35)';
-                                        }}
+                                    >
+                                        🏆 {language === 'es' ? 'VER TABLA DE LÍDERES' : 'VIEW LEADERBOARD'}
+                                    </button>
+
+                                    <button
+                                        id="restartBtn"
+                                        className="primary-btn"
+                                        onClick={handleCookAgain}
+                                        style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '1.05rem', boxShadow: 'none' }}
                                     >
                                         🍕 {language === 'es' ? 'TOCAR DE NUEVO' : 'PLAY AGAIN'}
                                     </button>
 
-                                    {/* Optional Level 2 Unlocked Banner (Only if >= 4000 pts) */}
-                                    {onChainScore !== null && onChainScore >= 4000 && (
+                                    {onChainScore !== null && onChainScore >= 4000 ? (
                                         <button
                                             id="nextLevelBtn"
+                                            className="primary-btn"
                                             onClick={handleNextLevel}
                                             style={{
                                                 width: '100%',
-                                                padding: '0.55rem 0.8rem',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 'bold',
-                                                fontFamily: "'Special Elite', monospace",
-                                                background: '#27ae60',
-                                                border: '1.5px solid #1e8449',
-                                                borderRadius: '8px',
-                                                color: '#fff',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '5px',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                padding: '0.85rem 1rem',
+                                                fontSize: '1.1rem',
+                                                background: '#E67E22',
+                                                borderColor: '#D35400',
+                                                boxShadow: 'none',
+                                                textTransform: 'uppercase'
                                             }}
                                         >
                                             🚀 {language === 'es' ? 'NIVEL 2: MÁS RÁPIDO' : 'LEVEL 2: FASTER'}
                                         </button>
+                                    ) : (
+                                        <button
+                                            id="nextLevelBtn"
+                                            style={{ width: '100%', padding: '0.8rem 1rem', fontSize: '0.95rem', fontFamily: 'var(--font-title)', opacity: 0.6, cursor: 'not-allowed', background: '#E0D4B8', border: '2px solid #ccc', borderRadius: '12px', color: '#888', fontWeight: 'bold' }}
+                                            disabled
+                                            title={language === 'es' ? 'Consigue 4000 pts para desbloquear' : 'Score 4000 pts to unlock'}
+                                        >
+                                            🔒 {language === 'es' ? 'SIGUIENTE NIVEL (4000 PTS)' : 'NEXT LEVEL (4000 PTS)'}
+                                        </button>
                                     )}
 
-                                    {/* Secondary Action Bar: Ranking & Exit */}
-                                    <div style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '1fr 1fr',
-                                        gap: '6px',
-                                        width: '100%'
-                                    }}>
-                                        {/* Ranking Button */}
-                                        <button
-                                            onClick={() => {
-                                                const results = document.getElementById('results');
-                                                if (results) results.style.display = 'none';
-                                                const overlay = document.getElementById('overlay');
-                                                if (overlay) overlay.style.display = 'flex';
-                                                loadLeaderboard();
-                                                setView('leaderboard');
-                                            }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.45rem 0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 'bold',
-                                                fontFamily: "'Special Elite', monospace",
-                                                background: '#D4AF37',
-                                                color: '#1a1005',
-                                                border: '1.5px solid #b8972e',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '4px',
-                                                boxShadow: '0 2px 4px rgba(212,175,55,0.25)'
-                                            }}
-                                        >
-                                            🏆 {language === 'es' ? 'RANKING' : 'RANKING'}
-                                        </button>
-
-                                        {/* Exit Button */}
-                                        <button
-                                            id="backToLobbyBtn"
-                                            onClick={handleBackToLobby}
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.45rem 0.4rem',
-                                                fontSize: '0.78rem',
-                                                fontFamily: "'Special Elite', monospace",
-                                                background: 'transparent',
-                                                border: '1.5px dashed #8B0000',
-                                                borderRadius: '6px',
-                                                color: '#8B0000',
-                                                fontWeight: 'bold',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '4px',
-                                                transition: 'all 0.2s ease'
-                                            }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                                        >
-                                            🚪 {language === 'es' ? 'SALIR' : 'EXIT'}
-                                        </button>
-                                    </div>
+                                    <button
+                                        id="backToLobbyBtn"
+                                        onClick={handleBackToLobby}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 1rem',
+                                            fontSize: '1rem',
+                                            fontFamily: "'Special Elite', monospace",
+                                            background: 'transparent',
+                                            border: '2px dashed #8B0000',
+                                            borderRadius: '12px',
+                                            color: '#8B0000',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF8E7'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        {language === 'es' ? 'SALIR DE LA COCINA' : 'EXIT KITCHEN'}
+                                    </button>
                                 </div>
 
                             </div>
@@ -8178,7 +8540,14 @@ Ganador: ${payload.winnerAddress}`);
 
 
 
-
+                    {/* ── NEW PLAYER ONBOARDING MODAL ────────────────────────────── */}
+                    <OnboardingModal
+                        showOnboarding={showOnboarding}
+                        onboardingStep={onboardingStep}
+                        setOnboardingStep={setOnboardingStep}
+                        language={language}
+                        dismissOnboarding={dismissOnboarding}
+                    />
 
 
 

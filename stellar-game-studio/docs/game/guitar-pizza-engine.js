@@ -156,6 +156,25 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
     // --- HELPER FUNCTIONS ---
 
+    function triggerHaptic(type) {
+        if (!navigator || !navigator.vibrate) return;
+        try {
+            if (type === 'perfect') {
+                navigator.vibrate(18);
+            } else if (type === 'tasty') {
+                navigator.vibrate(28);
+            } else if (type === 'miss' || type === 'trap') {
+                navigator.vibrate([40, 30, 45]);
+            } else if (type === 'fever') {
+                navigator.vibrate([30, 40, 50, 40, 70]);
+            } else if (type === 'pizza') {
+                navigator.vibrate([25, 30, 25, 30, 50]);
+            } else if (type === 'secretsauce') {
+                navigator.vibrate([60, 40, 80]);
+            }
+        } catch (e) {}
+    }
+
     let _difficultyStart = 0.6;  // set by startGame opts
 
     function resetGame() {
@@ -370,6 +389,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             if (lane >= 0 && lane < 4) {
                 Input.touchHeld[lane] = true;
                 Input.held[lane] = true;
+                laneHitAnim[lane] = 1.0;
+                laneBoxAnim[lane] = 0.6;
                 triggerInput(lane);
             }
         }
@@ -822,30 +843,41 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         songBuffer: null, songSource: null, musicGain: null, filterNode: null,
 
         init: function () {
-            if (this.isInit) {
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    // Only resume if called from a user gesture (startGame)
+            if (this.ctx && this.ctx.state === 'closed') {
+                this.isInit = false;
+                this.ctx = null;
+            }
+            if (this.isInit && this.ctx) {
+                if (this.ctx.state === 'suspended') {
                     try { this.ctx.resume(); } catch (e) { }
                 }
                 return;
             }
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioContext();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.35;
-            this.masterGain.connect(this.ctx.destination);
-
-            // Create Audio Analyser Node for dynamic visuals
             try {
-                this.analyser = this.ctx.createAnalyser();
-                this.analyser.fftSize = 64; // Small fft for fast volume tracking!
-                this.masterGain.connect(this.analyser);
-            } catch (e) {
-                console.warn('[AudioEngine] AnalyserNode creation failed:', e);
-            }
-            
-            // Capture audio stream for WebRTC guest mirroring
-            if (this.ctx) {
+                if (window._GP_GLOBAL_AUDIO_CTX && window._GP_GLOBAL_AUDIO_CTX.state !== 'closed') {
+                    this.ctx = window._GP_GLOBAL_AUDIO_CTX;
+                    if (this.ctx.state === 'suspended') {
+                        try { this.ctx.resume(); } catch (e) {}
+                    }
+                } else {
+                    this.ctx = new AudioContext();
+                    window._GP_GLOBAL_AUDIO_CTX = this.ctx;
+                }
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.35;
+                this.masterGain.connect(this.ctx.destination);
+
+                // Create Audio Analyser Node for dynamic visuals
+                try {
+                    this.analyser = this.ctx.createAnalyser();
+                    this.analyser.fftSize = 64; // Small fft for fast volume tracking!
+                    this.masterGain.connect(this.analyser);
+                } catch (e) {
+                    console.warn('[AudioEngine] AnalyserNode creation failed:', e);
+                }
+                
+                // Capture audio stream for WebRTC guest mirroring
                 try {
                     this.audioDest = this.ctx.createMediaStreamDestination();
                     this.masterGain.connect(this.audioDest);
@@ -854,28 +886,48 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 } catch (err) {
                     console.warn('[AudioEngine] MediaStreamAudioDestinationNode not supported or failed to create:', err);
                 }
-            }
 
-            // It will be suspended, we will resume it later
-            this.isInit = true;
+                this.isInit = true;
+            } catch (err) {
+                console.error('[AudioEngine] Failed to create AudioContext:', err);
+            }
         },
         setVolume: function (value) {
-            if (this.masterGain) {
+            if (this.masterGain && this.ctx) {
                 const v = Math.max(0, Math.min(1, value));
-                this.masterGain.gain.cancelScheduledValues(0);
-                this.masterGain.gain.value = v * 0.35;
+                try {
+                    this.masterGain.gain.cancelScheduledValues(0);
+                    this.masterGain.gain.value = v * 0.35;
+                } catch (e) {}
             }
         },
 
         // ── MUSIC ─────────────────────────────────────────────────────────────
         loadSong: async function (url) {
-            if (!this.isInit) this.init(); // Init context early (will be suspended)
-            if (!url) return;
+            this.init();
+            if (!url || !this.ctx) return;
             try {
-                const resp = await fetch(url);
-                const arrayBuffer = await resp.arrayBuffer();
-                this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-                console.log('[AudioEngine] Song loaded and decoded:', url);
+                // Persistent decoded buffer cache to prevent memory exhaustion and repeated decodes
+                window._GP_DECODED_BUFFER_CACHE = window._GP_DECODED_BUFFER_CACHE || new Map();
+                if (window._GP_DECODED_BUFFER_CACHE.has(url)) {
+                    this.songBuffer = window._GP_DECODED_BUFFER_CACHE.get(url);
+                    console.log('[AudioEngine] Song restored from cache:', url);
+                } else {
+                    window._GP_RAW_AUDIO_CACHE = window._GP_RAW_AUDIO_CACHE || new Map();
+                    let arrayBuffer;
+                    if (window._GP_RAW_AUDIO_CACHE.has(url)) {
+                        arrayBuffer = window._GP_RAW_AUDIO_CACHE.get(url).slice(0);
+                    } else {
+                        const resp = await fetch(url);
+                        const rawBuffer = await resp.arrayBuffer();
+                        window._GP_RAW_AUDIO_CACHE.set(url, rawBuffer);
+                        arrayBuffer = rawBuffer.slice(0);
+                    }
+                    
+                    this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+                    window._GP_DECODED_BUFFER_CACHE.set(url, this.songBuffer);
+                    console.log('[AudioEngine] Song loaded and decoded:', url);
+                }
 
                 // Run dynamic offline beat detection mapper if chartData is missing
                 if (!options.chartData || !Array.isArray(options.chartData.notes) || options.chartData.notes.length === 0) {
@@ -889,47 +941,64 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
         },
         playSong: function (initialRate, startSec, durationSec) {
-            if (!this.isInit || !this.songBuffer) return;
+            this.init();
+            if (!this.ctx || !this.songBuffer) return;
+            if (this.ctx.state === 'suspended') {
+                try { this.ctx.resume(); } catch (e) {}
+            }
             this.stopSong();
 
-            this.filterNode = this.ctx.createBiquadFilter();
-            this.filterNode.type = 'lowpass';
-            this.filterNode.frequency.value = 20000;
+            try {
+                this.filterNode = this.ctx.createBiquadFilter();
+                this.filterNode.type = 'lowpass';
+                this.filterNode.frequency.value = 20000;
 
-            this.musicGain = this.ctx.createGain();
-            this.musicGain.gain.value = 0.75;
+                this.musicGain = this.ctx.createGain();
+                this.musicGain.gain.value = 0.75;
 
-            this.songSource = this.ctx.createBufferSource();
-            this.songSource.buffer = this.songBuffer;
-            this.songSource.loop = false; // segment play — no full loop
-            this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
+                this.songSource = this.ctx.createBufferSource();
+                this.songSource.buffer = this.songBuffer;
+                this.songSource.loop = false; // segment play — no full loop
+                this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
 
-            this.songSource.connect(this.musicGain);
-            this.musicGain.connect(this.filterNode);
-            this.filterNode.connect(this.masterGain);
+                this.songSource.connect(this.musicGain);
+                this.musicGain.connect(this.filterNode);
+                this.filterNode.connect(this.masterGain);
 
-            // Play only the curated segment
-            const s = startSec || 0;
-            const d = durationSec || this.songBuffer.duration;
-            this.songSource.start(0, s, d);
-            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
+                // Play only the curated segment
+                const s = startSec || 0;
+                const d = durationSec || this.songBuffer.duration;
+                this.songSource.start(0, s, d);
+                console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
 
-            // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
-            const fadeStart = Math.max(0, d - 3);
-            const fadeStartCtx = this.ctx.currentTime + fadeStart;
-            this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
-            this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
+                // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
+                const fadeStart = Math.max(0, d - 3);
+                const fadeStartCtx = this.ctx.currentTime + fadeStart;
+                this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
+                this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
 
-            // When the segment naturally ends -> trigger level complete (victory)
-            this.songSource.onended = () => {
-                if (gameState === STATE.GAME) completeLevel();
-            };
+                // When the segment naturally ends -> trigger level complete (victory)
+                this.songSource.onended = () => {
+                    if (gameState === STATE.GAME) completeLevel();
+                };
+            } catch (err) {
+                console.error('[AudioEngine] Error in playSong:', err);
+            }
         },
         stopSong: function () {
             if (this.songSource) {
+                try { this.songSource.onended = null; } catch (e) { }
                 try { this.songSource.stop(); } catch (e) { }
                 try { this.songSource.disconnect(); } catch (e) { }
                 this.songSource = null;
+            }
+            if (this.filterNode) {
+                try { this.filterNode.disconnect(); } catch (e) { }
+                this.filterNode = null;
+            }
+            if (this.musicGain) {
+                try { this.musicGain.disconnect(); } catch (e) { }
+                this.musicGain = null;
             }
         },
 
@@ -974,8 +1043,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.03, 0.14);
             }
 
-            // Trigger synthesized sound effect
-            this.playHitSplat(isPerfect);
+            // Trigger synthesized sound effect with lane harmony
+            this.playHitSplat(isPerfect, lane);
         },
 
         onMiss: function () {
@@ -1006,6 +1075,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             this._fireRate = 1.15; // Speed up song during fever
             this.songSource.playbackRate.cancelScheduledValues(now);
             this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.5);
+            if (this.filterNode) {
+                this.filterNode.frequency.cancelScheduledValues(now);
+                this.filterNode.frequency.setValueAtTime(22050, now);
+            }
         },
 
         onFireModeEnd: function () {
@@ -1018,17 +1091,14 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
         onSustainTick: function (dt) {
             // Called every game frame while holding a sustain note.
-            // Throttle to ~10Hz to avoid flooding the scheduler.
             if (!this.filterNode || !this.isInit || !this.songSource) return;
             this._sustainTimer += dt;
             if (this._sustainTimer < 0.1) return;
             this._sustainTimer = 0;
             const now = this.ctx.currentTime;
-            // Gradually open filter brighter (excitement builds)
             const cur = this.filterNode.frequency.value;
             const target = Math.min(22050, cur + 1200);
             this.filterNode.frequency.setTargetAtTime(target, now, 0.08);
-            // Slowly increase speed (max +8%)
             const curRate = this.songSource.playbackRate.value;
             const targetRate = Math.min(this._fireRate + 0.08, curRate + 0.004);
             this.songSource.playbackRate.setTargetAtTime(targetRate, now, 0.3);
@@ -1037,46 +1107,16 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         onSustainComplete: function () {
             if (!this.isInit) return;
             const now = this.ctx.currentTime;
-            // Victory peak: pitch jumps up then settles back to base
             if (this.songSource) {
                 this.songSource.playbackRate.cancelScheduledValues(now);
                 this.songSource.playbackRate.setValueAtTime(1.12, now);
                 this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.08, 0.45);
             }
-            // Bright filter snap
             if (this.filterNode) {
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setValueAtTime(22050, now);
             }
-            // Chime tones removed — pitch peak + filter snap IS the reward
             this._sustainTimer = 0;
-        },
-
-
-        onFireMode: function () {
-            if (!this.isInit) return;
-            this._fireRate = 1.07; // music stays faster in fire mode
-            const now = this.ctx.currentTime;
-            if (this.songSource) {
-                this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setValueAtTime(1.12, now);          // hard jump
-                this.songSource.playbackRate.setTargetAtTime(1.07, now + 0.1, 0.3); // settle
-            }
-            if (this.filterNode) {
-                this.filterNode.frequency.cancelScheduledValues(now);
-                this.filterNode.frequency.setValueAtTime(22050, now);            // fully open
-            }
-            // Fire fanfare tones removed — the music speed jump IS the signal
-        },
-
-        onFireModeEnd: function () {
-            if (!this.isInit) return;
-            this._fireRate = 1.0;
-            const now = this.ctx.currentTime;
-            if (this.songSource) {
-                this.songSource.playbackRate.cancelScheduledValues(now);
-                this.songSource.playbackRate.setTargetAtTime(1.0, now, 0.4);
-            }
         },
 
         // ── SFX ───────────────────────────────────────────────────────────────
@@ -1095,7 +1135,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             osc.stop(this.ctx.currentTime + decay);
         },
 
-        playHitSplat: function (isPerfect) {
+        playHitSplat: function (isPerfect, lane) {
             if (!this.isInit) return;
             const now = this.ctx.currentTime;
 
@@ -1104,37 +1144,51 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const oscGain = this.ctx.createGain();
             osc.type = 'sine';
 
-            // Pitch sweep down
-            osc.frequency.setValueAtTime(isPerfect ? 180 : 130, now);
+            osc.frequency.setValueAtTime(isPerfect ? 190 : 140, now);
             osc.frequency.exponentialRampToValueAtTime(0.01, now + 0.1);
 
-            // Volume envelope
             oscGain.gain.setValueAtTime(0, now);
-            oscGain.gain.linearRampToValueAtTime(isPerfect ? 0.9 : 0.6, now + 0.01);
-            oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            oscGain.gain.linearRampToValueAtTime(isPerfect ? 0.85 : 0.55, now + 0.01);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
 
             osc.connect(oscGain);
             oscGain.connect(this.masterGain);
             osc.start(now);
-            osc.stop(now + 0.15);
+            osc.stop(now + 0.14);
 
-            // 2. "Splat" Noise (Short white noise burst)
-            const bufferSize = this.ctx.sampleRate * 0.1; // 100ms
+            // 2. Harmonic Slice Tone per Lane (A3=220, C4=261.63, E4=329.63, G4=392.00)
+            const laneFreqs = [220.0, 261.63, 329.63, 392.00];
+            const toneFreq = (lane !== undefined && lane >= 0 && lane < 4) ? laneFreqs[lane] : 261.63;
+            const toneOsc = this.ctx.createOscillator();
+            const toneGain = this.ctx.createGain();
+            toneOsc.type = 'triangle';
+            toneOsc.frequency.setValueAtTime(isPerfect ? toneFreq * 2 : toneFreq, now);
+            toneGain.gain.setValueAtTime(0, now);
+            toneGain.gain.linearRampToValueAtTime(isPerfect ? 0.25 : 0.12, now + 0.008);
+            toneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            toneOsc.connect(toneGain);
+            toneGain.connect(this.masterGain);
+            toneOsc.start(now);
+            toneOsc.stop(now + 0.12);
+
+            // 3. Crisp Knife/Splat Noise (Crunchy bandpass burst)
+            const bufferSize = Math.floor(this.ctx.sampleRate * 0.08); // 80ms
             const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1; // White noise
+                data[i] = Math.random() * 2 - 1;
             }
 
             const noise = this.ctx.createBufferSource();
             noise.buffer = buffer;
             const noiseFilter = this.ctx.createBiquadFilter();
             noiseFilter.type = 'bandpass';
-            noiseFilter.frequency.value = isPerfect ? 2500 : 1500; // Crunchier/higher for perfect
+            noiseFilter.frequency.value = isPerfect ? 3200 : 2000;
+            noiseFilter.Q.value = 3.0;
 
             const noiseGain = this.ctx.createGain();
             noiseGain.gain.setValueAtTime(0, now);
-            noiseGain.gain.linearRampToValueAtTime(isPerfect ? 0.4 : 0.2, now + 0.01);
+            noiseGain.gain.linearRampToValueAtTime(isPerfect ? 0.35 : 0.18, now + 0.005);
             noiseGain.gain.exponentialRampToValueAtTime(0.001, now + (isPerfect ? 0.08 : 0.05));
 
             noise.connect(noiseFilter);
@@ -1142,6 +1196,26 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             noiseGain.connect(this.masterGain);
 
             noise.start(now);
+        },
+
+        playComboMilestoneSFX: function (comboCount) {
+            if (!this.isInit) return;
+            const now = this.ctx.currentTime;
+            // Rising fanfare chime arpeggio (C5, E5, G5, C6)
+            const freqs = [523.25, 659.25, 783.99, 1046.50];
+            freqs.forEach((f, idx) => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, now + idx * 0.05);
+                gain.gain.setValueAtTime(0, now + idx * 0.05);
+                gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.05 + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.22);
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start(now + idx * 0.05);
+                osc.stop(now + idx * 0.05 + 0.22);
+            });
         },
 
         playMissSFX: function () {
@@ -1323,7 +1397,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                     if (fireMode) AudioEngine.onFireModeEnd();
                     combo = 0; fireMode = false; health -= 15; perfectStreak = 0;
                     score = Math.max(0, score - 500);
+                    triggerHaptic('trap');
                     createFeedback("WRONG ORDER! 🚫", lane, HIT_Y);
+                    createExplosion(lane, HIT_Y, '#222222', false, 'miss');
                     AudioEngine.onMiss(); // onMiss already triggers playMissSFX internally
                     shake = 18;
                     trapBurnAnim[lane] = 1.0; // Trigger burnt box charring indicator
@@ -1340,10 +1416,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
 
                 // Dynamic Auto-Calibration: gently align latency to player's natural offset over time
                 if (tasty) {
-                    // A positive offset means late hit, so notes should arrive slightly later -> increase latency slightly
-                    // A negative offset means early hit, so notes should arrive slightly earlier -> decrease latency slightly
                     latency += timeOffset * 0.035; 
-                    // Keep latency within reasonable bounds (e.g. -100ms to +300ms)
                     latency = Math.max(-0.1, Math.min(0.3, latency));
                     if (window.updateGuitarPizzaLatency) {
                         window.updateGuitarPizzaLatency(latency * 1000);
@@ -1360,6 +1433,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                     if (targetNote.isGolden) {
                         secretIngredients++;
                         score += 5000;
+                        triggerHaptic('secretsauce');
                         createFeedback("SECRET SAUCE! 🧪", lane, HIT_Y);
                         perfectStreak = 0; // Reset after finding one
                     }
@@ -1371,6 +1445,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 if (combo >= 19 && !fireMode) {
                     fireMode = true;
                     AudioEngine.onFireMode();
+                    triggerHaptic('fever');
                     createFeedback("🔥🔥 FEVER MODE! 🔥🔥", -1, H * 0.5);
                     shake = 15;
                 }
@@ -1380,19 +1455,23 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 combo++;
                 if (combo > maxCombo) maxCombo = combo;
 
-                // Cool combo streak popups
+                // Trigger Haptic feedback on hit
+                triggerHaptic(perfect ? 'perfect' : 'tasty');
+
+                // Cool combo streak popups and milestone SFX
                 if (combo > 0 && combo % 10 === 0 && !fireMode) {
                     createFeedback("COMBO " + combo + "!", -1, H * 0.4);
+                    AudioEngine.playComboMilestoneSFX(combo);
                 }
 
                 health = Math.min(100, health + (perfect ? 3 : 1));
-                createExplosion(targetNote.lane, HIT_Y, targetNote.color, perfect);
+                createExplosion(targetNote.lane, HIT_Y, targetNote.color, perfect, perfect ? 'perfect' : 'tasty');
                 createFeedback(perfect ? "DELICIOUS!" : "TASTY", lane, HIT_Y);
 
                 shake = perfect ? (fireMode ? 8 : 6) : 3;
                 camScale = perfect ? 1.02 : 1.01;
-                // Music IS the feedback: no synthetic chord — onHit swells the song itself
-                AudioEngine.onHit(perfect);
+                // Music IS the feedback: onHit swells the song and plays harmonic slice splat
+                AudioEngine.onHit(perfect, targetNote.lane);
 
                 pizzaProgress++;
                 if (pizzaProgress >= CONFIG.HITS_PER_PIZZA) finishPizza();
@@ -1404,7 +1483,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         if (fireMode) AudioEngine.onFireModeEnd();
         combo = 0; fireMode = false; health -= 4; perfectStreak = 0;
         console.log(`[Engine] MISS! Lane ${lane} played without a note. Health drops by 4 to ${health}`);
+        triggerHaptic('miss');
         createFeedback("BURNT", lane, HIT_Y);
+        createExplosion(lane, HIT_Y, '#222222', false, 'miss');
         shake = 5; camScale = 0.98;
         AudioEngine.onMiss(); // onMiss triggers playMissSFX internally
         return { hit: false, offset: null }; // MISS
@@ -1413,6 +1494,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     let pizzaPopup = { active: false, scale: 0, alpha: 0, timer: 0 };
     function finishPizza() {
         pizzaProgress = 0; pizzasMade++; score += 1000; health = Math.min(100, health + 15);
+        triggerHaptic('pizza');
         AudioEngine.playOvenBell();
         createFeedback("ORDER UP!", -1, H * 0.3);
         pizzaPopup.active = true; pizzaPopup.scale = 0; pizzaPopup.alpha = 1; pizzaPopup.timer = 1.5;
@@ -1611,20 +1693,41 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
     }
 
-    function createExplosion(lane, y, color, big) {
+    function createExplosion(lane, y, color, big, type = 'tasty') {
         const tempX = (lane * LANE_W) + (LANE_W / 2);
         const isSoft = (options.vfxMode || 'soft') === 'soft';
-        const count = isSoft ? (big ? 8 : 4) : (big ? 35 : 15);
+        const count = isSoft ? (big ? 10 : 5) : (big ? 35 : 18);
         for (let i = 0; i < count; i++) {
+            let shape = 'crumb';
+            let pColor = color;
+            let size = Math.random() * (W * (isSoft ? 0.015 : 0.03)) + (isSoft ? 3 : 6);
+            let life = 1.0;
+
+            if (type === 'perfect') {
+                shape = Math.random() < 0.5 ? 'spark' : 'crumb';
+                pColor = Math.random() < 0.6 ? '#FFD700' : (Math.random() < 0.5 ? '#FFF8DC' : color);
+                size *= 1.25;
+            } else if (type === 'miss') {
+                shape = 'smoke';
+                pColor = Math.random() < 0.5 ? 'rgba(60,60,60,0.8)' : 'rgba(30,30,30,0.9)';
+                size *= 1.4;
+                life = 0.75;
+            } else {
+                shape = Math.random() < 0.35 ? 'sauce' : 'crumb';
+            }
+
             particles.push({
                 x: tempX, y: y,
-                vx: (Math.random() - 0.5) * (W * (isSoft ? 0.35 : 0.8)),
-                vy: -Math.random() * (H * (isSoft ? 0.35 : 0.7)) - (H * (isSoft ? 0.1 : 0.2)), // Jump up (pop)
-                color: color,
-                life: 1.0,
-                size: Math.random() * (W * (isSoft ? 0.015 : 0.03)) + (isSoft ? 3 : 6),
+                vx: (Math.random() - 0.5) * (W * (isSoft ? 0.38 : 0.85)),
+                vy: type === 'miss'
+                    ? -Math.random() * (H * 0.15) - (H * 0.05)
+                    : -Math.random() * (H * (isSoft ? 0.38 : 0.75)) - (H * (isSoft ? 0.12 : 0.22)),
+                color: pColor,
+                life: life,
+                shape: shape,
+                size: size,
                 rotation: Math.random() * Math.PI * 2,
-                vr: (Math.random() - 0.5) * (isSoft ? 5 : 15) // rotation speed
+                vr: (Math.random() - 0.5) * (isSoft ? 6 : 16)
             });
         }
     }
@@ -2217,14 +2320,42 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             ctx.restore();
         });
 
-        // Visuals (Particles / Crumbs)
+        // Visuals (Particles / Crumbs / Sparks / Sauce / Smoke)
         particles.forEach(p => {
             ctx.save();
-            ctx.globalAlpha = p.life < 0.2 ? p.life * 5 : 1.0; // Fade out near the end
-            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life < 0.25 ? (p.life * 4) : 1.0;
             ctx.translate(p.x, p.y);
             if (p.rotation !== undefined) ctx.rotate(p.rotation);
-            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); // Square crumbs look better as food
+
+            if (p.shape === 'spark') {
+                // Golden Diamond Sparkle
+                ctx.fillStyle = p.color;
+                ctx.shadowColor = "#FFD700";
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.moveTo(0, -p.size);
+                ctx.lineTo(p.size * 0.5, 0);
+                ctx.lineTo(0, p.size);
+                ctx.lineTo(-p.size * 0.5, 0);
+                ctx.closePath();
+                ctx.fill();
+            } else if (p.shape === 'sauce') {
+                // Liquid Sauce Droplet
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (p.shape === 'smoke') {
+                // Charred Smoke Puff
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Square Food Crumb
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            }
             ctx.restore();
         });
         ctx.globalAlpha = 1.0;
@@ -2906,7 +3037,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             if (uiBackBtn) uiBackBtn.onclick = null;
 
             AudioEngine.stopSong();
-            if (AudioEngine.ctx) AudioEngine.ctx.close();
+            AudioEngine.isInit = false;
             if (socket) {
                 try {
                     socket.close();

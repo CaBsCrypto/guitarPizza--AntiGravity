@@ -225,40 +225,6 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
     }
 
-    function resetToMenu() {
-        AudioEngine.stopSong();
-        gameState = STATE.MENU;
-        loopRunning = false;
-        if (requestId) {
-            cancelAnimationFrame(requestId);
-            requestId = null;
-        }
-        score = 0; combo = 0; maxCombo = 0; health = 100;
-        fireMode = false; difficultyTimer = 0;
-        pizzaProgress = 0; pizzasMade = 0;
-        perfectStreak = 0; secretIngredients = 0;
-        rushHourActive = false; rushHourTimer = 0;
-        rushHourDuration = 0; rushHourNextTrigger = 15;
-        totalPerfectHits = 0; totalHits = 0;
-        feverTime = 0; totalTraps = 0; trapsAvoided = 0; totalNotes = 0;
-        notes = []; particles = []; feedbackSystem = [];
-        gameTimer = 0; nextNoteTime = 0;
-        _pendingSongPlay = null;
-        inputLog = [];
-        isVictory = false;
-        _levelCompleteTriggered = false;
-        laneBoxPhase = [0, 0, 0, 0];
-        laneBoxAnim = [0, 0, 0, 0];
-        laneHitAnim = [0, 0, 0, 0];
-        trapBurnAnim = [0, 0, 0, 0];
-        accuracyTicks = [];
-        centerBanner = null;
-        showScreen('menu');
-        if (ctx && canvas) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-    }
-
     function showScreen(screen) {
         if (uiOverlay) uiOverlay.style.display = 'none';
         if (uiResults) uiResults.style.display = 'none';
@@ -266,9 +232,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         if (screen === 'menu') {
             if (uiOverlay) uiOverlay.style.display = 'flex';
             // Clear canvas to transparent so CSS gradient shows
-            if (ctx && canvas) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         } else if (screen === 'results') {
             if (uiResults) uiResults.style.display = 'flex';
             if (uiResScore) uiResScore.innerText = Math.floor(score).toString();
@@ -280,24 +244,16 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const nextLevelBtn = document.getElementById('nextLevelBtn');
 
             if (isVictory) {
-                if (titleEl) { titleEl.innerText = t.engineLevelComplete; titleEl.style.color = '#8B0000'; }
-                if (pizzasEl) { pizzasEl.style.display = 'flex'; }
+                if (titleEl) { titleEl.innerText = t.engineLevelComplete; titleEl.style.color = '#ffd700'; }
+                if (pizzasEl) { pizzasEl.style.display = 'block'; }
                 if (pizzasCountEl) { pizzasCountEl.innerText = pizzasMade; }
-                if (nextLevelBtn) {
-                    nextLevelBtn.style.display = 'flex';
-                    nextLevelBtn.style.opacity = '1';
-                    nextLevelBtn.style.cursor = 'pointer';
-                }
-                if (uiResults) { uiResults.style.background = 'rgba(20,50,20,0.65)'; }
+                if (nextLevelBtn) { nextLevelBtn.style.display = 'block'; }
+                if (uiResults) { uiResults.style.background = 'rgba(20,50,20,0.7)'; }
             } else {
-                if (titleEl) { titleEl.innerText = t.engineServiceEnded; titleEl.style.color = '#8B0000'; }
+                if (titleEl) { titleEl.innerText = t.engineServiceEnded; titleEl.style.color = '#fff'; }
                 if (pizzasEl) { pizzasEl.style.display = 'none'; }
-                if (nextLevelBtn) {
-                    nextLevelBtn.style.display = 'flex';
-                    nextLevelBtn.style.opacity = '0.55';
-                    nextLevelBtn.style.cursor = 'not-allowed';
-                }
-                if (uiResults) { uiResults.style.background = 'rgba(15,5,5,0.65)'; }
+                if (nextLevelBtn) { nextLevelBtn.style.display = 'none'; }
+                if (uiResults) { uiResults.style.background = 'rgba(0,0,0,0.6)'; }
             }
 
             // Calculate Grade
@@ -319,13 +275,14 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         } else if (gameState === STATE.PAUSED) {
             gameState = STATE.GAME;
             // Resume the song exactly where we left off (resolvedStart + gameTimer)
+            const songRate = AudioEngine._fireRate || 1.0;
             const resolvedStart = CONFIG.SONG_START || 0;
             const resolvedDuration = CONFIG.SONG_DURATION || 0;
-            const durationLeft = resolvedDuration - Math.max(0, gameTimer);
+            const durationLeft = resolvedDuration - gameTimer;
             // gameTimer < 0 means we're still in the lead-in: the song hasn't
             // started yet (_pendingSongPlay will fire it), so don't resume audio.
             if (durationLeft > 0 && gameTimer >= 0) {
-                AudioEngine.playSong(1.0, resolvedStart + gameTimer, durationLeft, null, gameTimer);
+                AudioEngine.playSong(songRate, resolvedStart + gameTimer, durationLeft);
             }
             lastTime = performance.now(); // reset time to prevent huge dt jump
         }
@@ -727,13 +684,10 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     };
 
     // --- OFFLINE DSP BEAT DETECTOR & CHART GENERATOR ---
-    function generateChartFromAudio(songBuffer, bpm, songStartSec = 0, songDurationSec = 0) {
+    function generateChartFromAudio(songBuffer, bpm) {
         const channelData = songBuffer.getChannelData(0);
         const sampleRate = songBuffer.sampleRate;
-        const totalFileDuration = songBuffer.duration;
-        const startSec = songStartSec || 0;
-        const playDuration = songDurationSec > 0 ? songDurationSec : (totalFileDuration - startSec);
-        const endSec = Math.min(totalFileDuration, startSec + playDuration);
+        const duration = songBuffer.duration;
         
         const blockSize = 512;
         const totalBlocks = Math.floor(channelData.length / blockSize);
@@ -833,13 +787,8 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         const laneLastNoteTime = [-999, -999, -999, -999];
         
         function addNote(time, lane, isTrap = false, isSustain = false, length = 0) {
-            // Strictly filter to the active playing segment of the song!
-            if (time < startSec + 0.2 || time > endSec - 1.5) return;
-
-            // Offset note time so it is relative to gameplay start (0.0s = startSec in audio)
-            const relativeTime = time - startSec;
-            const quantized = Math.round(relativeTime / stepLength) * stepLength;
-            if (quantized < 0.2 || quantized > playDuration - 1.5) return;
+            const quantized = Math.round(time / stepLength) * stepLength;
+            if (quantized < 0.2 || quantized > duration - 2.5) return;
             
             // Enforce minimum time spacing (cooldown) to ensure fun, playable notes: at least 0.8 beats
             const minSpacing = beatLength * 0.8;
@@ -894,30 +843,41 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         songBuffer: null, songSource: null, musicGain: null, filterNode: null,
 
         init: function () {
-            if (this.isInit) {
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    // Only resume if called from a user gesture (startGame)
+            if (this.ctx && this.ctx.state === 'closed') {
+                this.isInit = false;
+                this.ctx = null;
+            }
+            if (this.isInit && this.ctx) {
+                if (this.ctx.state === 'suspended') {
                     try { this.ctx.resume(); } catch (e) { }
                 }
                 return;
             }
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AudioContext();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.35;
-            this.masterGain.connect(this.ctx.destination);
-
-            // Create Audio Analyser Node for dynamic visuals
             try {
-                this.analyser = this.ctx.createAnalyser();
-                this.analyser.fftSize = 64; // Small fft for fast volume tracking!
-                this.masterGain.connect(this.analyser);
-            } catch (e) {
-                console.warn('[AudioEngine] AnalyserNode creation failed:', e);
-            }
-            
-            // Capture audio stream for WebRTC guest mirroring
-            if (this.ctx) {
+                if (window._GP_GLOBAL_AUDIO_CTX && window._GP_GLOBAL_AUDIO_CTX.state !== 'closed') {
+                    this.ctx = window._GP_GLOBAL_AUDIO_CTX;
+                    if (this.ctx.state === 'suspended') {
+                        try { this.ctx.resume(); } catch (e) {}
+                    }
+                } else {
+                    this.ctx = new AudioContext();
+                    window._GP_GLOBAL_AUDIO_CTX = this.ctx;
+                }
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.35;
+                this.masterGain.connect(this.ctx.destination);
+
+                // Create Audio Analyser Node for dynamic visuals
+                try {
+                    this.analyser = this.ctx.createAnalyser();
+                    this.analyser.fftSize = 64; // Small fft for fast volume tracking!
+                    this.masterGain.connect(this.analyser);
+                } catch (e) {
+                    console.warn('[AudioEngine] AnalyserNode creation failed:', e);
+                }
+                
+                // Capture audio stream for WebRTC guest mirroring
                 try {
                     this.audioDest = this.ctx.createMediaStreamDestination();
                     this.masterGain.connect(this.audioDest);
@@ -926,33 +886,53 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 } catch (err) {
                     console.warn('[AudioEngine] MediaStreamAudioDestinationNode not supported or failed to create:', err);
                 }
-            }
 
-            // It will be suspended, we will resume it later
-            this.isInit = true;
+                this.isInit = true;
+            } catch (err) {
+                console.error('[AudioEngine] Failed to create AudioContext:', err);
+            }
         },
         setVolume: function (value) {
-            if (this.masterGain) {
+            if (this.masterGain && this.ctx) {
                 const v = Math.max(0, Math.min(1, value));
-                this.masterGain.gain.cancelScheduledValues(0);
-                this.masterGain.gain.value = v * 0.35;
+                try {
+                    this.masterGain.gain.cancelScheduledValues(0);
+                    this.masterGain.gain.value = v * 0.35;
+                } catch (e) {}
             }
         },
 
         // ── MUSIC ─────────────────────────────────────────────────────────────
         loadSong: async function (url) {
-            if (!this.isInit) this.init(); // Init context early (will be suspended)
-            if (!url) return;
+            this.init();
+            if (!url || !this.ctx) return;
             try {
-                const resp = await fetch(url);
-                const arrayBuffer = await resp.arrayBuffer();
-                this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
-                console.log('[AudioEngine] Song loaded and decoded:', url);
+                // Persistent decoded buffer cache to prevent memory exhaustion and repeated decodes
+                window._GP_DECODED_BUFFER_CACHE = window._GP_DECODED_BUFFER_CACHE || new Map();
+                if (window._GP_DECODED_BUFFER_CACHE.has(url)) {
+                    this.songBuffer = window._GP_DECODED_BUFFER_CACHE.get(url);
+                    console.log('[AudioEngine] Song restored from cache:', url);
+                } else {
+                    window._GP_RAW_AUDIO_CACHE = window._GP_RAW_AUDIO_CACHE || new Map();
+                    let arrayBuffer;
+                    if (window._GP_RAW_AUDIO_CACHE.has(url)) {
+                        arrayBuffer = window._GP_RAW_AUDIO_CACHE.get(url).slice(0);
+                    } else {
+                        const resp = await fetch(url);
+                        const rawBuffer = await resp.arrayBuffer();
+                        window._GP_RAW_AUDIO_CACHE.set(url, rawBuffer);
+                        arrayBuffer = rawBuffer.slice(0);
+                    }
+                    
+                    this.songBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+                    window._GP_DECODED_BUFFER_CACHE.set(url, this.songBuffer);
+                    console.log('[AudioEngine] Song loaded and decoded:', url);
+                }
 
                 // Run dynamic offline beat detection mapper if chartData is missing
                 if (!options.chartData || !Array.isArray(options.chartData.notes) || options.chartData.notes.length === 0) {
                     console.log('[Engine] Generating dynamic chart from audio track...');
-                    const autoNotes = generateChartFromAudio(this.songBuffer, CONFIG.BPM, CONFIG.SONG_START, CONFIG.SONG_DURATION);
+                    const autoNotes = generateChartFromAudio(this.songBuffer, CONFIG.BPM);
                     options.chartData = { notes: autoNotes };
                     console.log(`[Engine] Dynamically mapped ${autoNotes.length} notes across 4 lanes.`);
                 }
@@ -960,91 +940,73 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 console.warn('[AudioEngine] Failed to load song:', e);
             }
         },
-        songStartCtxTime: null,
-        songStartSec: 0,
-        songDurationSec: 0,
-        songOffsetAtPlay: 0,
-        isPlaying: false,
-
-        playSong: function (initialRate, startSec, durationSec, scheduledTimeCtx, offsetInSegment) {
-            if (!this.isInit || !this.songBuffer) return;
+        playSong: function (initialRate, startSec, durationSec) {
+            this.init();
+            if (!this.ctx || !this.songBuffer) return;
+            if (this.ctx.state === 'suspended') {
+                try { this.ctx.resume(); } catch (e) {}
+            }
             this.stopSong();
 
-            this.filterNode = this.ctx.createBiquadFilter();
-            this.filterNode.type = 'lowpass';
-            this.filterNode.frequency.value = 20000;
+            try {
+                this.filterNode = this.ctx.createBiquadFilter();
+                this.filterNode.type = 'lowpass';
+                this.filterNode.frequency.value = 20000;
 
-            this.musicGain = this.ctx.createGain();
-            this.musicGain.gain.value = 0.75;
+                this.musicGain = this.ctx.createGain();
+                this.musicGain.gain.value = 0.75;
 
-            this.songSource = this.ctx.createBufferSource();
-            this.songSource.buffer = this.songBuffer;
-            this.songSource.loop = false; // segment play — no full loop
-            this.songSource.playbackRate.value = 1.0; // Strictly 1.0 for perfect rhythmic synchronization
+                this.songSource = this.ctx.createBufferSource();
+                this.songSource.buffer = this.songBuffer;
+                this.songSource.loop = false; // segment play — no full loop
+                this.songSource.playbackRate.value = initialRate || this._fireRate || 1.0;
 
-            this.songSource.connect(this.musicGain);
-            this.musicGain.connect(this.filterNode);
-            this.filterNode.connect(this.masterGain);
+                this.songSource.connect(this.musicGain);
+                this.musicGain.connect(this.filterNode);
+                this.filterNode.connect(this.masterGain);
 
-            // Play only the curated segment
-            const s = startSec || 0;
-            const d = durationSec || this.songBuffer.duration;
-            this.songStartSec = s;
-            this.songDurationSec = d;
-            this.songOffsetAtPlay = offsetInSegment || 0;
+                // Play only the curated segment
+                const s = startSec || 0;
+                const d = durationSec || this.songBuffer.duration;
+                this.songSource.start(0, s, d);
+                console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's)');
 
-            const nowCtx = this.ctx.currentTime;
-            const startWhen = (typeof scheduledTimeCtx === 'number' && scheduledTimeCtx >= nowCtx)
-                ? scheduledTimeCtx
-                : nowCtx;
+                // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
+                const fadeStart = Math.max(0, d - 3);
+                const fadeStartCtx = this.ctx.currentTime + fadeStart;
+                this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
+                this.musicGain.gain.linearRampToValueAtTime(0.0, this.ctx.currentTime + d);
 
-            this.songStartCtxTime = startWhen;
-            this.isPlaying = true;
-
-            this.songSource.start(startWhen, s, d);
-            console.log('[AudioEngine] segment ' + s + 's – ' + (s + d) + 's  (duration: ' + d + 's, scheduled at ctx ' + startWhen.toFixed(4) + ')');
-
-            // Schedule a 3s fade-out before the segment ends to avoid abrupt cut
-            const fadeStart = Math.max(0, d - 3);
-            const fadeStartCtx = startWhen + fadeStart;
-            this.musicGain.gain.setValueAtTime(0.75, fadeStartCtx);
-            this.musicGain.gain.linearRampToValueAtTime(0.0, startWhen + d);
-
-            // When the segment naturally ends -> trigger level complete (victory)
-            this.songSource.onended = () => {
-                this.isPlaying = false;
-                if (gameState === STATE.GAME) completeLevel();
-            };
+                // When the segment naturally ends -> trigger level complete (victory)
+                this.songSource.onended = () => {
+                    if (gameState === STATE.GAME) completeLevel();
+                };
+            } catch (err) {
+                console.error('[AudioEngine] Error in playSong:', err);
+            }
         },
         stopSong: function () {
-            this.isPlaying = false;
-            this.songStartCtxTime = null;
             if (this.songSource) {
+                try { this.songSource.onended = null; } catch (e) { }
                 try { this.songSource.stop(); } catch (e) { }
                 try { this.songSource.disconnect(); } catch (e) { }
                 this.songSource = null;
             }
-        },
-
-        getSongPosition: function () {
-            if (!this.isPlaying || this.songStartCtxTime === null || !this.ctx) {
-                return null;
+            if (this.filterNode) {
+                try { this.filterNode.disconnect(); } catch (e) { }
+                this.filterNode = null;
             }
-            const currentCtxTime = this.ctx.currentTime;
-            if (currentCtxTime < this.songStartCtxTime) {
-                // Audio scheduled in future (e.g. before lead-in ends)
-                return -(this.songStartCtxTime - currentCtxTime);
+            if (this.musicGain) {
+                try { this.musicGain.disconnect(); } catch (e) { }
+                this.musicGain = null;
             }
-            const elapsed = currentCtxTime - this.songStartCtxTime;
-            const hwLatency = (typeof this.ctx.outputLatency === 'number') ? this.ctx.outputLatency : 0;
-            return Math.max(0, this.songOffsetAtPlay + elapsed - hwLatency);
         },
 
         // ── REACTIVE AUDIO ────────────────────────────────────────────────────
-        _fireRate: 1.0,      // target playback rate reference
+        _fireRate: 1.0,      // target playback rate during fire mode
         _sustainTimer: 0,    // throttle for sustain ticks
 
-        onHit: function (isPerfect, lane) {
+        onHit: function (isPerfect) {
             if (!this.filterNode || !this.isInit || !this.musicGain || !this.songSource) return;
             const now = this.ctx.currentTime;
 
@@ -1059,6 +1021,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setValueAtTime(22050, now);
                 this.filterNode.frequency.setTargetAtTime(16000, now + 0.06, 0.25);
+
+                // Pitch: satisfying swell +5%, decay back
+                this.songSource.playbackRate.cancelScheduledValues(now);
+                this.songSource.playbackRate.setValueAtTime(1.05, now);
+                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.06, 0.22);
             } else {
                 // ── NORMAL HIT: lighter swell ─────────────────────────────────
                 // Volume: bump to 0.90, fall back
@@ -1069,6 +1036,11 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 // Filter: open brighter briefly
                 this.filterNode.frequency.cancelScheduledValues(now);
                 this.filterNode.frequency.setTargetAtTime(20000, now, 0.08);
+
+                // Pitch: subtle +2% nudge
+                this.songSource.playbackRate.cancelScheduledValues(now);
+                this.songSource.playbackRate.setValueAtTime(1.02, now);
+                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.03, 0.14);
             }
 
             // Trigger synthesized sound effect with lane harmony
@@ -1078,25 +1050,43 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         onMiss: function () {
             if (!this.filterNode || !this.isInit) return;
             const now = this.ctx.currentTime;
-            // ── Vinyl scratch filter muffling (quick recovery) ──
+            // ── HARD vinyl scratch ──
+            // Filter: instant slam to 280Hz, slow crawl back
             this.filterNode.frequency.cancelScheduledValues(now);
             this.filterNode.frequency.setValueAtTime(20000, now);
-            this.filterNode.frequency.linearRampToValueAtTime(350, now + 0.07);
-            this.filterNode.frequency.setTargetAtTime(16000, now + 0.15, 0.35);
+            this.filterNode.frequency.linearRampToValueAtTime(280, now + 0.07);
+            // Stay muffled (around 800Hz) until a correct pizza is hit
+            this.filterNode.frequency.setTargetAtTime(800, now + 0.1, 0.5);
+            // Pitch: big dip + wobble back
+            if (this.songSource) {
+                this.songSource.playbackRate.cancelScheduledValues(now);
+                this.songSource.playbackRate.setValueAtTime(0.82, now);
+                this.songSource.playbackRate.linearRampToValueAtTime(1.06, now + 0.18);
+                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.2, 0.5);
+            }
 
             // Trigger error buzzer SFX
             this.playMissSFX();
         },
 
         onFireMode: function () {
-            if (!this.isInit || !this.filterNode) return;
+            if (!this.isInit || !this.songSource) return;
             const now = this.ctx.currentTime;
-            this.filterNode.frequency.cancelScheduledValues(now);
-            this.filterNode.frequency.setValueAtTime(22050, now);
+            this._fireRate = 1.15; // Speed up song during fever
+            this.songSource.playbackRate.cancelScheduledValues(now);
+            this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.5);
+            if (this.filterNode) {
+                this.filterNode.frequency.cancelScheduledValues(now);
+                this.filterNode.frequency.setValueAtTime(22050, now);
+            }
         },
 
         onFireModeEnd: function () {
-            // Keep steady playback
+            if (!this.isInit || !this.songSource) return;
+            const now = this.ctx.currentTime;
+            this._fireRate = 1.0; // Reset to normal speed
+            this.songSource.playbackRate.cancelScheduledValues(now);
+            this.songSource.playbackRate.setTargetAtTime(this._fireRate, now, 0.2);
         },
 
         onSustainTick: function (dt) {
@@ -1109,13 +1099,23 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             const cur = this.filterNode.frequency.value;
             const target = Math.min(22050, cur + 1200);
             this.filterNode.frequency.setTargetAtTime(target, now, 0.08);
+            const curRate = this.songSource.playbackRate.value;
+            const targetRate = Math.min(this._fireRate + 0.08, curRate + 0.004);
+            this.songSource.playbackRate.setTargetAtTime(targetRate, now, 0.3);
         },
 
         onSustainComplete: function () {
-            if (!this.isInit || !this.filterNode) return;
+            if (!this.isInit) return;
             const now = this.ctx.currentTime;
-            this.filterNode.frequency.cancelScheduledValues(now);
-            this.filterNode.frequency.setValueAtTime(22050, now);
+            if (this.songSource) {
+                this.songSource.playbackRate.cancelScheduledValues(now);
+                this.songSource.playbackRate.setValueAtTime(1.12, now);
+                this.songSource.playbackRate.setTargetAtTime(this._fireRate, now + 0.08, 0.45);
+            }
+            if (this.filterNode) {
+                this.filterNode.frequency.cancelScheduledValues(now);
+                this.filterNode.frequency.setValueAtTime(22050, now);
+            }
             this._sustainTimer = 0;
         },
 
@@ -1410,9 +1410,18 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 const perfect = absOffset < PERFECT_WINDOW_SEC;
                 const tasty = absOffset < TASTY_WINDOW_SEC;
 
-                // Precision Timing Calibration Calculation (Visual feedback only - no jitter on global latency)
+                // Precision Timing Calibration Calculation
                 accuracyTicks.push({ offset: timeOffset, life: 1.5, isPerfect: perfect });
                 if (accuracyTicks.length > 20) accuracyTicks.shift();
+
+                // Dynamic Auto-Calibration: gently align latency to player's natural offset over time
+                if (tasty) {
+                    latency += timeOffset * 0.035; 
+                    latency = Math.max(-0.1, Math.min(0.3, latency));
+                    if (window.updateGuitarPizzaLatency) {
+                        window.updateGuitarPizzaLatency(latency * 1000);
+                    }
+                }
 
                 totalHits++;
                 // Trigger box bounce animation on the hit lane
@@ -1525,20 +1534,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         }
 
         if (fireMode) feverTime += dt;  // accumulate seconds in fever/fire mode
-
-        // --- MASTER AUDIO CLOCK SYNC ---
-        // Lock gameTimer strictly to Web Audio hardware playback position to avoid CPU frame drift
-        if (AudioEngine.isPlaying && AudioEngine.songStartCtxTime !== null) {
-            const audioPos = AudioEngine.getSongPosition();
-            if (typeof audioPos === 'number' && audioPos >= 0) {
-                gameTimer = audioPos;
-            } else {
-                gameTimer += dt;
-            }
-        } else {
-            gameTimer += dt;
-        }
-
+        gameTimer += dt;
         // Lead-in over: start the song exactly when the clock crosses zero
         if (_pendingSongPlay && gameTimer >= 0) {
             const _startSong = _pendingSongPlay;
@@ -2882,9 +2878,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 if (songUrl) {
                     _pendingSongPlay = () => {
                         if (AudioEngine.songBuffer) {
-                            AudioEngine.playSong(1.0, resolvedStart, resolvedDuration);
+                            AudioEngine.playSong(songRate, resolvedStart, resolvedDuration);
                         } else {
-                            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(1.0, resolvedStart, resolvedDuration));
+                            AudioEngine.loadSong(songUrl).then(() => AudioEngine.playSong(songRate, resolvedStart, resolvedDuration));
                         }
                     };
                 }
@@ -3023,7 +3019,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         AudioEngine.loadSong(songUrl);
     }
 
-    const api = {
+    return {
         cleanup: () => {
             shouldRun = false;
             cancelAnimationFrame(requestId);
@@ -3041,7 +3037,7 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             if (uiBackBtn) uiBackBtn.onclick = null;
 
             AudioEngine.stopSong();
-            if (AudioEngine.ctx) AudioEngine.ctx.close();
+            AudioEngine.isInit = false;
             if (socket) {
                 try {
                     socket.close();
@@ -3052,7 +3048,6 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             }
             window.toggleGuitarPizzaPause = null;
             window.getGuitarPizzaStats = null;
-            window.resetGuitarPizzaToMenu = null;
         },
         setVolume: (v) => AudioEngine.setVolume(v),
         startGame: () => {
@@ -3060,7 +3055,6 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
                 startGame();
             }
         },
-        resetToMenu: resetToMenu,
         getInputLog: () => inputLog,
         getInputState: () => Input,
         updateLatency: updateLatencyFunc,
@@ -3076,8 +3070,5 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
             latency: latency * 1000
         })
     };
-
-    window.resetGuitarPizzaToMenu = resetToMenu;
-    return api;
 };
 

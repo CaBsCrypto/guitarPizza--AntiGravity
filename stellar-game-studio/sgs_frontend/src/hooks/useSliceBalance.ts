@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletStore } from '../store/walletSlice';
 import { StellarContractService } from '../services/StellarContractService';
+import { AvalancheContractService } from '../services/AvalancheContractService';
+import type { Address } from 'viem';
 
 const POLL_INTERVAL_MS = 30_000; // refresh every 30s
 
@@ -16,8 +18,13 @@ export function useSliceBalance() {
     }
     setLoading(true);
     try {
-      const b = await StellarContractService.getSliceBalance(publicKey);
-      setBalance(b);
+      if (publicKey.startsWith('0x')) {
+        const b = await AvalancheContractService.getSliceBalance(publicKey as Address);
+        setBalance(b);
+      } else {
+        const b = await StellarContractService.getSliceBalance(publicKey);
+        setBalance(b);
+      }
     } catch {
       // keep previous value on error
     } finally {
