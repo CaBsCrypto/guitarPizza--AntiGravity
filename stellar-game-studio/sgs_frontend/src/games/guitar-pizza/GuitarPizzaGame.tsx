@@ -3254,41 +3254,6 @@ Ganador: ${payload.winnerAddress}`);
         <div className="w-full h-full flex flex-col text-white font-sans overflow-hidden" style={{ background: "#0a0705" }}>
             {/* Game Container */}
             <div id="restaurant-table-bg" className="pizzeria-checker" style={{ flex: 1, height: '100%', padding: '0.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', position: 'relative', backgroundPosition: 'center 80%', boxSizing: 'border-box' }}>
-                {/* Global Portal Link: Volver a SpicyCrust */}
-                <a
-                    href="https://spicycrust.com"
-                    target="_self"
-                    style={{
-                        position: 'absolute',
-                        top: '12px',
-                        left: '12px',
-                        zIndex: 100,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 12px',
-                        background: 'rgba(20, 5, 5, 0.85)',
-                        border: '1.5px solid #8B0000',
-                        borderRadius: '20px',
-                        color: '#FFF8DC',
-                        fontSize: '0.8rem',
-                        fontWeight: 'bold',
-                        textDecoration: 'none',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                        backdropFilter: 'blur(8px)',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                        fontFamily: "'Special Elite', monospace"
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#DAA520'; e.currentTarget.style.color = '#DAA520'; e.currentTarget.style.transform = 'scale(1.04)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#8B0000'; e.currentTarget.style.color = '#FFF8DC'; e.currentTarget.style.transform = 'scale(1)'; }}
-                    title={language === 'es' ? 'Volver a SpicyCrust.com' : 'Back to SpicyCrust.com'}
-                >
-                    <span style={{ fontSize: '0.95rem' }}>🍕</span>
-                    <span>{language === 'es' ? 'SpicyCrust' : 'SpicyCrust'}</span>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--ph-gold)' }}>←</span>
-                </a>
-
                 <div
                     id="game-device-screen"
                     className="game-container game-frame"

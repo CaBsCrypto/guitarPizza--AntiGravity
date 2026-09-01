@@ -1,0 +1,24 @@
+import{f9 as p,d7 as x,d8 as y,dc as a,fa as C,d9 as r,dC as s}from"./index-D8f71Q81.js";import{n as g}from"./styles-DVyDvTdj-B5xr3bSk.js";import{i,d as l,l as c,Q as j}from"./styles-B5IHPi7e-Xm5fdtGC.js";import{c as b}from"./createLucideIcon-Ds8x4V01.js";import{C as w}from"./credit-card-BtTPlwRn.js";import"./ScreenLayout-rsaLrlHW-BCzUTjhd.js";import"./ModalHeader-CPVs-20G-C821Z3cO.js";import"./Screen-CkHwbpUl-BkQYmv8p.js";import"./index-Dq_xe9dz-BVKvBPZY.js";const k=[["rect",{width:"20",height:"12",x:"2",y:"6",rx:"2",key:"9lu3g6"}],["circle",{cx:"12",cy:"12",r:"2",key:"1c9p78"}],["path",{d:"M6 12h.01M18 12h.01",key:"113zkx"}]],d=b("banknote",k),M={component:()=>{let e=p(),{onUserCloseViaDialogOrKeybindRef:n}=x(),m=y(),t=a.useRef(!1);a.useEffect((()=>{e&&(t.current=!1)}),[e]);let o=a.useCallback((async()=>{!t.current&&e&&(t.current=!0,C(),await e.onCancel())}),[e]);return a.useEffect((()=>(n.current=o,()=>{n.current===o&&(n.current=null)})),[o,n]),e?e.error?r.jsx(i,{icon:d,iconVariant:"warning",title:"Unable to add funds",subtitle:e.error,showClose:!0,onClose:o,primaryCta:{label:"Close",onClick:o}}):r.jsx(i,{icon:d,iconVariant:"subtle",title:"Select method",subtitle:"Choose how to fund your wallet",showClose:!0,onClose:o,children:r.jsxs(g,{style:{marginTop:"1rem"},$colorScheme:m.appearance.palette.colorScheme,children:[e.startFiat&&r.jsxs(l,{onClick:async()=>{t.current||(t.current=!0,await e.startFiat?.())},children:[r.jsx(u,{children:r.jsx(w,{})}),r.jsxs(f,{children:[r.jsx(c,{children:"Pay with fiat"}),r.jsx(h,{children:"Apple Pay, Google Pay, or debit card"})]})]}),e.startCrypto&&r.jsxs(l,{onClick:async()=>{t.current||(t.current=!0,await e.startCrypto?.())},children:[r.jsx(u,{children:r.jsx(j,{})}),r.jsxs(f,{children:[r.jsx(c,{children:"Transfer from wallet"}),r.jsx(h,{children:"Send crypto from any wallet"})]})]})]})}):null}};let u=s.span`
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--privy-border-radius-full);
+  background-color: var(--privy-color-background-2);
+  color: var(--color-icon-muted, #64668b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+`,f=s.span`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+`,h=s.span`
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--privy-color-foreground-3);
+`;export{M as AddFundsSelectionScreen,M as default};
