@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
-    "build:docs": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build --outDir ../docs --emptyOutDir --base=/guitarPizza--AntiGravity/",
+    "build": "vite build",
+    "build:docs": "vite build --outDir ../docs --emptyOutDir --base=/guitarPizza--AntiGravity/",
     "lint": "eslint .",
     "preview": "vite preview"
   },

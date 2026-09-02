@@ -15,7 +15,7 @@ import {
   StakeInfo,
   RefrigeratorBalances
 } from './IBlockchainAdapter';
-import { SOLANA_PROGRAMS, SOLANA_DEVNET_RPC } from '../contracts/solanaContracts';
+import { SOLANA_PROGRAMS, SOLANA_DEVNET_RPC, SOLANA_OVEN_COLLECTION } from '../contracts/solanaContracts';
 import { isSolanaAddress } from '../utils/addressUtils';
 
 export class SolanaAdapter implements IBlockchainAdapter {
@@ -64,15 +64,34 @@ export class SolanaAdapter implements IBlockchainAdapter {
     return data.result;
   }
 
+  /**
+   * Helper to request transaction signature from connected Phantom / Solflare wallet
+   */
+  private async signWithSolanaWallet(txName: string): Promise<string> {
+    const solana = typeof window !== 'undefined' ? ((window as any).solana || (window as any).phantom?.solana) : null;
+    if (solana && solana.isPhantom && typeof solana.signMessage === 'function') {
+      try {
+        const message = new TextEncoder().encode(`Rhythm Slice [Solana Devnet]: Confirm ${txName} at ${Date.now()}`);
+        const signed = await solana.signMessage(message, 'utf8');
+        const sigHex = Array.from(signed.signature || [])
+          .map((b: any) => b.toString(16).padStart(2, '0'))
+          .join('')
+          .slice(0, 32);
+        return `sol_sig_${sigHex}`;
+      } catch (err: any) {
+        console.warn(`[SolanaAdapter] Signature skipped or rejected for ${txName}:`, err?.message);
+      }
+    }
+    return `sol_${txName.toLowerCase().replace(/\s+/g, '_')}_${Date.now().toString(36)}`;
+  }
+
   // ── Tokens & Balances ──────────────────────────────────────────
   async getSliceBalance(address: string): Promise<number> {
     if (!address) return 0;
     try {
       if (isSolanaAddress(address)) {
-        // Query native SOL balance or SPL associated token account
         const balanceResult = await this.rpcCall<{ value: number }>('getBalance', [address]);
         const solBalance = (balanceResult?.value || 0) / 1e9;
-        // 1 SOL maps to 1,000 $SLICE test units if no SPL mint deployed yet
         return solBalance > 0 ? Number((solBalance * 1000).toFixed(2)) : 1000;
       }
       return 1500;
@@ -98,8 +117,7 @@ export class SolanaAdapter implements IBlockchainAdapter {
     if (!address) return { success: false };
     try {
       if (isSolanaAddress(address)) {
-        // Request 1 SOL (1,000,000,000 lamports) on Solana Devnet
-        const lamports = 1000000000;
+        const lamports = 1000000000; // 1 SOL
         const txSig = await this.rpcCall<string>('requestAirdrop', [address, lamports]);
         return {
           success: true,
@@ -109,7 +127,7 @@ export class SolanaAdapter implements IBlockchainAdapter {
     } catch (err) {
       console.warn('Solana Devnet airdrop fallback:', err);
     }
-    const simulatedSig = `sol_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+    const simulatedSig = `sol_airdrop_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
     return {
       success: true,
       txHash: simulatedSig
@@ -119,20 +137,31 @@ export class SolanaAdapter implements IBlockchainAdapter {
   // ── Oven Collectibles (Metaplex / Anchor NFT) ─────────────────
   async getUserOvens(address: string): Promise<OvenItem[]> {
     if (!address) return [];
-    return [
-      { tokenId: 1, styleId: 0, name: 'Standard Brick Oven (Solana)', multiplierBps: 10000 },
-      { tokenId: 2, styleId: 1, name: 'Golden Mob Oven (Metaplex)', multiplierBps: 12500 }
-    ];
+    return SOLANA_OVEN_COLLECTION.map((oven) => ({
+      tokenId: oven.tokenId,
+      styleId: oven.styleId,
+      name: oven.name,
+      multiplierBps: oven.multiplierBps
+    }));
   }
 
   async getPlayerMultiplierBps(address: string): Promise<number> {
     if (!address) return 10000;
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('sgs_equipped_oven_solana') : null;
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      const found = SOLANA_OVEN_COLLECTION.find((o) => o.tokenId === parsed);
+      if (found) return found.multiplierBps;
+    }
     return 10000;
   }
 
   async equipOven(signerContext: any, address: string, tokenId: number): Promise<{ success: boolean; txHash?: string }> {
-    const tx = `sol_equip_${tokenId}_${Date.now().toString(36)}`;
-    return { success: true, txHash: tx };
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('sgs_equipped_oven_solana', tokenId.toString());
+    }
+    const sig = await this.signWithSolanaWallet(`Equip Oven #${tokenId}`);
+    return { success: true, txHash: sig };
   }
 
   // ── Timed Baking (El Horno) ──────────────────────────────────
@@ -185,9 +214,10 @@ export class SolanaAdapter implements IBlockchainAdapter {
     recipeId: number,
     woodOrBoost: number
   ): Promise<{ success: boolean; txHash?: string }> {
+    const sig = await this.signWithSolanaWallet(`Start Baking Slot #${slotIndex} Recipe #${recipeId}`);
     return {
       success: true,
-      txHash: `sol_bake_${slotIndex}_${Date.now().toString(36)}`
+      txHash: sig
     };
   }
 
@@ -196,9 +226,10 @@ export class SolanaAdapter implements IBlockchainAdapter {
     address: string,
     slotIndex: number
   ): Promise<{ success: boolean; txHash?: string; reward?: number }> {
+    const sig = await this.signWithSolanaWallet(`Claim Pizza Slot #${slotIndex}`);
     return {
       success: true,
-      txHash: `sol_claim_${slotIndex}_${Date.now().toString(36)}`,
+      txHash: sig,
       reward: 75
     };
   }
@@ -208,22 +239,24 @@ export class SolanaAdapter implements IBlockchainAdapter {
     return {
       stakedSlice: 500,
       tier: 1,
-      tierName: 'Soldato (Solana Vault)',
+      tierName: 'Soldato (Solana Staking Vault)',
       pendingRewards: 25
     };
   }
 
   async stakeSlice(signerContext: any, address: string, amount: number): Promise<{ success: boolean; txHash?: string }> {
+    const sig = await this.signWithSolanaWallet(`Stake ${amount} $SLICE`);
     return {
       success: true,
-      txHash: `sol_stake_${amount}_${Date.now().toString(36)}`
+      txHash: sig
     };
   }
 
   async unstakeSlice(signerContext: any, address: string, amount: number): Promise<{ success: boolean; txHash?: string }> {
+    const sig = await this.signWithSolanaWallet(`Unstake ${amount} $SLICE`);
     return {
       success: true,
-      txHash: `sol_unstake_${amount}_${Date.now().toString(36)}`
+      txHash: sig
     };
   }
 
@@ -243,9 +276,10 @@ export class SolanaAdapter implements IBlockchainAdapter {
     ingredient: string,
     amount: number
   ): Promise<{ success: boolean; txHash?: string }> {
+    const sig = await this.signWithSolanaWallet(`Deposit ${amount} ${ingredient} to Fridge`);
     return {
       success: true,
-      txHash: `sol_fridge_dep_${ingredient}_${Date.now().toString(36)}`
+      txHash: sig
     };
   }
 
@@ -255,9 +289,10 @@ export class SolanaAdapter implements IBlockchainAdapter {
     ingredient: string,
     amount: number
   ): Promise<{ success: boolean; txHash?: string }> {
+    const sig = await this.signWithSolanaWallet(`Withdraw ${amount} ${ingredient} from Fridge`);
     return {
       success: true,
-      txHash: `sol_fridge_with_${ingredient}_${Date.now().toString(36)}`
+      txHash: sig
     };
   }
 
@@ -268,10 +303,10 @@ export class SolanaAdapter implements IBlockchainAdapter {
     stats: any,
     proofHex?: string
   ): Promise<{ success: boolean; txHash?: string; score?: number }> {
-    const tx = `sol_session_${stats?.score || 0}_${Date.now().toString(36)}`;
+    const sig = await this.signWithSolanaWallet(`Submit Rhythm Score ${stats?.score || 0} pts`);
     return {
       success: true,
-      txHash: tx,
+      txHash: sig,
       score: stats?.score || 0
     };
   }
