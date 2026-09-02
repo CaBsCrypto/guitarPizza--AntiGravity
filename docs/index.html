@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#080808" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./game/assets/Benny.png" />
+    <title>Rhythm Slice — The Mafia Rhythm Pizza Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
+      if (typeof globalThis.process === 'undefined') {
+        globalThis.process = { env: {} };
+      }
+      // Polyfill basic crypto.subtle for non-secure HTTP LAN origins
+      if (typeof window !== 'undefined') {
+        if (!window.crypto) {
+          window.crypto = {};
+        }
+        if (!window.crypto.subtle) {
+          window.crypto.subtle = {
+            digest: async function() { return new ArrayBuffer(32); },
+            importKey: async function() { return {}; },
+            sign: async function() { return new ArrayBuffer(0); },
+            verify: async function() { return true; },
+            generateKey: async function() { return {}; },
+            exportKey: async function() { return new ArrayBuffer(0); }
+          };
+        }
+      }
+      // Service worker in production only
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http') && !window.location.port) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch((err) => {
+            console.log('[SW] Registration skipped or failed:', err);
+          });
+        });
+      }
+    </script>
+    <script type="module" crossorigin src="/guitarPizza--AntiGravity/assets/index-CHDG_EjL.js"></script>
+    <link rel="stylesheet" crossorigin href="/guitarPizza--AntiGravity/assets/index-Bu2dURL9.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="gp-mobile-error" style="display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(180,20,20,0.95); color:#fff; padding:12px; font-family:monospace; font-size:12px; z-index:999999; word-break:break-all;"></div>
+  </body>
+</html>
