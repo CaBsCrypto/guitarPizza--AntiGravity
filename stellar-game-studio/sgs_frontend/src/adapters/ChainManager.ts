@@ -27,28 +27,8 @@ class ChainManagerService {
 
   private resolveInitialChain(): SupportedChainId {
     if (typeof window !== 'undefined') {
-      // 1. URL Query Parameter ?chain=solana | ?chain=stellar
-      const urlParams = new URLSearchParams(window.location.search);
-      const chainParam = urlParams.get('chain')?.toLowerCase();
-      if (chainParam === 'solana' || chainParam === 'stellar') {
-        localStorage.setItem(STORAGE_KEY, chainParam);
-        return chainParam;
-      }
-
-      // 2. LocalStorage selection
-      const saved = localStorage.getItem(STORAGE_KEY)?.toLowerCase();
-      if (saved === 'solana' || saved === 'stellar') {
-        return saved as SupportedChainId;
-      }
-
-      // Migrate legacy 'avalanche' or set default
       localStorage.setItem(STORAGE_KEY, 'solana');
-      return 'solana';
     }
-
-    // 3. Environment Variable fallback (default: solana)
-    const envChain = (import.meta.env.VITE_ACTIVE_CHAIN || 'solana').toLowerCase();
-    if (envChain === 'stellar') return 'stellar';
     return 'solana';
   }
 
