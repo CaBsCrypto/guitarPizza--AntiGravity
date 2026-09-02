@@ -158,90 +158,68 @@
 .rs-header-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
 }
 
 .rs-nft-btn {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  padding: 5px 12px;
+  letter-spacing: 0.04em;
+  height: 36px;
+  padding: 0 12px;
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(153, 69, 255, 0.25), rgba(20, 241, 149, 0.25));
-  border: 1px solid rgba(20, 241, 149, 0.5);
-  color: #14F195;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #F5EDE0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   transition: all 0.2s ease;
-  box-shadow: 0 0 10px rgba(20, 241, 149, 0.15);
+  user-select: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .rs-nft-btn:hover {
-  background: linear-gradient(135deg, rgba(153, 69, 255, 0.45), rgba(20, 241, 149, 0.45));
-  border-color: #14F195;
-  color: #fff;
+  background: rgba(153, 69, 255, 0.15);
+  border-color: rgba(153, 69, 255, 0.5);
+  color: #ffffff;
   transform: translateY(-1px);
-  box-shadow: 0 0 15px rgba(20, 241, 149, 0.35);
-}
-
-/* Network pill */
-.rs-network-pill {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  padding: 3px 10px;
-  border-radius: 20px;
-  background: rgba(45, 122, 45, 0.12);
-  border: 1px solid rgba(45, 122, 45, 0.5);
-  color: #66DD66;
-  text-transform: uppercase;
-  /* Green blink on the dot */
-  animation: pillPulse 3s ease-in-out infinite;
-}
-
-@keyframes pillPulse {
-
-  0%,
-  90%,
-  100% {
-    opacity: 1;
-  }
-
-  95% {
-    opacity: 0.5;
-  }
+  box-shadow: 0 0 12px rgba(153, 69, 255, 0.3);
 }
 
 /* Play / Enter kitchen button */
 .rs-play-btn {
   font-family: 'Bangers', cursive;
-  font-size: 1rem;
-  letter-spacing: 0.1em;
-  padding: 0.35rem 1.4rem;
-  background: #CC2929;
-  color: #F5EDE0;
-  border: 2px solid #8B0000;
-  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  height: 36px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #E52E2E 0%, #990000 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 120, 120, 0.4);
+  border-radius: 8px;
   cursor: pointer;
-  /* 3D pressed bottom shadow */
-  box-shadow: 0 3px 0 #5C0000, 0 6px 16px rgba(204, 41, 41, 0.35);
-  transition: transform 0.1s, box-shadow 0.1s;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(229, 46, 46, 0.35);
+  transition: all 0.15s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
+  user-select: none;
 }
 
 .rs-play-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 0 #5C0000, 0 10px 24px rgba(204, 41, 41, 0.45);
+  background: linear-gradient(135deg, #FF3D3D 0%, #B30000 100%);
+  box-shadow: 0 0 16px rgba(229, 46, 46, 0.55);
+  transform: translateY(-1px);
 }
 
 .rs-play-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #5C0000;
+  transform: translateY(1px);
 }
 
 /* When already in game — active/muted state */

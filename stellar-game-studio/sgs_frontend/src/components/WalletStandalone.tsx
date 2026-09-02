@@ -136,16 +136,11 @@ export function WalletStandalone() {
       {SHOW_CRYPTO_HEADER && (
         isConnected ? (
           <div className="wallet-standalone-connected">
-            <div className="slice-balance-chip" style={{ background: 'rgba(153, 69, 255, 0.18)', borderColor: 'rgba(20, 241, 149, 0.5)', color: '#14F195', fontWeight: 'bold' }}>
+            <div className="ws-chip-balance">
               🍕 {balance !== null ? (balance % 1 === 0 ? balance.toFixed(0) : balance.toFixed(2)) : '50'} $SLICE
             </div>
             <button 
-              className="wallet-standalone-button mint-vinyl-button"
-              style={{
-                background: 'linear-gradient(135deg, rgba(153, 69, 255, 0.3), rgba(20, 241, 149, 0.3))',
-                borderColor: 'rgba(20, 241, 149, 0.6)',
-                color: '#ffffff'
-              }}
+              className="ws-btn ws-btn-airdrop"
               onClick={async (e) => {
                 const target = e.currentTarget;
                 target.disabled = true;
@@ -172,72 +167,49 @@ export function WalletStandalone() {
                   alert("⚠️ Error en airdrop: " + (err.message || err));
                 } finally {
                   target.disabled = false;
-                  target.innerHTML = '<span class="mint-vinyl-icon">🍕</span> <span>AIRDROP (8 $SLICE)</span>';
+                  target.innerHTML = '<span>🍕</span> <span>+8 $SLICE</span>';
                 }
               }}
               title="Airdrop free $SLICE tokens on Solana Devnet!"
             >
-              <div className="mint-vinyl-icon">🍕</div>
-              <span>AIRDROP (8 $SLICE)</span>
+              <span>🍕</span>
+              <span>+8 $SLICE</span>
             </button>
             <a 
               href="https://faucet.solana.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="wallet-standalone-button"
-              style={{
-                background: 'rgba(20, 241, 149, 0.12)',
-                borderColor: 'rgba(20, 241, 149, 0.4)',
-                color: '#14F195',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
+              className="ws-btn ws-btn-faucet"
               title="Obtener SOL de prueba gratis en el Faucet oficial de Solana Devnet"
             >
-              <span>💧</span> <span>FAUCET SOL</span>
+              <span>💧 FAUCET</span>
             </a>
-            <button className="wallet-standalone-button" onClick={disconnect} title="Click to disconnect">
-              🔴 {shortAddress}
+            <button className="ws-btn ws-btn-address" onClick={disconnect} title="Click para desconectar wallet">
+              <span className="ws-dot-connected"></span>
+              <span>{shortAddress}</span>
             </button>
           </div>
         ) : (
-          <div className="wallet-standalone-actions" style={{ display: 'flex', gap: '8px' }}>
+          <div className="wallet-standalone-actions">
             {/* Phantom / Solana Wallet Button */}
             <button
-              className="wallet-standalone-button"
-              style={{
-                background: 'linear-gradient(135deg, rgba(153, 69, 255, 0.9), rgba(20, 241, 149, 0.9))',
-                color: '#ffffff',
-                borderColor: 'rgba(20, 241, 149, 0.9)',
-                fontWeight: 700,
-                boxShadow: '0 0 14px rgba(153, 69, 255, 0.4)',
-                cursor: 'pointer'
-              }}
+              className="ws-btn ws-btn-phantom"
               onClick={() => connectSolana()}
               disabled={isConnecting}
               title="Conectar con Phantom / Solflare u otra wallet nativa de Solana"
             >
-              {isConnecting ? 'CONECTANDO...' : '🟣 PHANTOM / SOLANA'}
+              <span className="ws-phantom-icon">🟣</span>
+              <span>{isConnecting ? 'CONECTANDO...' : 'PHANTOM / SOLANA'}</span>
             </button>
 
             {/* Official Privy Login Button */}
             <button
-              className="wallet-standalone-button login-button"
-              style={{
-                background: 'linear-gradient(135deg, rgba(232, 65, 66, 0.85), rgba(168, 85, 247, 0.85))',
-                color: '#ffffff',
-                borderColor: 'rgba(232, 65, 66, 0.9)',
-                fontWeight: 700,
-                boxShadow: '0 0 14px rgba(232, 65, 66, 0.4)',
-                cursor: 'pointer'
-              }}
+              className="ws-btn ws-btn-privy"
               onClick={() => privyLogin()}
               disabled={isConnecting}
               title="Iniciar sesión social con Privy"
             >
-              ⚡ PRIVY
+              <span>⚡ PRIVY</span>
             </button>
           </div>
         )
