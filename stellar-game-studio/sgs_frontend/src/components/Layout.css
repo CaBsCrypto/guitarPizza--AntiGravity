@@ -161,6 +161,32 @@
   gap: 0.75rem;
 }
 
+.rs-nft-btn {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.25), rgba(20, 241, 149, 0.25));
+  border: 1px solid rgba(20, 241, 149, 0.5);
+  color: #14F195;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 10px rgba(20, 241, 149, 0.15);
+}
+
+.rs-nft-btn:hover {
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.45), rgba(20, 241, 149, 0.45));
+  border-color: #14F195;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(20, 241, 149, 0.35);
+}
+
 /* Network pill */
 .rs-network-pill {
   font-family: var(--font-mono);

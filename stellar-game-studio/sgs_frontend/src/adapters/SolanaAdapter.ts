@@ -167,12 +167,56 @@ export class SolanaAdapter implements IBlockchainAdapter {
   // ── Oven Collectibles (Metaplex / Anchor NFT) ─────────────────
   async getUserOvens(address: string): Promise<OvenItem[]> {
     if (!address) return [];
-    return SOLANA_OVEN_COLLECTION.map((oven) => ({
+    let ownedIds = [1]; // Start with OG Oven
+    const storageKey = `sgs_owned_ovens_${address}`;
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          ownedIds = JSON.parse(saved);
+        } catch {}
+      } else {
+        localStorage.setItem(storageKey, JSON.stringify([1]));
+      }
+    }
+
+    return SOLANA_OVEN_COLLECTION.filter((oven) => ownedIds.includes(oven.tokenId)).map((oven) => ({
       tokenId: oven.tokenId,
       styleId: oven.styleId,
       name: oven.name,
       multiplierBps: oven.multiplierBps
     }));
+  }
+
+  async mintOven(signerContext: any, address: string, styleId: number): Promise<{ success: boolean; txHash?: string; tokenId?: number }> {
+    const tokenId = styleId;
+    const storageKey = `sgs_owned_ovens_${address}`;
+    if (typeof localStorage !== 'undefined') {
+      let ownedIds = [1];
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try { ownedIds = JSON.parse(saved); } catch {}
+      }
+      if (!ownedIds.includes(tokenId)) {
+        ownedIds.push(tokenId);
+        localStorage.setItem(storageKey, JSON.stringify(ownedIds));
+      }
+
+      // Deduct 10 $SLICE
+      const balanceKey = `gp_slice_balance_${address}`;
+      const curBal = parseFloat(localStorage.getItem(balanceKey) || '50');
+      localStorage.setItem(balanceKey, Math.max(0, curBal - 10).toString());
+
+      window.dispatchEvent(new Event('balance-updated'));
+      window.dispatchEvent(new Event('ovens-updated'));
+    }
+
+    const sig = await this.signWithSolanaWallet(`Mint Oven NFT #${tokenId} (Style: ${styleId}) on Metaplex Devnet`);
+    return {
+      success: true,
+      txHash: sig,
+      tokenId
+    };
   }
 
   async getPlayerMultiplierBps(address: string): Promise<number> {
@@ -189,6 +233,7 @@ export class SolanaAdapter implements IBlockchainAdapter {
   async equipOven(signerContext: any, address: string, tokenId: number): Promise<{ success: boolean; txHash?: string }> {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('sgs_equipped_oven_solana', tokenId.toString());
+      window.dispatchEvent(new Event('ovens-updated'));
     }
     const sig = await this.signWithSolanaWallet(`Equip Oven #${tokenId}`);
     return { success: true, txHash: sig };

@@ -66,6 +66,7 @@ export interface IBlockchainAdapter {
   getUserOvens(address: string): Promise<OvenItem[]>;
   getPlayerMultiplierBps(address: string): Promise<number>;
   equipOven(signerContext: any, address: string, tokenId: number): Promise<{ success: boolean; txHash?: string }>;
+  mintOven?(signerContext: any, address: string, styleId: number): Promise<{ success: boolean; txHash?: string; tokenId?: number }>;
 
   // Timed Baking (El Horno)
   getUserSlots(address: string): Promise<BakeSlot[]>;
