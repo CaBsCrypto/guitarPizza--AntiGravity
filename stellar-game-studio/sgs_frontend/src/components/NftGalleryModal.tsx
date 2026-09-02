@@ -1,8 +1,137 @@
 import React, { useState, useEffect } from 'react';
 import { ChainManager } from '../adapters/ChainManager';
 import { useWalletStore } from '../store/walletSlice';
-import { SOLANA_OVEN_COLLECTION } from '../contracts/solanaContracts';
 import './NftGalleryModal.css';
+
+export interface OvenShowcaseItem {
+  tokenId: number;
+  styleId: number;
+  name: string;
+  rarity: 'LEGENDARY' | 'EPIC' | 'RARE' | 'UNCOMMON' | 'COMMON';
+  multiplierDisplay: string;
+  multiplierBps: number;
+  image: string;
+  lore: string;
+  woodBonus: string;
+  speedBonus: string;
+  cost: number;
+  colorTheme: string;
+}
+
+export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
+  {
+    tokenId: 1,
+    styleId: 1,
+    name: 'Horno Dorado OG (Metaplex)',
+    rarity: 'LEGENDARY',
+    multiplierDisplay: '+3.0x',
+    multiplierBps: 30000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/golden_oven_pixel.png',
+    lore: 'Forjado con incrustaciones de oro puro de 24k por orden directa de Don Salieri. Otorga el máximo prestigio en la cocina.',
+    woodBonus: '+100% Madera Élite',
+    speedBonus: '+50% Velocidad',
+    cost: 10,
+    colorTheme: '#FFD700'
+  },
+  {
+    tokenId: 2,
+    styleId: 2,
+    name: 'Capo Wood Oven',
+    rarity: 'EPIC',
+    multiplierDisplay: '+2.5x',
+    multiplierBps: 25000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/capo_oven_pixel.png',
+    lore: 'Alimentado con leña de roble siciliano curada. Utilizado por los lugartenientes para pizzas de alta velocidad.',
+    woodBonus: '+75% Madera Mesquite',
+    speedBonus: '+35% Velocidad',
+    cost: 10,
+    colorTheme: '#A855F7'
+  },
+  {
+    tokenId: 3,
+    styleId: 3,
+    name: 'Cyber Neon Pizza Oven',
+    rarity: 'EPIC',
+    multiplierDisplay: '+2.2x',
+    multiplierBps: 22000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/neon_oven_pixel.png',
+    lore: 'Circuitos fluorescentes overclockeados. Hornea a temperaturas ultra-precisas con pulsos lumínicos.',
+    woodBonus: '+50% Energía Cuántica',
+    speedBonus: '+30% Velocidad',
+    cost: 10,
+    colorTheme: '#06B6D4'
+  },
+  {
+    tokenId: 4,
+    styleId: 4,
+    name: 'Retro Arcade Oven 1984',
+    rarity: 'RARE',
+    multiplierDisplay: '+2.0x',
+    multiplierBps: 20000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/arcade_oven_pixel.png',
+    lore: 'Modificado con una placa arcade vintage. Cada acierto en la canción genera calor retro acumulativo.',
+    woodBonus: '+40% Bonus Combo',
+    speedBonus: '+25% Velocidad',
+    cost: 10,
+    colorTheme: '#EC4899'
+  },
+  {
+    tokenId: 5,
+    styleId: 5,
+    name: 'Cyberpunk Industrial Forge',
+    rarity: 'RARE',
+    multiplierDisplay: '+1.8x',
+    multiplierBps: 18000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/punk_oven_pixel.png',
+    lore: 'Construido con placas de aleación pesada. Resiste las recetas más ardientes sin perder rendimiento.',
+    woodBonus: '+30% Resistencia',
+    speedBonus: '+20% Velocidad',
+    cost: 10,
+    colorTheme: '#F97316'
+  },
+  {
+    tokenId: 6,
+    styleId: 6,
+    name: 'Vintage Italian Stone Oven',
+    rarity: 'UNCOMMON',
+    multiplierDisplay: '+1.5x',
+    multiplierBps: 15000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/vintage_oven_pixel.png',
+    lore: 'Piedra volcánica tradicional traída de Nápoles. El secreto del crujiente perfecto de la nonna.',
+    woodBonus: '+20% Aroma Clásico',
+    speedBonus: '+15% Velocidad',
+    cost: 10,
+    colorTheme: '#10B981'
+  },
+  {
+    tokenId: 7,
+    styleId: 7,
+    name: 'Industrial Steel Oven',
+    rarity: 'COMMON',
+    multiplierDisplay: '+1.3x',
+    multiplierBps: 13000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/steel_oven_pixel.png',
+    lore: 'Acero reforzado de alta durabilidad para producción en masa durante los fines de semana más ajetreados.',
+    woodBonus: '+15% Capacidad',
+    speedBonus: '+10% Velocidad',
+    cost: 10,
+    colorTheme: '#94A3B8'
+  },
+  {
+    tokenId: 8,
+    styleId: 0,
+    name: 'Standard Brick Oven',
+    rarity: 'COMMON',
+    multiplierDisplay: '+1.0x',
+    multiplierBps: 10000,
+    image: '/guitarPizza--AntiGravity/game/assets/nfts/brick_oven_pixel.png',
+    lore: 'El clásico horno de ladrillo artesanal. Tu compañero leal desde el primer día en la cocina.',
+    woodBonus: 'Estándar',
+    speedBonus: 'Base',
+    cost: 10,
+    colorTheme: '#64748B'
+  }
+];
 
 interface NftGalleryModalProps {
   isOpen: boolean;
@@ -11,12 +140,12 @@ interface NftGalleryModalProps {
 
 export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
   const { publicKey, isConnected } = useWalletStore();
-  const [activeTab, setActiveTab] = useState<'mint' | 'collection'>('mint');
+  const [selectedOven, setSelectedOven] = useState<OvenShowcaseItem>(SHOWCASE_OVENS[0]);
   const [ownedOvens, setOwnedOvens] = useState<number[]>([1]);
   const [equippedOvenId, setEquippedOvenId] = useState<number>(1);
-  const [mintingId, setMintingId] = useState<number | null>(null);
-  const [equippingId, setEquippingId] = useState<number | null>(null);
-  const [txMessage, setTxMessage] = useState<string | null>(null);
+  const [isMinting, setIsMinting] = useState(false);
+  const [isEquipping, setIsEquipping] = useState(false);
+  const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
 
   const loadOvens = async () => {
     if (!publicKey) return;
@@ -24,13 +153,13 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
       const adapter = ChainManager.getInstance().getAdapter();
       const ovens = await adapter.getUserOvens(publicKey);
       setOwnedOvens(ovens.map(o => o.tokenId));
-      
+
       const savedEquipped = localStorage.getItem('sgs_equipped_oven_solana');
       if (savedEquipped) {
         setEquippedOvenId(parseInt(savedEquipped, 10));
       }
     } catch (err) {
-      console.warn('Error loading ovens:', err);
+      console.warn('Error al cargar hornos:', err);
     }
   };
 
@@ -41,148 +170,192 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
   }, [isOpen, publicKey]);
 
   useEffect(() => {
-    const handleOvenUpdate = () => {
-      loadOvens();
-    };
+    const handleOvenUpdate = () => loadOvens();
     window.addEventListener('ovens-updated', handleOvenUpdate);
     return () => window.removeEventListener('ovens-updated', handleOvenUpdate);
   }, [publicKey]);
 
   if (!isOpen) return null;
 
-  const handleMint = async (oven: typeof SOLANA_OVEN_COLLECTION[0]) => {
+  const isSelectedOwned = ownedOvens.includes(selectedOven.tokenId);
+  const isSelectedEquipped = equippedOvenId === selectedOven.tokenId;
+
+  const handleMint = async () => {
     if (!isConnected || !publicKey) {
       alert('⚠️ Por favor conecta tu billetera Phantom o Solana primero.');
       return;
     }
 
-    setMintingId(oven.tokenId);
-    setTxMessage(`Firmando y minteando ${oven.name} en Solana Devnet...`);
+    setIsMinting(true);
+    setFeedbackBanner(`Solicitando firma en Phantom para mintear ${selectedOven.name}...`);
 
     try {
       const adapter = ChainManager.getInstance().getAdapter();
       if (adapter.mintOven) {
-        await adapter.mintOven(null, publicKey, oven.tokenId);
-        setTxMessage(`🎉 ¡Minteo exitoso! Horno #${oven.tokenId} añadido a tu colección.`);
+        await adapter.mintOven(null, publicKey, selectedOven.tokenId);
+        setFeedbackBanner(`🎉 ¡Minteo Confirmado en Solana Devnet! Horno agregado a tu colección.`);
         await loadOvens();
       }
     } catch (err: any) {
-      alert('⚠️ Error en minteo: ' + (err.message || err));
+      alert('⚠️ ' + (err.message || 'Error en minteo'));
     } finally {
-      setMintingId(null);
-      setTimeout(() => setTxMessage(null), 4000);
+      setIsMinting(false);
+      setTimeout(() => setFeedbackBanner(null), 4000);
     }
   };
 
-  const handleEquip = async (ovenId: number) => {
+  const handleEquip = async () => {
     if (!publicKey) return;
-    setEquippingId(ovenId);
+    setIsEquipping(true);
     try {
       const adapter = ChainManager.getInstance().getAdapter();
-      await adapter.equipOven(null, publicKey, ovenId);
-      setEquippedOvenId(ovenId);
-      setTxMessage(`⚡ ¡Horno equipado! Multiplicador activo en tus partidas.`);
+      await adapter.equipOven(null, publicKey, selectedOven.tokenId);
+      setEquippedOvenId(selectedOven.tokenId);
+      setFeedbackBanner(`⚡ ¡Horno ${selectedOven.name} equipado! Multiplicador ${selectedOven.multiplierDisplay} activo.`);
       await loadOvens();
     } catch (err: any) {
-      alert('⚠️ Error al equipar: ' + (err.message || err));
+      alert('⚠️ ' + (err.message || 'Error al equipar'));
     } finally {
-      setEquippingId(null);
-      setTimeout(() => setTxMessage(null), 3000);
+      setIsEquipping(false);
+      setTimeout(() => setFeedbackBanner(null), 3500);
     }
   };
 
   return (
-    <div className="nft-modal-overlay" onClick={onClose}>
-      <div className="nft-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="nft-showcase-overlay" onClick={onClose}>
+      <div className="nft-showcase-modal" onClick={(e) => e.stopPropagation()}>
         
-        {/* Header */}
-        <div className="nft-modal-header">
-          <div className="nft-header-title-box">
-            <span className="nft-badge-solana">◎ SOLANA METAPLEX DEVNET</span>
-            <h2>🎨 HORNOS PIXEL-ART NFT</h2>
-            <p>Mintea y equipa tus hornos para multiplicar tu puntuación y cosechar más $SLICE en el juego.</p>
+        {/* Top Bar */}
+        <div className="nft-top-bar">
+          <div className="nft-top-brand">
+            <span className="nft-sol-badge">◎ SOLANA DEVNET METAPLEX</span>
+            <h2>🍕 SHOWROOM DE HORNOS NFT</h2>
           </div>
-          <button className="nft-close-btn" onClick={onClose} title="Cerrar">✕</button>
+          <button className="nft-modal-close-icon" onClick={onClose} title="Cerrar">✕</button>
         </div>
 
-        {/* Tab Controls */}
-        <div className="nft-tabs-bar">
-          <button 
-            className={`nft-tab-btn ${activeTab === 'mint' ? 'active' : ''}`}
-            onClick={() => setActiveTab('mint')}
-          >
-            🏪 TIENDA & MINT (8 MODELOS)
-          </button>
-          <button 
-            className={`nft-tab-btn ${activeTab === 'collection' ? 'active' : ''}`}
-            onClick={() => setActiveTab('collection')}
-          >
-            🎒 MI COLECCIÓN ({ownedOvens.length} HORNOS)
-          </button>
-        </div>
-
-        {/* Status Message Banner */}
-        {txMessage && (
-          <div className="nft-status-banner">
-            <span>{txMessage}</span>
+        {/* Feedback Banner */}
+        {feedbackBanner && (
+          <div className="nft-hero-feedback">
+            <span>{feedbackBanner}</span>
           </div>
         )}
 
-        {/* Oven Cards Grid */}
-        <div className="nft-grid-container">
-          {SOLANA_OVEN_COLLECTION.filter(oven => activeTab === 'mint' || ownedOvens.includes(oven.tokenId)).map((oven) => {
-            const isOwned = ownedOvens.includes(oven.tokenId);
-            const isEquipped = equippedOvenId === oven.tokenId;
-            const multDisplay = (oven.multiplierBps / 10000).toFixed(1) + 'x';
+        {/* Hero Showcase Main Area */}
+        <div className="nft-hero-stage">
+          
+          {/* Left / Center: Large Oven Sprite Stage with Ambient Glow */}
+          <div className="nft-hero-visual-box" style={{ '--oven-glow': selectedOven.colorTheme } as React.CSSProperties}>
+            <div className="nft-stage-ambient-glow"></div>
+            <div className="nft-stage-pedestal"></div>
+            <img 
+              src={selectedOven.image} 
+              alt={selectedOven.name} 
+              className="nft-hero-sprite" 
+            />
+            <div className="nft-hero-rarity-pill" style={{ borderColor: selectedOven.colorTheme, color: selectedOven.colorTheme }}>
+              ★ {selectedOven.rarity}
+            </div>
+          </div>
 
-            return (
-              <div key={oven.tokenId} className={`nft-oven-card ${isEquipped ? 'equipped-card' : ''}`}>
-                <div className="nft-card-top-tags">
-                  <span className="nft-rarity-tag">{oven.rarity}</span>
-                  <span className="nft-mult-tag">+{multDisplay} MULT</span>
-                </div>
+          {/* Right: Technical Mafia Spec Sheet */}
+          <div className="nft-hero-spec-sheet">
+            <div className="nft-spec-header">
+              <span className="nft-mult-hero-badge" style={{ background: `${selectedOven.colorTheme}20`, borderColor: selectedOven.colorTheme, color: selectedOven.colorTheme }}>
+                {selectedOven.multiplierDisplay} SCORE BOOST
+              </span>
+              <h3 className="nft-hero-title">{selectedOven.name}</h3>
+              <p className="nft-hero-lore">{selectedOven.lore}</p>
+            </div>
 
-                <div className="nft-image-frame">
-                  <img src={oven.image} alt={oven.name} className="nft-oven-img" />
-                </div>
-
-                <div className="nft-card-info">
-                  <h3>{oven.name}</h3>
-                  <p className="nft-desc">{oven.description}</p>
-                  <div className="nft-traits">
-                    <span>🔥 {oven.woodBonus}</span>
-                    <span>⏱️ {oven.speedBonus}</span>
-                  </div>
-                </div>
-
-                <div className="nft-card-actions">
-                  {isOwned ? (
-                    <button
-                      className={`nft-action-btn ${isEquipped ? 'btn-equipped' : 'btn-equip'}`}
-                      onClick={() => handleEquip(oven.tokenId)}
-                      disabled={isEquipped || equippingId === oven.tokenId}
-                    >
-                      {isEquipped ? '🌟 EQUIPADO' : equippingId === oven.tokenId ? 'EQUIPANDO...' : '⚡ EQUIPAR HORNO'}
-                    </button>
-                  ) : (
-                    <button
-                      className="nft-action-btn btn-mint"
-                      onClick={() => handleMint(oven)}
-                      disabled={mintingId === oven.tokenId}
-                    >
-                      {mintingId === oven.tokenId ? 'MINTEANDO...' : '🔥 MINT (10 $SLICE)'}
-                    </button>
-                  )}
-                </div>
+            {/* Performance Stats */}
+            <div className="nft-specs-grid">
+              <div className="nft-spec-item">
+                <span className="spec-label">Multiplicador On-Chain</span>
+                <span className="spec-val" style={{ color: selectedOven.colorTheme }}>{selectedOven.multiplierDisplay}</span>
               </div>
-            );
-          })}
+              <div className="nft-spec-item">
+                <span className="spec-label">Bonus Combustible</span>
+                <span className="spec-val">🔥 {selectedOven.woodBonus}</span>
+              </div>
+              <div className="nft-spec-item">
+                <span className="spec-label">Velocidad Cocción</span>
+                <span className="spec-val">⏱️ {selectedOven.speedBonus}</span>
+              </div>
+              <div className="nft-spec-item">
+                <span className="spec-label">Estado de Posesión</span>
+                <span className="spec-val" style={{ color: isSelectedEquipped ? '#14F195' : isSelectedOwned ? '#60A5FA' : '#E2E8F0' }}>
+                  {isSelectedEquipped ? '🌟 EQUIPADO' : isSelectedOwned ? '✅ EN TU PODER' : '🔒 POR MINTEAR'}
+                </span>
+              </div>
+            </div>
+
+            {/* Main Action Button */}
+            <div className="nft-hero-action-box">
+              {isSelectedEquipped ? (
+                <button className="nft-hero-btn btn-hero-equipped" disabled>
+                  <span>🌟 HORNO EQUIPADO Y ACTIVO</span>
+                </button>
+              ) : isSelectedOwned ? (
+                <button 
+                  className="nft-hero-btn btn-hero-equip" 
+                  onClick={handleEquip}
+                  disabled={isEquipping}
+                >
+                  <span>⚡ {isEquipping ? 'EQUIPANDO EN SOLANA...' : 'EQUIPAR EN EL JUEGO'}</span>
+                </button>
+              ) : (
+                <button 
+                  className="nft-hero-btn btn-hero-mint" 
+                  onClick={handleMint}
+                  disabled={isMinting}
+                  style={{ '--btn-glow': selectedOven.colorTheme } as React.CSSProperties}
+                >
+                  <span>🔥 {isMinting ? 'FIRMANDO EN PHANTOM...' : `MINT HORNO (${selectedOven.cost} $SLICE)`}</span>
+                </button>
+              )}
+            </div>
+
+          </div>
+
         </div>
 
-        {/* Modal Footer */}
-        <div className="nft-modal-footer">
-          <span>Metaplex Standard · Program ID: <code>piz...NFT11</code> · Solana Devnet</span>
-          <button className="nft-footer-close-btn" onClick={onClose}>Listo</button>
+        {/* Bottom: Carousel / Selector of the 8 Ovens */}
+        <div className="nft-carousel-section">
+          <div className="nft-carousel-header">
+            <span>SELECCIONA UN HORNO PARA INSPECCIONAR ({SHOWCASE_OVENS.length} MODELOS METAPLEX)</span>
+          </div>
+          <div className="nft-carousel-track">
+            {SHOWCASE_OVENS.map((oven) => {
+              const isItemOwned = ownedOvens.includes(oven.tokenId);
+              const isItemEquipped = equippedOvenId === oven.tokenId;
+              const isSelected = selectedOven.tokenId === oven.tokenId;
+
+              return (
+                <div 
+                  key={oven.tokenId}
+                  className={`nft-mini-card ${isSelected ? 'selected' : ''} ${isItemEquipped ? 'equipped' : ''}`}
+                  onClick={() => setSelectedOven(oven)}
+                  style={{ '--card-theme': oven.colorTheme } as React.CSSProperties}
+                >
+                  <div className="mini-card-tags">
+                    <span className="mini-mult">{oven.multiplierDisplay}</span>
+                    {isItemEquipped && <span className="mini-equipped-tag">★</span>}
+                  </div>
+                  <div className="mini-img-box">
+                    <img src={oven.image} alt={oven.name} className="mini-sprite" />
+                  </div>
+                  <span className="mini-name">{oven.name.split(' ')[0]}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="nft-showcase-footer">
+          <span>Metaplex Core Standard · Anchor PDA Program: <code>OVEN11...111</code></span>
+          <button className="nft-done-btn" onClick={onClose}>Volver a la Cocina</button>
         </div>
 
       </div>
