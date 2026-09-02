@@ -3,6 +3,16 @@ import { ChainManager } from '../adapters/ChainManager';
 import { useWalletStore } from '../store/walletSlice';
 import './NftGalleryModal.css';
 
+// Direct ESM asset imports — guaranteed to resolve correctly on Vercel, GitHub Pages, and Localhost
+import goldenOvenImg from '../assets/nfts/golden_oven_pixel.png';
+import capoOvenImg from '../assets/nfts/capo_oven_pixel.png';
+import neonOvenImg from '../assets/nfts/neon_oven_pixel.png';
+import arcadeOvenImg from '../assets/nfts/arcade_oven_pixel.png';
+import punkOvenImg from '../assets/nfts/punk_oven_pixel.png';
+import vintageOvenImg from '../assets/nfts/vintage_oven_pixel.png';
+import steelOvenImg from '../assets/nfts/steel_oven_pixel.png';
+import brickOvenImg from '../assets/nfts/brick_oven_pixel.png';
+
 export interface OvenShowcaseItem {
   tokenId: number;
   styleId: number;
@@ -10,18 +20,12 @@ export interface OvenShowcaseItem {
   rarity: 'LEGENDARY' | 'EPIC' | 'RARE' | 'UNCOMMON' | 'COMMON';
   multiplierDisplay: string;
   multiplierBps: number;
-  filename: string;
+  image: string;
   lore: string;
   woodBonus: string;
   speedBonus: string;
   cost: number;
   colorTheme: string;
-}
-
-export function getOvenImageUrl(filename: string): string {
-  const base = import.meta.env.BASE_URL || '/';
-  const prefix = base.endsWith('/') ? base : `${base}/`;
-  return `${prefix}game/assets/nfts/${filename}`;
 }
 
 export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
@@ -32,7 +36,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'LEGENDARY',
     multiplierDisplay: '+3.0x',
     multiplierBps: 30000,
-    filename: 'golden_oven_pixel.png',
+    image: goldenOvenImg,
     lore: 'Forjado con incrustaciones de oro puro de 24k por orden directa de Don Salieri. Otorga el máximo prestigio en la cocina.',
     woodBonus: '+100% Madera Élite',
     speedBonus: '+50% Velocidad',
@@ -46,7 +50,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'EPIC',
     multiplierDisplay: '+2.5x',
     multiplierBps: 25000,
-    filename: 'capo_oven_pixel.png',
+    image: capoOvenImg,
     lore: 'Alimentado con leña de roble siciliano curada. Utilizado por los lugartenientes para pizzas de alta velocidad.',
     woodBonus: '+75% Madera Mesquite',
     speedBonus: '+35% Velocidad',
@@ -60,7 +64,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'EPIC',
     multiplierDisplay: '+2.2x',
     multiplierBps: 22000,
-    filename: 'neon_oven_pixel.png',
+    image: neonOvenImg,
     lore: 'Circuitos fluorescentes overclockeados. Hornea a temperaturas ultra-precisas con pulsos lumínicos.',
     woodBonus: '+50% Energía Cuántica',
     speedBonus: '+30% Velocidad',
@@ -74,7 +78,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'RARE',
     multiplierDisplay: '+2.0x',
     multiplierBps: 20000,
-    filename: 'arcade_oven_pixel.png',
+    image: arcadeOvenImg,
     lore: 'Modificado con una placa arcade vintage. Cada acierto en la canción genera calor retro acumulativo.',
     woodBonus: '+40% Bonus Combo',
     speedBonus: '+25% Velocidad',
@@ -88,7 +92,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'RARE',
     multiplierDisplay: '+1.8x',
     multiplierBps: 18000,
-    filename: 'punk_oven_pixel.png',
+    image: punkOvenImg,
     lore: 'Construido con placas de aleación pesada. Resiste las recetas más ardientes sin perder rendimiento.',
     woodBonus: '+30% Resistencia',
     speedBonus: '+20% Velocidad',
@@ -102,7 +106,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'UNCOMMON',
     multiplierDisplay: '+1.5x',
     multiplierBps: 15000,
-    filename: 'vintage_oven_pixel.png',
+    image: vintageOvenImg,
     lore: 'Piedra volcánica tradicional traída de Nápoles. El secreto del crujiente perfecto de la nonna.',
     woodBonus: '+20% Aroma Clásico',
     speedBonus: '+15% Velocidad',
@@ -116,7 +120,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'COMMON',
     multiplierDisplay: '+1.3x',
     multiplierBps: 13000,
-    filename: 'steel_oven_pixel.png',
+    image: steelOvenImg,
     lore: 'Acero reforzado de alta durabilidad para producción en masa durante los fines de semana más ajetreados.',
     woodBonus: '+15% Capacidad',
     speedBonus: '+10% Velocidad',
@@ -130,7 +134,7 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     rarity: 'COMMON',
     multiplierDisplay: '+1.0x',
     multiplierBps: 10000,
-    filename: 'brick_oven_pixel.png',
+    image: brickOvenImg,
     lore: 'El clásico horno de ladrillo artesanal. Tu compañero leal desde el primer día en la cocina.',
     woodBonus: 'Estándar',
     speedBonus: 'Base',
@@ -255,19 +259,9 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
             <div className="nft-stage-ambient-glow"></div>
             <div className="nft-stage-pedestal"></div>
             <img 
-              src={getOvenImageUrl(selectedOven.filename)} 
+              src={selectedOven.image} 
               alt={selectedOven.name} 
-              className="nft-hero-sprite"
-              onError={(e) => {
-                const img = e.currentTarget;
-                if (!img.dataset.failedOnce) {
-                  img.dataset.failedOnce = 'true';
-                  img.src = `./game/assets/nfts/${selectedOven.filename}`;
-                } else if (!img.dataset.failedTwice) {
-                  img.dataset.failedTwice = 'true';
-                  img.src = `/game/assets/nfts/${selectedOven.filename}`;
-                }
-              }}
+              className="nft-hero-sprite" 
             />
             <div className="nft-hero-rarity-pill" style={{ borderColor: selectedOven.colorTheme, color: selectedOven.colorTheme }}>
               ★ {selectedOven.rarity}
@@ -360,19 +354,9 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
                   </div>
                   <div className="mini-img-box">
                     <img 
-                      src={getOvenImageUrl(oven.filename)} 
+                      src={oven.image} 
                       alt={oven.name} 
                       className="mini-sprite" 
-                      onError={(e) => {
-                        const img = e.currentTarget;
-                        if (!img.dataset.failedOnce) {
-                          img.dataset.failedOnce = 'true';
-                          img.src = `./game/assets/nfts/${oven.filename}`;
-                        } else if (!img.dataset.failedTwice) {
-                          img.dataset.failedTwice = 'true';
-                          img.src = `/game/assets/nfts/${oven.filename}`;
-                        }
-                      }}
                     />
                   </div>
                   <span className="mini-name">{oven.name.split(' ')[0]}</span>
