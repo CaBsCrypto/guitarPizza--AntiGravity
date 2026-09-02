@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ChainManager } from '../adapters/ChainManager';
 import { useWalletStore } from '../store/walletSlice';
+import { arcadeAudio } from '../utils/arcadeAudio';
 import './NftGalleryModal.css';
 
-// Direct ESM asset imports — guaranteed to resolve correctly on Vercel, GitHub Pages, and Localhost
+// Direct ESM asset imports — guaranteed to resolve correctly across all environments
 import goldenOvenImg from '../assets/nfts/golden_oven_pixel.png';
 import capoOvenImg from '../assets/nfts/capo_oven_pixel.png';
 import neonOvenImg from '../assets/nfts/neon_oven_pixel.png';
@@ -26,6 +27,12 @@ export interface OvenShowcaseItem {
   speedBonus: string;
   cost: number;
   colorTheme: string;
+  stats: {
+    multiplierPct: number;
+    speedPct: number;
+    fuelPct: number;
+    crustPct: number;
+  };
 }
 
 export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
@@ -41,7 +48,13 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     woodBonus: '+100% Madera Élite',
     speedBonus: '+50% Velocidad',
     cost: 10,
-    colorTheme: '#FFD700'
+    colorTheme: '#FFD700',
+    stats: {
+      multiplierPct: 100,
+      speedPct: 95,
+      fuelPct: 98,
+      crustPct: 100
+    }
   },
   {
     tokenId: 2,
@@ -55,7 +68,13 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     woodBonus: '+75% Madera Mesquite',
     speedBonus: '+35% Velocidad',
     cost: 10,
-    colorTheme: '#A855F7'
+    colorTheme: '#A855F7',
+    stats: {
+      multiplierPct: 83,
+      speedPct: 80,
+      fuelPct: 90,
+      crustPct: 85
+    }
   },
   {
     tokenId: 3,
@@ -65,11 +84,17 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     multiplierDisplay: '+2.2x',
     multiplierBps: 22000,
     image: neonOvenImg,
-    lore: 'Circuitos fluorescentes overclockeados. Hornea a temperaturas ultra-precisas con pulsos lumínicos.',
+    lore: 'Circuitos fluorescentes overclockeados. Hornea a temperaturas ultra-precisas con pulsos lumínicos cuánticos.',
     woodBonus: '+50% Energía Cuántica',
     speedBonus: '+30% Velocidad',
     cost: 10,
-    colorTheme: '#06B6D4'
+    colorTheme: '#06B6D4',
+    stats: {
+      multiplierPct: 73,
+      speedPct: 85,
+      fuelPct: 70,
+      crustPct: 80
+    }
   },
   {
     tokenId: 4,
@@ -79,11 +104,17 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     multiplierDisplay: '+2.0x',
     multiplierBps: 20000,
     image: arcadeOvenImg,
-    lore: 'Modificado con una placa arcade vintage. Cada acierto en la canción genera calor retro acumulativo.',
+    lore: 'Modificado con una placa arcade vintage. Cada acierto rítmico en la canción genera calor retro acumulativo.',
     woodBonus: '+40% Bonus Combo',
     speedBonus: '+25% Velocidad',
     cost: 10,
-    colorTheme: '#EC4899'
+    colorTheme: '#EC4899',
+    stats: {
+      multiplierPct: 66,
+      speedPct: 70,
+      fuelPct: 65,
+      crustPct: 75
+    }
   },
   {
     tokenId: 5,
@@ -97,7 +128,13 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     woodBonus: '+30% Resistencia',
     speedBonus: '+20% Velocidad',
     cost: 10,
-    colorTheme: '#F97316'
+    colorTheme: '#F97316',
+    stats: {
+      multiplierPct: 60,
+      speedPct: 60,
+      fuelPct: 75,
+      crustPct: 70
+    }
   },
   {
     tokenId: 6,
@@ -111,7 +148,13 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     woodBonus: '+20% Aroma Clásico',
     speedBonus: '+15% Velocidad',
     cost: 10,
-    colorTheme: '#10B981'
+    colorTheme: '#10B981',
+    stats: {
+      multiplierPct: 50,
+      speedPct: 45,
+      fuelPct: 60,
+      crustPct: 65
+    }
   },
   {
     tokenId: 7,
@@ -125,7 +168,13 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     woodBonus: '+15% Capacidad',
     speedBonus: '+10% Velocidad',
     cost: 10,
-    colorTheme: '#94A3B8'
+    colorTheme: '#94A3B8',
+    stats: {
+      multiplierPct: 43,
+      speedPct: 35,
+      fuelPct: 45,
+      crustPct: 50
+    }
   },
   {
     tokenId: 8,
@@ -139,7 +188,13 @@ export const SHOWCASE_OVENS: OvenShowcaseItem[] = [
     woodBonus: 'Estándar',
     speedBonus: 'Base',
     cost: 10,
-    colorTheme: '#64748B'
+    colorTheme: '#64748B',
+    stats: {
+      multiplierPct: 33,
+      speedPct: 25,
+      fuelPct: 35,
+      crustPct: 40
+    }
   }
 ];
 
@@ -156,6 +211,7 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
   const [isMinting, setIsMinting] = useState(false);
   const [isEquipping, setIsEquipping] = useState(false);
   const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const loadOvens = async () => {
     if (!publicKey) return;
@@ -190,6 +246,17 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
   const isSelectedOwned = ownedOvens.includes(selectedOven.tokenId);
   const isSelectedEquipped = equippedOvenId === selectedOven.tokenId;
 
+  const handleSelectOven = (oven: OvenShowcaseItem) => {
+    setSelectedOven(oven);
+    arcadeAudio.playSelect();
+  };
+
+  const toggleSound = () => {
+    arcadeAudio.enabled = !soundEnabled;
+    setSoundEnabled(!soundEnabled);
+    if (!soundEnabled) arcadeAudio.playSelect();
+  };
+
   const handleMint = async () => {
     if (!isConnected || !publicKey) {
       alert('⚠️ Por favor conecta tu billetera Phantom o Solana primero.');
@@ -203,6 +270,7 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
       const adapter = ChainManager.getInstance().getAdapter();
       if (adapter.mintOven) {
         await adapter.mintOven(null, publicKey, selectedOven.tokenId);
+        arcadeAudio.playMintSuccess();
         setFeedbackBanner(`🎉 ¡Minteo Confirmado en Solana Devnet! Horno agregado a tu colección.`);
         await loadOvens();
       }
@@ -220,6 +288,7 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
     try {
       const adapter = ChainManager.getInstance().getAdapter();
       await adapter.equipOven(null, publicKey, selectedOven.tokenId);
+      arcadeAudio.playEquip();
       setEquippedOvenId(selectedOven.tokenId);
       setFeedbackBanner(`⚡ ¡Horno ${selectedOven.name} equipado! Multiplicador ${selectedOven.multiplierDisplay} activo.`);
       await loadOvens();
@@ -241,7 +310,16 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
             <span className="nft-sol-badge">◎ SOLANA DEVNET METAPLEX</span>
             <h2>🍕 SHOWROOM DE HORNOS NFT</h2>
           </div>
-          <button className="nft-modal-close-icon" onClick={onClose} title="Cerrar">✕</button>
+          <div className="nft-top-controls">
+            <button 
+              className="nft-sound-toggle-btn" 
+              onClick={toggleSound}
+              title={soundEnabled ? 'Silenciar Efectos Arcade' : 'Activar Efectos Arcade'}
+            >
+              {soundEnabled ? '🔊 SONIDO ON' : '🔇 SONIDO OFF'}
+            </button>
+            <button className="nft-modal-close-icon" onClick={onClose} title="Cerrar">✕</button>
+          </div>
         </div>
 
         {/* Feedback Banner */}
@@ -254,9 +332,17 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
         {/* Hero Showcase Main Area */}
         <div className="nft-hero-stage">
           
-          {/* Left / Center: Large Oven Sprite Stage with Ambient Glow */}
+          {/* Left / Center: Large Oven Sprite Stage with Ambient Glow and Floating Sparks */}
           <div className="nft-hero-visual-box" style={{ '--oven-glow': selectedOven.colorTheme } as React.CSSProperties}>
             <div className="nft-stage-ambient-glow"></div>
+            
+            {/* Animated Floating Fire Sparks */}
+            <div className="nft-spark-particle spark-1"></div>
+            <div className="nft-spark-particle spark-2"></div>
+            <div className="nft-spark-particle spark-3"></div>
+            <div className="nft-spark-particle spark-4"></div>
+            <div className="nft-spark-particle spark-5"></div>
+
             <div className="nft-stage-pedestal"></div>
             <img 
               src={selectedOven.image} 
@@ -278,33 +364,84 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
               <p className="nft-hero-lore">{selectedOven.lore}</p>
             </div>
 
-            {/* Performance Stats */}
-            <div className="nft-specs-grid">
-              <div className="nft-spec-item">
-                <span className="spec-label">Multiplicador On-Chain</span>
-                <span className="spec-val" style={{ color: selectedOven.colorTheme }}>{selectedOven.multiplierDisplay}</span>
+            {/* Neon Power Progress Bars */}
+            <div className="nft-neon-power-bars">
+              
+              <div className="nft-power-bar-row">
+                <div className="bar-info">
+                  <span className="bar-title">Score Multiplier</span>
+                  <span className="bar-num" style={{ color: selectedOven.colorTheme }}>{selectedOven.multiplierDisplay}</span>
+                </div>
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill" 
+                    style={{ 
+                      width: `${selectedOven.stats.multiplierPct}%`,
+                      background: `linear-gradient(90deg, ${selectedOven.colorTheme}80, ${selectedOven.colorTheme})`,
+                      boxShadow: `0 0 10px ${selectedOven.colorTheme}`
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div className="nft-spec-item">
-                <span className="spec-label">Bonus Combustible</span>
-                <span className="spec-val">🔥 {selectedOven.woodBonus}</span>
+
+              <div className="nft-power-bar-row">
+                <div className="bar-info">
+                  <span className="bar-title">Aceleración de Horneado</span>
+                  <span className="bar-num">{selectedOven.speedBonus}</span>
+                </div>
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill" 
+                    style={{ 
+                      width: `${selectedOven.stats.speedPct}%`,
+                      background: 'linear-gradient(90deg, #3B82F6, #60A5FA)',
+                      boxShadow: '0 0 10px rgba(96, 165, 250, 0.6)'
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div className="nft-spec-item">
-                <span className="spec-label">Velocidad Cocción</span>
-                <span className="spec-val">⏱️ {selectedOven.speedBonus}</span>
+
+              <div className="nft-power-bar-row">
+                <div className="bar-info">
+                  <span className="bar-title">Retención de Leña / Combustible</span>
+                  <span className="bar-num">{selectedOven.woodBonus}</span>
+                </div>
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill" 
+                    style={{ 
+                      width: `${selectedOven.stats.fuelPct}%`,
+                      background: 'linear-gradient(90deg, #F97316, #FB923C)',
+                      boxShadow: '0 0 10px rgba(249, 115, 22, 0.6)'
+                    }}
+                  ></div>
+                </div>
               </div>
-              <div className="nft-spec-item">
-                <span className="spec-label">Estado de Posesión</span>
-                <span className="spec-val" style={{ color: isSelectedEquipped ? '#14F195' : isSelectedOwned ? '#60A5FA' : '#E2E8F0' }}>
-                  {isSelectedEquipped ? '🌟 EQUIPADO' : isSelectedOwned ? '✅ EN TU PODER' : '🔒 POR MINTEAR'}
-                </span>
+
+              <div className="nft-power-bar-row">
+                <div className="bar-info">
+                  <span className="bar-title">Potencia de Masa Crujiente</span>
+                  <span className="bar-num">{selectedOven.stats.crustPct}% Max</span>
+                </div>
+                <div className="bar-track">
+                  <div 
+                    className="bar-fill" 
+                    style={{ 
+                      width: `${selectedOven.stats.crustPct}%`,
+                      background: 'linear-gradient(90deg, #10B981, #34D399)',
+                      boxShadow: '0 0 10px rgba(16, 185, 129, 0.6)'
+                    }}
+                  ></div>
+                </div>
               </div>
+
             </div>
 
-            {/* Main Action Button */}
+            {/* State and Main Action Button */}
             <div className="nft-hero-action-box">
               {isSelectedEquipped ? (
                 <button className="nft-hero-btn btn-hero-equipped" disabled>
-                  <span>🌟 HORNO EQUIPADO Y ACTIVO</span>
+                  <span>🌟 HORNO EQUIPADO Y ACTIVO EN SOLANA</span>
                 </button>
               ) : isSelectedOwned ? (
                 <button 
@@ -345,7 +482,7 @@ export function NftGalleryModal({ isOpen, onClose }: NftGalleryModalProps) {
                 <div 
                   key={oven.tokenId}
                   className={`nft-mini-card ${isSelected ? 'selected' : ''} ${isItemEquipped ? 'equipped' : ''}`}
-                  onClick={() => setSelectedOven(oven)}
+                  onClick={() => handleSelectOven(oven)}
                   style={{ '--card-theme': oven.colorTheme } as React.CSSProperties}
                 >
                   <div className="mini-card-tags">
