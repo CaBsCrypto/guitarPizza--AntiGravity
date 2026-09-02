@@ -9,7 +9,7 @@ import { ProofGenerator } from '../../zk/ProofGenerator';
 import { SimulatedZKCircuit } from './SimulatedZKCircuit';
 
 import { StellarContractService, type GameSessionStats, ACHIEVEMENT, CONTRACT_IDS } from '../../services/StellarContractService';
-import { AvalancheContractService } from '../../services/AvalancheContractService';
+import { ChainManager } from '../../adapters/ChainManager';
 import { multiplayerService } from '../../services/MultiplayerService';
 import { useFriendsStore } from '../../store/friendsSlice';
 
@@ -1415,52 +1415,34 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
             const fetchOnChainData = async () => {
                 if (document.hidden) return; // Skip if tab is inactive
                 try {
-                    if (userAddress.startsWith('0x')) {
-                        const [sliceBal, stakeInfo, userSlots, ingredientBals] = await Promise.all([
-                            AvalancheContractService.getSliceBalance(userAddress as any),
-                            AvalancheContractService.getStakeInfo(userAddress as any),
-                            AvalancheContractService.getUserSlots(userAddress as any),
-                            AvalancheContractService.getIngredientBalances(userAddress as any)
-                        ]);
+                    const adapter = ChainManager.getInstance().getAdapter();
+                    const [sliceBal, stakeInfo, userSlots, ingredientBals] = await Promise.all([
+                        adapter.getSliceBalance(userAddress),
+                        adapter.getStakeInfo(userAddress),
+                        adapter.getUserSlots(userAddress),
+                        adapter.getIngredientBalances(userAddress)
+                    ]);
 
-                        setSliceBalance(sliceBal);
-                        setStakedSlice(stakeInfo.amount);
-                        setIngredients(ingredientBals);
+                    setSliceBalance(sliceBal);
+                    setStakedSlice(stakeInfo.stakedSlice ?? 0);
+                    setIngredients(ingredientBals);
 
-                        if (view === 'oven' && userSlots.length > 0) {
-                            const updated = userSlots.map(s => {
-                                const isFinished = s.startTime > 0 && Date.now() >= (s.startTime + s.duration) * 1000;
-                                return {
-                                    id: s.slotId,
-                                    isLocked: s.isLocked,
-                                    status: (s.isLocked ? 'idle' : (s.startTime === 0 ? 'idle' : (isFinished ? 'completed' : 'baking'))) as 'idle' | 'baking' | 'completed',
-                                    pizzaType: (s.recipeId === 1 ? 'margherita' : (s.recipeId === 2 ? 'pepperoni' : (s.recipeId === 3 ? 'special' : (s.recipeId === 4 ? 'tartufo' : (s.recipeId === 5 ? 'dolce' : (s.recipeId === 6 ? 'mafia' : null)))))) as any,
-                                    startTime: s.startTime * 1000,
-                                    duration: s.duration * 1000,
-                                    ovenNftId: s.ovenNftId,
-                                    basePayout: s.basePayout
-                                };
-                            });
-                            setOvenSlots(updated);
-                        }
-                    } else {
-                        const [balance, staked, tickets, lpBal, stakedLpBal, onChainCheckIn, lpLastHarvestVal] = await Promise.all([
-                            StellarContractService.getSliceBalance(userAddress),
-                            StellarContractService.getStakedBalance(userAddress),
-                            StellarContractService.getTournamentTickets(userAddress),
-                            StellarContractService.getDefindexLpBalance(userAddress),
-                            StellarContractService.getLpStakedBalance(userAddress),
-                            StellarContractService.getDailyCheckIn(userAddress),
-                            StellarContractService.getLpStakingLastHarvest(userAddress),
-                            fetchRefrigeratorData()
-                        ]);
-
-                        setSliceBalance(balance);
-                        setStakedSlice(staked);
-                        setTicketBalance(tickets);
-                        setDefindexLpBalance(lpBal);
-                        setStakedLp(stakedLpBal);
-                        setLpLastHarvest(lpLastHarvestVal);
+                    if (view === 'oven' && userSlots.length > 0) {
+                        const updated = userSlots.map((s: any) => {
+                            const isFinished = s.startTime > 0 && Date.now() >= (s.startTime + s.duration) * 1000;
+                            const isLocked = s.isUnlocked === false;
+                            return {
+                                id: s.slotId,
+                                isLocked,
+                                status: (isLocked ? 'idle' : (s.startTime === 0 ? 'idle' : (isFinished ? 'completed' : 'baking'))) as 'idle' | 'baking' | 'completed',
+                                pizzaType: (s.recipeId === 1 ? 'margherita' : (s.recipeId === 2 ? 'pepperoni' : (s.recipeId === 3 ? 'special' : (s.recipeId === 4 ? 'tartufo' : (s.recipeId === 5 ? 'dolce' : (s.recipeId === 6 ? 'mafia' : null)))))) as any,
+                                startTime: s.startTime * 1000,
+                                duration: s.duration * 1000,
+                                ovenNftId: (s as any).ovenNftId || 1,
+                                basePayout: (s as any).basePayout || s.baseReward || 50
+                            };
+                        });
+                        setOvenSlots(updated);
                     }
                 } catch (e) {
                     console.error("Failed to load on-chain balances/oven data", e);
@@ -2188,53 +2170,18 @@ Ganador: ${payload.winnerAddress}`);
         // Send to Stellar Soroban on-chain contract (PizzaBaking)
 
         if (userAddress) {
-
-            if (userAddress.startsWith('0x')) {
-                try {
-                    const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
-                    if (activeWallet) {
-                        const ethereumProvider = await activeWallet.getEthereumProvider();
-                        const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
-                        const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : 0;
-                        const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
-                        const txHash = await AvalancheContractService.startBaking(
-                            walletClient,
-                            userAddress as any,
-                            slotId,
-                            recipeId,
-                            rawDurationSec,
-                            basePayoutRaw,
-                            ovenNftId,
-                            fuelType
-                        );
-                        addLog(`🔥 Avalanche Fuji baking started! Hash: ${txHash}`);
-                    }
-                } catch (avaxErr) {
-                    console.error("Avalanche startBaking error:", avaxErr);
+            try {
+                const adapter = ChainManager.getInstance().getAdapter();
+                const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : 0;
+                const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
+                const recipeId = recipe === 'margherita' ? 1 : recipe === 'pepperoni' ? 2 : recipe === 'special' ? 3 : recipe === 'tartufo' ? 4 : recipe === 'dolce' ? 5 : 6;
+                const result = await adapter.startBaking(null, userAddress, slotId, recipeId, fuelType);
+                if (result.success) {
+                    addLog(`🔥 Solana Devnet baking started! Hash: ${result.txHash || 'confirmed'}`);
                 }
-            } else {
-                try {
-                    const signer = getContractSignerRef.current();
-                    const ovenNftId = equippedIdStr ? parseInt(equippedIdStr, 10) : null;
-                    const fuelType = selectedFuel === 'cherry' ? 1 : (selectedFuel === 'mesquite' ? 2 : 0);
-                    const result = await StellarContractService.startBake(
-                        userAddress,
-                        slotId,
-                        recipeId,
-                        rawDurationSec,
-                        basePayoutRaw,
-                        ovenNftId,
-                        fuelType,
-                        signer
-                    );
-                    if (result.success) {
-                        addLog(`🔥 On-chain baking started successfully! Hash: ${result.txHash}`);
-                    }
-                } catch (err) {
-                    console.error("Soroban startBake exception", err);
-                }
+            } catch (err) {
+                console.error("startBaking exception:", err);
             }
-
         }
 
     };
@@ -2364,28 +2311,14 @@ Ganador: ${payload.winnerAddress}`);
 
 
         if (userAddress) {
-            if (userAddress.startsWith('0x')) {
-                try {
-                    const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
-                    if (activeWallet) {
-                        const ethereumProvider = await activeWallet.getEthereumProvider();
-                        const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
-                        const txHash = await AvalancheContractService.claimPizza(walletClient, userAddress as any, slotId);
-                        addLog(`🍕 Baking slot claim confirmed on Avalanche Fuji! Hash: ${txHash}`);
-                    }
-                } catch (avaxErr) {
-                    console.error("Avalanche claimBake error:", avaxErr);
+            try {
+                const adapter = ChainManager.getInstance().getAdapter();
+                const result = await adapter.claimPizza(null, userAddress, slotId);
+                if (result.success) {
+                    addLog(`🍕 Baking slot claim confirmed on Solana Devnet! Hash: ${result.txHash || 'confirmed'}`);
                 }
-            } else {
-                try {
-                    const signer = getContractSignerRef.current();
-                    const result = await StellarContractService.claimBake(userAddress, slotId, signer);
-                    if (result.success) {
-                        addLog(`🍕 Baking slot claim confirmed on-chain!`);
-                    }
-                } catch (err) {
-                    console.error("Failed to claim bake on-chain", err);
-                }
+            } catch (err) {
+                console.error("Failed to claim bake on Solana Devnet:", err);
             }
         }
 
@@ -3540,8 +3473,8 @@ Ganador: ${payload.winnerAddress}`);
                                         lineHeight: '1.3',
                                     }}>
                                         🔑 {language === 'es'
-                                            ? 'Conecta una wallet Avalanche para ganar $SLICE y NFTs'
-                                            : 'Connect an Avalanche wallet to earn $SLICE & NFTs'}
+                                            ? 'Conecta Phantom Wallet en Solana para ganar $SLICE y NFTs'
+                                            : 'Connect Phantom Wallet on Solana to earn $SLICE & NFTs'}
                                     </div>
                                 )}
 
@@ -4018,14 +3951,14 @@ Ganador: ${payload.winnerAddress}`);
                                 </h2>
                                 <p style={{ fontSize: '0.9rem', color: '#e0d4b8', marginBottom: '1rem', lineHeight: '1.4' }}>
                                     {language === 'es' 
-                                        ? 'Has completado tu primera receta de prueba. Conéctate con Privy en Avalanche para desbloquear tu Horno Starter NFT #0 de regalo, guardar tu historial de cocina y ganar tokens $SLICE on-chain.'
-                                        : 'You completed your first test recipe! Connect with Privy on Avalanche to claim your free Starter Oven NFT #0, track your cooking history, and earn $SLICE on-chain.'}
+                                        ? 'Has completado tu primera receta de prueba. Conecta Phantom Wallet en Solana Devnet para desbloquear tu Horno Starter NFT #0 de regalo, guardar tu historial de cocina y ganar tokens $SLICE on-chain.'
+                                        : 'You completed your first test recipe! Connect Phantom Wallet on Solana Devnet to claim your free Starter Oven NFT #0, track your cooking history, and earn $SLICE on-chain.'}
                                 </p>
                                 <div style={{ background: 'rgba(232, 65, 66, 0.15)', border: '1px dashed #e84142', borderRadius: '12px', padding: '0.8rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                                     <img src="/game/assets/nfts/brick_oven_pixel.png?v=2" alt="Starter Oven" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
                                     <div style={{ textAlign: 'left' }}>
                                         <div style={{ fontWeight: 'bold', color: '#FFD700', fontSize: '0.85rem' }}>Horno Starter Mafia #0</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#4CAF50' }}>+1.5x Multiplier On-Chain (Avalanche)</div>
+                                        <div style={{ fontSize: '0.75rem', color: '#4CAF50' }}>+1.5x Multiplier On-Chain (Solana Devnet)</div>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -6102,70 +6035,33 @@ Ganador: ${payload.winnerAddress}`);
 
 
                                                 {/* Action Panel */}
-
                                                 <div style={{
-
                                                     background: 'rgba(255, 255, 255, 0.02)',
-
                                                     border: '1px solid rgba(255, 255, 255, 0.1)',
-
                                                     borderRadius: '8px',
-
                                                     padding: '0.6rem 0.8rem',
-
                                                     display: 'flex',
-
                                                     flexDirection: 'column',
-
                                                     gap: '0.5rem'
-
                                                 }}>
-
                                                     <h3 style={{ margin: '0 0 0.2rem 0', color: 'var(--ph-gold)', fontSize: '0.85rem' }}>🎛️ Acciones de Bóveda</h3>
-
                                                     <div style={{ display: 'flex', gap: '0.4rem' }}>
-
                                                         <button 
-
                                                             onClick={async () => {
-
                                                                 const amtStr = prompt(language === 'es' ? '¿Cuánto $SLICE deseas congelar en el Horno Clásico?' : 'How much $SLICE do you wish to stake?');
-
                                                                 if (!amtStr) return;
-
                                                                 const amt = parseFloat(amtStr);
-
                                                                 if (isNaN(amt) || amt <= 0) return;
 
-                                                                
-
                                                                 if (userAddress) {
-
-                                                                    if (userAddress.startsWith('0x')) {
-                                                                        try {
-                                                                            const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
-                                                                            if (activeWallet) {
-                                                                                const ethereumProvider = await activeWallet.getEthereumProvider();
-                                                                                const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
-                                                                                const txHash = await AvalancheContractService.stakeSlice(walletClient, userAddress as any, amt);
-                                                                                setStakedSlice(prev => prev + amt);
-                                                                                setSliceBalance(prev => Math.max(0, prev - amt));
-                                                                                alert(`🥩 ¡Tokens $SLICE congelados en Avalanche Fuji!\nHash: ${txHash}`);
-                                                                            }
-                                                                        } catch (avaxErr) {
-                                                                            console.error("Avalanche stake error:", avaxErr);
-                                                                        }
-                                                                    } else {
-                                                                        try {
-                                                                            const signer = getContractSignerRef.current();
-                                                                            const result = await StellarContractService.stakeSlice(userAddress, amt, signer);
-                                                                            if (result.success) {
-                                                                                setStakedSlice(prev => prev + amt);
-                                                                                alert("Staked successfully on-chain!");
-                                                                            }
-                                                                        } catch (err) {
-                                                                            console.error("Stake on-chain failed", err);
-                                                                        }
+                                                                    try {
+                                                                        const adapter = ChainManager.getInstance().getAdapter();
+                                                                        const result = await adapter.stakeSlice(null, userAddress, amt);
+                                                                        setStakedSlice(prev => prev + amt);
+                                                                        setSliceBalance(prev => Math.max(0, prev - amt));
+                                                                        alert(language === 'es' ? `🥩 ¡Tokens $SLICE congelados en Solana!\nHash: ${result.txHash || 'confirmado'}` : `🥩 $SLICE staked on Solana!\nHash: ${result.txHash || 'confirmed'}`);
+                                                                    } catch (err) {
+                                                                        console.error("Stake on Solana failed", err);
                                                                     }
                                                                 } else {
                                                                     setStakedSlice(prev => prev + amt);
@@ -6193,36 +6089,18 @@ Ganador: ${payload.winnerAddress}`);
                                                                 if (isNaN(amt) || amt <= 0 || amt > stakedSlice) return;
 
                                                                 if (userAddress) {
-                                                                    if (userAddress.startsWith('0x')) {
-                                                                        try {
-                                                                            const activeWallet = wallets.find(w => w.address.toLowerCase() === userAddress.toLowerCase()) || wallets[0];
-                                                                            if (activeWallet) {
-                                                                                const ethereumProvider = await activeWallet.getEthereumProvider();
-                                                                                const walletClient = AvalancheContractService.createWalletClientFromProvider(ethereumProvider);
-                                                                                const txHash = await AvalancheContractService.unstakeSlice(walletClient, userAddress as any, amt);
-                                                                                setStakedSlice(prev => Math.max(0, prev - amt));
-                                                                                setSliceBalance(prev => prev + amt);
-                                                                                alert(`🔥 ¡Tokens $SLICE descongelados de Avalanche Fuji!\nHash: ${txHash}`);
-                                                                            }
-                                                                        } catch (avaxErr) {
-                                                                            console.error("Avalanche unstake error:", avaxErr);
-                                                                        }
-                                                                    } else {
-                                                                        try {
-                                                                            const signer = getContractSignerRef.current();
-                                                                            const result = await StellarContractService.unstakeSlice(userAddress, amt, signer);
-                                                                            if (result.success) {
-                                                                                setStakedSlice(prev => Math.max(0, prev - amt));
-                                                                                alert("Unstaked successfully on-chain!");
-                                                                            }
-                                                                        } catch (err) {
-                                                                            console.error("Unstake on-chain failed", err);
-                                                                        }
+                                                                    try {
+                                                                        const adapter = ChainManager.getInstance().getAdapter();
+                                                                        const result = await adapter.unstakeSlice(null, userAddress, amt);
+                                                                        setStakedSlice(prev => Math.max(0, prev - amt));
+                                                                        setSliceBalance(prev => prev + amt);
+                                                                        alert(language === 'es' ? `🔥 ¡Tokens $SLICE descongelados en Solana!\nHash: ${result.txHash || 'confirmado'}` : `🔥 $SLICE unstaked on Solana!\nHash: ${result.txHash || 'confirmed'}`);
+                                                                    } catch (err) {
+                                                                        console.error("Unstake on Solana failed", err);
                                                                     }
                                                                 } else {
                                                                     setStakedSlice(prev => Math.max(0, prev - amt));
                                                                 }
-
                                                             }}
 
                                                             style={{

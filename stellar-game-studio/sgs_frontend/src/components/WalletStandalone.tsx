@@ -3,6 +3,7 @@ import { useSafePrivy } from '../hooks/useSafePrivy';
 import { useWallet } from '../hooks/useWallet';
 import { useSliceBalance } from '../hooks/useSliceBalance';
 import { passkeyService, type PasskeyAccount } from '../services/PasskeyService';
+import { ChainManager } from '../adapters/ChainManager';
 import { formatAddress } from '../utils/addressUtils';
 import './WalletStandalone.css';
 
@@ -38,10 +39,10 @@ export function WalletStandalone() {
   const [minting, setMinting] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    try {
       setLocalAccounts(passkeyService.getRegisteredAccounts());
-    }
-  }, [isConnected, passkeyModalState]);
+    } catch {}
+  }, [passkeyModalState]);
 
   useEffect(() => {
     const handleBalanceUpdated = () => {
@@ -67,14 +68,19 @@ export function WalletStandalone() {
   const handleRegisterPasskeySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!usernameInput.trim()) {
-      setPasskeyError('Please enter a username.');
+      setPasskeyError('Please enter a username or alias.');
       return;
     }
     try {
       setPasskeyLoading(true);
       setPasskeyError(null);
-      await registerPasskey(usernameInput.trim());
-      setPasskeyModalState(null);
+      const acc = await registerPasskey(usernameInput.trim());
+      if (acc && (acc as any).secretKey) {
+        setExportedSecretKey((acc as any).secretKey);
+        setPasskeyModalState('backup');
+      } else {
+        setPasskeyModalState(null);
+      }
       setUsernameInput('');
     } catch (err: any) {
       setPasskeyError(err?.message || 'Failed to create biometric passkey.');
@@ -87,7 +93,7 @@ export function WalletStandalone() {
     try {
       setPasskeyLoading(true);
       setPasskeyError(null);
-      await loginPasskey(acc);
+      await loginPasskey();
       setPasskeyModalState(null);
     } catch (err: any) {
       setPasskeyError(err?.message || 'Biometric authentication failed.');
@@ -105,20 +111,14 @@ export function WalletStandalone() {
     try {
       setPasskeyLoading(true);
       setPasskeyError(null);
-      passkeyService.saveAccount({
+      (passkeyService as any).saveAccount?.({
         credentialId: 'restored_' + Date.now(),
         publicKey: restoreSecretInput.trim(),
         username: usernameInput.trim(),
         createdAt: Date.now(),
         secretKey: restoreSecretInput.trim(),
       });
-      await loginPasskey({
-        credentialId: 'restored_' + Date.now(),
-        publicKey: restoreSecretInput.trim(),
-        username: usernameInput.trim(),
-        createdAt: Date.now(),
-        secretKey: restoreSecretInput.trim(),
-      });
+      await loginPasskey();
       setPasskeyModalState(null);
       setUsernameInput('');
       setRestoreSecretInput('');
@@ -146,6 +146,7 @@ export function WalletStandalone() {
                 target.disabled = true;
                 target.textContent = 'AIRDROPPING...';
                 try {
+                  if (!publicKey) return;
                   const adapter = ChainManager.getInstance().getAdapter();
                   const airdropResult = await adapter.requestSliceAirdrop(publicKey, 8);
                   

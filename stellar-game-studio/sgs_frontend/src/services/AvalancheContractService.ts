@@ -18,7 +18,7 @@ import { avalancheFuji } from 'viem/chains';
 import { AVALANCHE_FUJI_CONFIG, AVALANCHE_ABIS } from '../contracts/avalancheContracts';
 
 export class AvalancheContractService {
-  private static publicClient: PublicClient = createPublicClient({
+  private static publicClient: any = createPublicClient({
     chain: avalancheFuji,
     transport: http(AVALANCHE_FUJI_CONFIG.network.rpcUrl),
   });
@@ -26,7 +26,7 @@ export class AvalancheContractService {
   /**
    * Obtiene el PublicClient para consultas de lectura en Avalanche Fuji
    */
-  static getPublicClient(): PublicClient {
+  static getPublicClient(): any {
     return this.publicClient;
   }
 
@@ -303,7 +303,7 @@ export class AvalancheContractService {
         abi: AVALANCHE_ABIS.PizzaBaking,
         functionName: 'getUserSlots',
         args: [address],
-      }) as any[];
+      }) as unknown as any[];
 
       const now = Math.floor(Date.now() / 1000);
 

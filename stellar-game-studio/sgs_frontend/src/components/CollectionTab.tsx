@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { ChainManager } from '../adapters/ChainManager';
-import { AvalancheContractService } from '../services/AvalancheContractService';
-import { useSafeWallets } from '../hooks/useSafePrivy';
-import type { Address } from 'viem';
 
 interface CollectionTabProps {
     language: 'es' | 'en';
@@ -17,7 +14,6 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
     const [equippedId, setEquippedId] = useState<number | null>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [cardsToShow, setCardsToShow] = useState(3);
-    const { wallets } = useSafeWallets();
 
     useEffect(() => {
         const handleResize = () => {
@@ -75,7 +71,7 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
         try {
             setLoading(true);
             const adapter = ChainManager.getAdapter();
-            ovens = await adapter.getUserOvens(userAddress);
+            let ovens: any[] = await adapter.getUserOvens(userAddress);
 
             // Fallback starter oven if in demo or none minted yet
             if (ovens.length === 0) {
@@ -85,7 +81,7 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
                 }
             }
 
-            const nfts = ovens.map(({ tokenId, styleId }) => {
+            const nfts = ovens.map(({ tokenId, styleId }: any) => {
                 let name = '';
                 let image = '';
                 let bonus = '';
@@ -143,7 +139,7 @@ export function CollectionTab({ language, userAddress, onBack, isEmbedded = fals
 
             // Auto-equip first oven if none equipped
             const saved = localStorage.getItem('equippedOvenId');
-            if (saved && nfts.some(n => n.id === parseInt(saved, 10))) {
+            if (saved && nfts.some((n: any) => n.id === parseInt(saved, 10))) {
                 setEquippedId(parseInt(saved, 10));
             } else if (nfts.length > 0) {
                 setEquippedId(nfts[0].id);

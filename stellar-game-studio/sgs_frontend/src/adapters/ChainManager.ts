@@ -25,6 +25,10 @@ class ChainManagerService {
     return ChainManagerService.instance;
   }
 
+  getInstance(): ChainManagerService {
+    return this;
+  }
+
   private resolveInitialChain(): SupportedChainId {
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, 'solana');
@@ -33,12 +37,10 @@ class ChainManagerService {
   }
 
   getActiveChain(): SupportedChainId {
-    return this.currentChain;
+    return 'solana';
   }
 
   getAdapter(): IBlockchainAdapter {
-    if (this.currentChain === 'stellar') return this.stellarAdapter;
-    if (this.currentChain === 'avalanche') return this.avalancheAdapter;
     return this.solanaAdapter;
   }
 
