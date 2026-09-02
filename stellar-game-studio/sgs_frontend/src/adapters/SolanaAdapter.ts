@@ -69,20 +69,27 @@ export class SolanaAdapter implements IBlockchainAdapter {
    */
   private async signWithSolanaWallet(txName: string): Promise<string> {
     const solana = typeof window !== 'undefined' ? ((window as any).solana || (window as any).phantom?.solana) : null;
-    if (solana && solana.isPhantom && typeof solana.signMessage === 'function') {
+    if (solana) {
       try {
-        const message = new TextEncoder().encode(`Rhythm Slice [Solana Devnet]: Confirm ${txName} at ${Date.now()}`);
-        const signed = await solana.signMessage(message, 'utf8');
-        const sigHex = Array.from(signed.signature || [])
-          .map((b: any) => b.toString(16).padStart(2, '0'))
-          .join('')
-          .slice(0, 32);
-        return `sol_sig_${sigHex}`;
+        if (!solana.isConnected) {
+          await solana.connect();
+        }
+        if (typeof solana.signMessage === 'function') {
+          const messageText = `🍕 Rhythm Slice [Solana Devnet]\nAcción: ${txName}\nFecha: ${new Date().toLocaleString()}`;
+          const message = new TextEncoder().encode(messageText);
+          const signed = await solana.signMessage(message, 'utf8');
+          const sigBytes = signed.signature || signed;
+          const sigHex = Array.from(sigBytes)
+            .map((b: any) => b.toString(16).padStart(2, '0'))
+            .join('');
+          return `sol_sig_${sigHex.slice(0, 44)}`;
+        }
       } catch (err: any) {
-        console.warn(`[SolanaAdapter] Signature skipped or rejected for ${txName}:`, err?.message);
+        console.error(`[SolanaAdapter] Error solicitando firma en Phantom:`, err);
+        throw new Error(err?.message || 'Firma de transacción cancelada o rechazada en Phantom.');
       }
     }
-    return `sol_${txName.toLowerCase().replace(/\s+/g, '_')}_${Date.now().toString(36)}`;
+    throw new Error('Billetera Phantom no detectada en esta ventana. Por favor asegúrate de tener la extensión Phantom activa.');
   }
 
   // ── Tokens & Balances ──────────────────────────────────────────
