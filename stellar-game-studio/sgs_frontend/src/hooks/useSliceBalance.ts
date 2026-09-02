@@ -1,32 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletStore } from '../store/walletSlice';
-import { StellarContractService } from '../services/StellarContractService';
-import { AvalancheContractService } from '../services/AvalancheContractService';
-import type { Address } from 'viem';
+import { ChainManager } from '../adapters/ChainManager';
 
-const POLL_INTERVAL_MS = 30_000; // refresh every 30s
+const POLL_INTERVAL_MS = 15_000; // refresh every 15s
 
 export function useSliceBalance() {
   const { publicKey, isConnected } = useWalletStore();
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetch = useCallback(async () => {
+  const fetchBalance = useCallback(async () => {
     if (!isConnected || !publicKey || publicKey === 'G_DEMO_USER') {
       setBalance(null);
       return;
     }
     setLoading(true);
     try {
-      if (publicKey.startsWith('0x')) {
-        const b = await AvalancheContractService.getSliceBalance(publicKey as Address);
-        setBalance(b);
-      } else {
-        const b = await StellarContractService.getSliceBalance(publicKey);
-        setBalance(b);
-      }
-    } catch {
-      // keep previous value on error
+      const adapter = ChainManager.getInstance().getAdapter();
+      const b = await adapter.getSliceBalance(publicKey);
+      setBalance(b);
+    } catch (err) {
+      console.warn('useSliceBalance error fetching balance:', err);
     } finally {
       setLoading(false);
     }
@@ -34,15 +28,24 @@ export function useSliceBalance() {
 
   // Fetch on mount and when wallet changes
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    fetchBalance();
+  }, [fetchBalance]);
 
-  // Poll every 30s
+  // Listen to 'balance-updated' custom event
+  useEffect(() => {
+    const handleUpdate = () => {
+      fetchBalance();
+    };
+    window.addEventListener('balance-updated', handleUpdate);
+    return () => window.removeEventListener('balance-updated', handleUpdate);
+  }, [fetchBalance]);
+
+  // Poll periodically
   useEffect(() => {
     if (!isConnected || !publicKey) return;
-    const id = setInterval(fetch, POLL_INTERVAL_MS);
+    const id = setInterval(fetchBalance, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [isConnected, publicKey, fetch]);
+  }, [isConnected, publicKey, fetchBalance]);
 
-  return { balance, loading, refresh: fetch };
+  return { balance, loading, refresh: fetchBalance };
 }

@@ -89,15 +89,31 @@ export class SolanaAdapter implements IBlockchainAdapter {
   async getSliceBalance(address: string): Promise<number> {
     if (!address) return 0;
     try {
-      if (isSolanaAddress(address)) {
-        const balanceResult = await this.rpcCall<{ value: number }>('getBalance', [address]);
-        const solBalance = (balanceResult?.value || 0) / 1e9;
-        return solBalance > 0 ? Number((solBalance * 1000).toFixed(2)) : 1000;
+      const storageKey = `gp_slice_balance_${address}`;
+      const localVal = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      if (localVal !== null) {
+        const parsed = parseFloat(localVal);
+        if (!isNaN(parsed)) return parsed;
       }
-      return 1500;
+
+      let startingBalance = 50; // Starting trial balance
+      if (isSolanaAddress(address)) {
+        try {
+          const balanceResult = await this.rpcCall<{ value: number }>('getBalance', [address]);
+          const solBalance = (balanceResult?.value || 0) / 1e9;
+          if (solBalance > 0) {
+            startingBalance = Number((solBalance * 100).toFixed(2));
+          }
+        } catch {}
+      }
+
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(storageKey, startingBalance.toString());
+      }
+      return startingBalance;
     } catch (err) {
-      console.warn('SolanaAdapter: error fetching live balance, using cached value:', err);
-      return 1500;
+      console.warn('SolanaAdapter: error fetching balance:', err);
+      return 50;
     }
   }
 
@@ -113,24 +129,38 @@ export class SolanaAdapter implements IBlockchainAdapter {
     };
   }
 
-  async requestSliceAirdrop(address: string, amount: number = 100): Promise<{ success: boolean; txHash?: string }> {
+  async requestSliceAirdrop(address: string, amount: number = 8): Promise<{ success: boolean; txHash?: string }> {
     if (!address) return { success: false };
+
+    // 1. Increment local persistent $SLICE balance
+    const storageKey = `gp_slice_balance_${address}`;
+    let current = 50;
+    if (typeof localStorage !== 'undefined') {
+      const localVal = localStorage.getItem(storageKey);
+      if (localVal) {
+        const parsed = parseFloat(localVal);
+        if (!isNaN(parsed)) current = parsed;
+      }
+      const nextBalance = current + amount;
+      localStorage.setItem(storageKey, nextBalance.toString());
+      window.dispatchEvent(new Event('balance-updated'));
+    }
+
+    // 2. Request 1 SOL on Devnet
+    let txSig = `sol_airdrop_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
     try {
       if (isSolanaAddress(address)) {
         const lamports = 1000000000; // 1 SOL
-        const txSig = await this.rpcCall<string>('requestAirdrop', [address, lamports]);
-        return {
-          success: true,
-          txHash: txSig
-        };
+        const rpcSig = await this.rpcCall<string>('requestAirdrop', [address, lamports]);
+        if (rpcSig) txSig = rpcSig;
       }
     } catch (err) {
-      console.warn('Solana Devnet airdrop fallback:', err);
+      console.warn('Solana Devnet SOL airdrop fallback:', err);
     }
-    const simulatedSig = `sol_airdrop_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+
     return {
       success: true,
-      txHash: simulatedSig
+      txHash: txSig
     };
   }
 
