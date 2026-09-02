@@ -191,25 +191,15 @@ export function WalletStandalone() {
           </div>
         ) : (
           <div className="wallet-standalone-actions">
-            {/* Phantom / Solana Wallet Button */}
+            {/* Clean Solana Connect Button */}
             <button
               className="ws-btn ws-btn-phantom"
               onClick={() => connectSolana()}
               disabled={isConnecting}
-              title="Conectar con Phantom / Solflare u otra wallet nativa de Solana"
+              title="Conectar billetera Solana (Phantom, Solflare, etc.)"
             >
               <span className="ws-phantom-icon">🟣</span>
-              <span>{isConnecting ? 'CONECTANDO...' : 'PHANTOM / SOLANA'}</span>
-            </button>
-
-            {/* Official Privy Login Button */}
-            <button
-              className="ws-btn ws-btn-privy"
-              onClick={() => privyLogin()}
-              disabled={isConnecting}
-              title="Iniciar sesión social con Privy"
-            >
-              <span>⚡ PRIVY</span>
+              <span>{isConnecting ? 'CONECTANDO...' : 'CONECTAR WALLET'}</span>
             </button>
           </div>
         )
