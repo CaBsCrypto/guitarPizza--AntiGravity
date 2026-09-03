@@ -346,7 +346,7 @@ function OnboardingModal({
   language,
   dismissOnboarding,
 }: OnboardingModalProps) {
-  if (!showOnboarding) return null;
+  return null;
 
   return (
     <div
@@ -644,11 +644,8 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     const t = TRANSLATIONS[language];
 
-    // New Player Onboarding — shows once on first visit
-    const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
-        try { return !localStorage.getItem('gp_onboarding_done'); }
-        catch { return false; }
-    });
+    // New Player Onboarding — disabled
+    const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
 
     const [onboardingStep, setOnboardingStep] = useState(0);
 
