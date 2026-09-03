@@ -4,7 +4,8 @@ import App from './App'
 import { isWeb3Active } from './utils/constants'
 import './index.css'
 
-const LazyPrivyWrapper = React.lazy(() => import('./components/PrivyWrapper'))
+const web3Active = isWeb3Active();
+const LazyPrivyWrapper = web3Active ? React.lazy(() => import('./components/PrivyWrapper')) : null;
 
 const rawPrivyId = import.meta.env.VITE_PRIVY_APP_ID || ''
 const hasValidPrivyId = Boolean(
@@ -72,8 +73,6 @@ class GlobalAppErrorBoundary extends React.Component<{ children: React.ReactNode
     return this.props.children;
   }
 }
-
-const web3Active = isWeb3Active();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

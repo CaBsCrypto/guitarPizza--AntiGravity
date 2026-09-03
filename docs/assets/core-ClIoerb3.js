@@ -1,6 +1,6 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/features-B8mVG8jR.js","assets/vendor-viem-Cgtp5ekC.js","assets/vendor-privy-BJ_Vxqk1.js","assets/basic-CVB5ynJQ.js","assets/index-D-CUCE9V.js","assets/w3m-modal-p5wiOxMm.js"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/features-BHoQ7UAq.js","assets/vendor-viem-Cgtp5ekC.js","assets/vendor-privy-uOEXquY0.js","assets/basic-NAOEwdJw.js","assets/index-6T1xdCbh.js","assets/w3m-modal-BDhOjW1y.js"])))=>i.map(i=>d[i]);
 import { J as Td, _ as _i, E as ei, ah as Bu, G as nc, V as ti, ax as rc } from "./vendor-viem-Cgtp5ekC.js";
-import { W as Fu, y as ju, $ as Fo, I as er, f as Wu, v as Dt, a4 as yt, g as W, h as _s, C as qu, n as Hu, j as Ir, a1 as jo, e as tr, m as Vu, o as Ku, c as zu, d as Gu, p as vn, A as Yu, z as Ju, t as ts, U as sr, N as Ta, q as Xu, D as ka, F as Oa, u as Pr, a6 as Pa, P as ic, a as Zu, b as Qu, Z as oc, x as dn, s as kd, H as ps, B as es, S as ks, r as Od, __tla as __tla_0 } from "./vendor-privy-BJ_Vxqk1.js";
+import { W as Fu, y as ju, $ as Fo, I as er, f as Wu, v as Dt, a4 as yt, g as W, h as _s, C as qu, n as Hu, j as Ir, a1 as jo, e as tr, m as Vu, o as Ku, c as zu, d as Gu, p as vn, A as Yu, z as Ju, t as ts, U as sr, N as Ta, q as Xu, D as ka, F as Oa, u as Pr, a6 as Pa, P as ic, a as Zu, b as Qu, Z as oc, x as dn, s as kd, H as ps, B as es, S as ks, r as Od, __tla as __tla_0 } from "./vendor-privy-uOEXquY0.js";
 let gI, He, xa, Mn, bI, Zn, Ou, ni, Ye, jd, Lt, Ii, Hs, ue, Pd, _, it, wI, te, ns, It, Oe, yI, Cs, Je, Xe, Na, T1, vt, Bt, ee, yn, Ut, Bd, se, p, H, L, vi, S, me, ZA, J, Ks, le, cp, X, Q, rs, $, Xp, vr, fI, CI, mI;
 let __tla = Promise.all([
     (()=>{
@@ -20276,7 +20276,7 @@ ${t.length}`, s = new TextEncoder().encode(e + t);
         async initialize(e) {
             if (this.initializeProjectSettings(e), this.initControllers(e), await this.initChainAdapters(), this.sendInitializeEvent(e), _.state.enableReconnect ? (await this.syncExistingConnection(), await this.syncAdapterConnections()) : await this.unSyncExistingConnection(), this.remoteFeatures = await L1.fetchRemoteFeatures(e), _.setRemoteFeatures(this.remoteFeatures), this.remoteFeatures.onramp && Go.setOnrampProviders(this.remoteFeatures.onramp), (_.state.remoteFeatures?.email || Array.isArray(_.state.remoteFeatures?.socials) && _.state.remoteFeatures?.socials.length > 0) && await this.checkAllowedOrigins(), _.state.features?.reownAuthentication || _.state.remoteFeatures?.reownAuthentication) {
                 const { ReownAuthentication: s } = await _i(async ()=>{
-                    const { ReownAuthentication: r } = await import("./features-B8mVG8jR.js");
+                    const { ReownAuthentication: r } = await import("./features-BHoQ7UAq.js");
                     return {
                         ReownAuthentication: r
                     };
@@ -21375,7 +21375,7 @@ ${t.length}`, s = new TextEncoder().encode(e + t);
         }
         async injectModalUi() {
             if (!Sd && J.isClient()) {
-                if (await _i(()=>import("./basic-CVB5ynJQ.js"), __vite__mapDeps([3,4,1,2])), await _i(()=>import("./w3m-modal-p5wiOxMm.js"), __vite__mapDeps([5,4,1,2])), !document.querySelector("w3m-modal")) {
+                if (await _i(()=>import("./basic-NAOEwdJw.js"), __vite__mapDeps([3,4,1,2])), await _i(()=>import("./w3m-modal-BDhOjW1y.js"), __vite__mapDeps([5,4,1,2])), !document.querySelector("w3m-modal")) {
                     const s = document.createElement("w3m-modal");
                     !_.state.disableAppend && !_.state.enableEmbedded && document.body.insertAdjacentElement("beforeend", s);
                 }

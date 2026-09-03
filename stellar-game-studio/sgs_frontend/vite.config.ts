@@ -18,7 +18,8 @@ export default defineConfig(({ mode }) => ({
       { find: '@', replacement: path.resolve(__dirname, './src') },
       { find: 'buffer', replacement: path.resolve(__dirname, './node_modules/buffer/') },
       { find: '@solana-program/token', replacement: path.resolve(__dirname, './src/utils/emptyMock.ts') },
-      { find: '@stripe/stripe-js', replacement: path.resolve(__dirname, './src/utils/emptyMock.ts') }
+      { find: '@stripe/stripe-js', replacement: path.resolve(__dirname, './src/utils/emptyMock.ts') },
+      { find: '@farcaster/mini-app-solana', replacement: path.resolve(__dirname, './src/utils/emptyMock.ts') }
     ],
     dedupe: ['@stellar/stellar-sdk']
   },
