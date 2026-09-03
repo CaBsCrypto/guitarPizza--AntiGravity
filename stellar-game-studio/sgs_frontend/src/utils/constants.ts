@@ -118,3 +118,28 @@ export const DEFAULT_METHOD_OPTIONS = {
 // Auth TTL constants (in minutes)
 export const DEFAULT_AUTH_TTL_MINUTES = 5;
 export const MULTI_SIG_AUTH_TTL_MINUTES = 60;
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  WEB2 EVENT MODE & FEATURE FLAG
+ *  Default: false (Pure Web2 Arcade Mode for Web2 Event submissions)
+ *  Activation options:
+ *   1. URL param: ?web3=1 or ?solana=1
+ *   2. LocalStorage: localStorage.setItem('rs_web3_enabled', 'true')
+ *   3. Env var: VITE_ENABLE_WEB3=true
+ * ═══════════════════════════════════════════════════════════════
+ */
+export function isWeb3Active(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('web3') === '1' || params.get('web3') === 'true' || params.get('solana') === '1') {
+      return true;
+    }
+    const saved = localStorage.getItem('rs_web3_enabled');
+    if (saved === 'true') return true;
+  } catch {}
+  return import.meta.env.VITE_ENABLE_WEB3 === 'true';
+}
+
+export const ENABLE_WEB3 = isWeb3Active();

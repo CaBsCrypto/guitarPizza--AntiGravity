@@ -24,6 +24,7 @@ import { CollectionTab } from '../../components/CollectionTab';
 import { WalletStandalone } from '../../components/WalletStandalone';
 import { SpicyCrustService } from '../../services/SpicyCrustService';
 import { HubBridgeService } from '../../services/HubBridgeService';
+import { isWeb3Active } from '../../utils/constants';
 
 
 
@@ -3472,9 +3473,15 @@ Ganador: ${payload.winnerAddress}`);
                                         textAlign: 'center',
                                         lineHeight: '1.3',
                                     }}>
-                                        🔑 {language === 'es'
-                                            ? 'Conecta Phantom Wallet en Solana para ganar $SLICE y NFTs'
-                                            : 'Connect Phantom Wallet on Solana to earn $SLICE & NFTs'}
+                                        {isWeb3Active() ? (
+                                            <>🔑 {language === 'es'
+                                                ? 'Conecta Phantom Wallet en Solana para ganar $SLICE y NFTs'
+                                                : 'Connect Phantom Wallet on Solana to earn $SLICE & NFTs'}</>
+                                        ) : (
+                                            <>🎮 {language === 'es'
+                                                ? '¡Presiona A, S, K, L para hornear al ritmo de la música!'
+                                                : 'Press A, S, K, L to bake to the rhythm of the beat!'}</>
+                                        )}
                                     </div>
                                 )}
 

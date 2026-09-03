@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { WalletStandalone } from './WalletStandalone';
 import { ChainSwitcher } from './ChainSwitcher';
 import { NftGalleryModal } from './NftGalleryModal';
+import { isWeb3Active } from '../utils/constants';
 import type { Page } from '../types/navigation';
 import './Layout.css';
 
@@ -13,6 +14,7 @@ interface LayoutProps {
 
 export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const [isNftModalOpen, setIsNftModalOpen] = useState(false);
+  const web3Active = isWeb3Active();
 
   return (
     <div className={`rs-shell ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>
@@ -39,16 +41,20 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
 
         {/* Right controls */}
         <div className="rs-header-right">
-          <ChainSwitcher />
-          <button
-            type="button"
-            className="rs-nft-btn"
-            onClick={() => setIsNftModalOpen(true)}
-            title="Galería y Minteo de Hornos NFT en Solana Devnet"
-          >
-            <span>🎨 HORNOS NFT</span>
-          </button>
-          <WalletStandalone />
+          {web3Active && (
+            <>
+              <ChainSwitcher />
+              <button
+                type="button"
+                className="rs-nft-btn"
+                onClick={() => setIsNftModalOpen(true)}
+                title="Galería y Minteo de Hornos NFT en Solana Devnet"
+              >
+                <span>🎨 HORNOS NFT</span>
+              </button>
+              <WalletStandalone />
+            </>
+          )}
           {currentPage !== 'game' && (
             <button
               type="button"
@@ -65,12 +71,12 @@ export function Layout({ children, currentPage, onNavigate }: LayoutProps) {
       <main className={`rs-main ${currentPage === 'game' ? 'rs-game-mode' : ''}`}>{children}</main>
 
       {/* NFT Gallery & Mint Modal */}
-      <NftGalleryModal isOpen={isNftModalOpen} onClose={() => setIsNftModalOpen(false)} />
+      {web3Active && <NftGalleryModal isOpen={isNftModalOpen} onClose={() => setIsNftModalOpen(false)} />}
 
       {currentPage !== 'game' && (
         <footer className="rs-footer">
-          <span>Rhythm Slice · Solana Devnet · Metaplex NFT Ovens 2026</span>
-          <span className="rs-footer-quote">"The Don doesn't take your word for it. Show the receipt."</span>
+          <span>{web3Active ? 'Rhythm Slice · Solana Devnet · Metaplex NFT Ovens 2026' : 'Rhythm Slice · Retro Arcade Kitchen 2026'}</span>
+          <span className="rs-footer-quote">{web3Active ? '"The Don doesn\'t take your word for it. Show the receipt."' : '"Bake with rhythm. No compromises."'}</span>
         </footer>
       )}
     </div>
