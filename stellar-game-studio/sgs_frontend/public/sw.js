@@ -1,8 +1,6 @@
 // Guitar Pizza Service Worker (PWA Cache & Offline Resilience)
-const CACHE_NAME = 'guitar-pizza-cache-v4';
+const CACHE_NAME = 'guitar-pizza-cache-v6';
 const STATIC_ASSETS = [
-  './',
-  './index.html',
   './manifest.json',
   './mafia-theme.css',
   './game/guitar-pizza-engine.js',
@@ -41,7 +39,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for local assets (audio, images, css, js)
+  // HTML / Navigation requests: Network-First (NEVER serve stale index.html)
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Static assets (images, audio, CSS): Stale-while-revalidate
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
