@@ -35,6 +35,16 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     commonjsOptions: {
       transformMixedEsModules: true
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('@privy-io')) return 'vendor-privy';
+          if (id.includes('@noir-lang') || id.includes('backend_barretenberg')) return 'vendor-noir';
+          if (id.includes('@stellar/stellar-sdk')) return 'vendor-stellar';
+          if (id.includes('viem')) return 'vendor-viem';
+        }
+      }
     }
   },
   server: {

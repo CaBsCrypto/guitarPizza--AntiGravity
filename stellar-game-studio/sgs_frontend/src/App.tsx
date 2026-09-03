@@ -7,10 +7,12 @@ import { useWallet } from './hooks/useWallet';
 import { HubBridgeService } from './services/HubBridgeService';
 import type { Page } from './types/navigation';
 
-const isEmbed = new URLSearchParams(window.location.search).get('embed') === '1';
+const queryParamsInit = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+const isEmbed = queryParamsInit.get('embed') === '1';
+const initialPage: Page = queryParamsInit.get('page') === 'home' ? 'home' : 'game';
 
 function App() {
-  const [page, setPage] = useState<Page>(isEmbed ? 'game' : 'home');
+  const [page, setPage] = useState<Page>(initialPage);
   const { publicKey } = useWallet(); // HMR reload trigger
 
   useEffect(() => {

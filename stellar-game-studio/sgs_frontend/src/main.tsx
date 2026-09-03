@@ -1,9 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { PrivyProvider } from '@privy-io/react-auth'
 import App from './App'
+import { isWeb3Active } from './utils/constants'
 import './index.css'
 
+const LazyPrivyWrapper = React.lazy(() => import('./components/PrivyWrapper'))
 
 const rawPrivyId = import.meta.env.VITE_PRIVY_APP_ID || ''
 const hasValidPrivyId = Boolean(
@@ -72,30 +73,18 @@ class GlobalAppErrorBoundary extends React.Component<{ children: React.ReactNode
   }
 }
 
+const web3Active = isWeb3Active();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <GlobalAppErrorBoundary>
-      {isSecure && hasValidPrivyId ? (
+      {web3Active && isSecure && hasValidPrivyId ? (
         <PrivyErrorBoundary>
-          <PrivyProvider
-            appId={rawPrivyId}
-            config={{
-              loginMethods: ['email', 'wallet', 'google', 'twitter', 'discord'],
-              appearance: {
-                theme: 'dark',
-                accentColor: '#14F195',
-                logo: '/game/assets/Benny.png',
-                walletList: ['phantom', 'solflare', 'backpack', 'detected_wallets']
-              },
-              embeddedWallets: {
-                solana: {
-                  createOnLogin: 'users-without-wallets',
-                },
-              },
-            }}
-          >
-            <App />
-          </PrivyProvider>
+          <React.Suspense fallback={<App />}>
+            <LazyPrivyWrapper appId={rawPrivyId}>
+              <App />
+            </LazyPrivyWrapper>
+          </React.Suspense>
         </PrivyErrorBoundary>
       ) : (
         <App />
