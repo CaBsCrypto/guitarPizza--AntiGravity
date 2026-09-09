@@ -552,8 +552,13 @@
         let startLen = inputLog.length;
         let passedCases = 0;
 
-        // Test Cases mapping buttons to lanes
+        // Test Cases mapping buttons to lanes (Rear Triggers + D-Pad + Face Buttons)
         const testMappings = [
+            // Primary Rear Triggers / Bumpers
+            { name: "Left Trigger (LT)", btn: 6, lane: 0 },
+            { name: "Left Bumper (LB)", btn: 4, lane: 1 },
+            { name: "Right Bumper (RB)", btn: 5, lane: 2 },
+            { name: "Right Trigger (RT)", btn: 7, lane: 3 },
             // D-Pad mappings
             { name: "D-pad Left", btn: 14, lane: 0 },
             { name: "D-pad Down", btn: 13, lane: 1 },
@@ -592,9 +597,9 @@
         }
 
         const metricsEl = document.getElementById('suite1Metrics');
-        metricsEl.innerText = `Gamepad Mappings Verified: ${passedCases} / 8 Passed`;
+        metricsEl.innerText = `Gamepad Mappings Verified: ${passedCases} / 12 Passed`;
 
-        if (passedCases === 8) {
+        if (passedCases === 12) {
             setSuiteStatus('suite1', 'passed');
             return true;
         } else {

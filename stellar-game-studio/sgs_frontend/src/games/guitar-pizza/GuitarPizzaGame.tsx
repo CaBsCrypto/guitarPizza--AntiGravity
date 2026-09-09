@@ -107,7 +107,7 @@ const TRANSLATIONS = {
 
         setup: 'AJUSTES',
 
-        fireUp: 'JUGAR (ENCENDER HORNO)',
+        fireUp: 'JUGAR',
 
         heatingUp: 'CALENTANDO...',
 
@@ -221,7 +221,7 @@ const TRANSLATIONS = {
 
         setup: 'SETUP',
 
-        fireUp: 'PLAY (FIRE UP OVEN)',
+        fireUp: 'PLAY',
 
         heatingUp: 'HEATING UP...',
 
@@ -2723,6 +2723,71 @@ Ganador: ${payload.winnerAddress}`);
         } catch {}
     };
 
+    // --- XBOX / GAMEPAD MENU & LOBBY NAVIGATION ---
+    useEffect(() => {
+        let animId: number;
+        let lastBtnA = false;
+        let lastBtnStart = false;
+        let lastBtnB = false;
+
+        const pollMenuGamepad = () => {
+            if (navigator.getGamepads) {
+                const gps = navigator.getGamepads();
+                let aPressed = false;
+                let startPressed = false;
+                let bPressed = false;
+
+                for (let i = 0; i < gps.length; i++) {
+                    const gp = gps[i];
+                    if (!gp || !gp.buttons) continue;
+                    // Button 0: A
+                    if (gp.buttons[0] && (gp.buttons[0].pressed || (typeof gp.buttons[0].value === 'number' && gp.buttons[0].value > 0.5))) aPressed = true;
+                    // Button 9: Start / Menu
+                    if (gp.buttons[9] && (gp.buttons[9].pressed || (typeof gp.buttons[9].value === 'number' && gp.buttons[9].value > 0.5))) startPressed = true;
+                    // Button 1: B, Button 8: Select / Back
+                    if ((gp.buttons[1] && (gp.buttons[1].pressed || (typeof gp.buttons[1].value === 'number' && gp.buttons[1].value > 0.5))) ||
+                        (gp.buttons[8] && (gp.buttons[8].pressed || (typeof gp.buttons[8].value === 'number' && gp.buttons[8].value > 0.5)))) {
+                        bPressed = true;
+                    }
+                }
+
+                // Rising edge for A or Start
+                const actionTriggered = (aPressed && !lastBtnA) || (startPressed && !lastBtnStart);
+                const backTriggered = (bPressed && !lastBtnB);
+
+                lastBtnA = aPressed;
+                lastBtnStart = startPressed;
+                lastBtnB = bPressed;
+
+                if (actionTriggered) {
+                    // Check if results screen is visible
+                    const resultsEl = document.getElementById('results');
+                    const isResultsVisible = resultsEl && resultsEl.style.display !== 'none';
+
+                    if (isResultsVisible) {
+                        const restartBtn = document.getElementById('restartBtn');
+                        if (restartBtn) restartBtn.click();
+                    } else if (view === 'lobby') {
+                        const startBtn = document.getElementById('startBtn');
+                        if (startBtn) startBtn.click();
+                    } else if (view === 'songpicker') {
+                        setView('lobby');
+                    }
+                }
+
+                if (backTriggered) {
+                    if (view !== 'lobby') {
+                        closeModalWithAnimation('lobby');
+                    }
+                }
+            }
+            animId = requestAnimationFrame(pollMenuGamepad);
+        };
+
+        animId = requestAnimationFrame(pollMenuGamepad);
+        return () => cancelAnimationFrame(animId);
+    }, [view, closeModalWithAnimation]);
+
     // Load leaderboard on mount
     useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
 
@@ -2822,7 +2887,7 @@ Ganador: ${payload.winnerAddress}`);
 
                     // Append version parameter to bust aggressive browser cache of public assets
 
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=6`.replace('//', '/');
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=10`.replace('//', '/');
 
 
 
@@ -6480,7 +6545,7 @@ Ganador: ${payload.winnerAddress}`);
                                                     className="primary-btn"
                                                     style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
                                                     onClick={() => { setView('lobby'); handleStartGame(); }}
-                                                >🔥 FIRE UP OVEN</button>
+                                                >🔥 {t.fireUp}</button>
                                             </div>
                                         ) : (
                                             <div style={{ width: '100%' }}>

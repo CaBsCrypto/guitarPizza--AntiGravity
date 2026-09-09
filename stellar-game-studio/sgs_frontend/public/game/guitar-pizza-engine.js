@@ -88,6 +88,9 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     let inputLog = [];
     let gamepadActive = false;
     let lastStartPressed = false;
+    let lastSelectPressed = false;
+    const gpCurrentPressed = [false, false, false, false];
+    const gpTriggerHeld = {}; // { [gpIndex]: { lt: boolean, rt: boolean } }
 
     // --- ENGINE SETUP ---
     const canvas = canvasElement;
@@ -157,22 +160,56 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     // --- HELPER FUNCTIONS ---
 
     function triggerHaptic(type) {
-        if (!navigator || !navigator.vibrate) return;
-        try {
-            if (type === 'perfect') {
-                navigator.vibrate(18);
-            } else if (type === 'tasty') {
-                navigator.vibrate(28);
-            } else if (type === 'miss' || type === 'trap') {
-                navigator.vibrate([40, 30, 45]);
-            } else if (type === 'fever') {
-                navigator.vibrate([30, 40, 50, 40, 70]);
-            } else if (type === 'pizza') {
-                navigator.vibrate([25, 30, 25, 30, 50]);
-            } else if (type === 'secretsauce') {
-                navigator.vibrate([60, 40, 80]);
-            }
-        } catch (e) {}
+        // 1. Mobile Vibration
+        if (navigator && navigator.vibrate) {
+            try {
+                if (type === 'perfect') {
+                    navigator.vibrate(18);
+                } else if (type === 'tasty') {
+                    navigator.vibrate(28);
+                } else if (type === 'miss' || type === 'trap') {
+                    navigator.vibrate([40, 30, 45]);
+                } else if (type === 'fever') {
+                    navigator.vibrate([30, 40, 50, 40, 70]);
+                } else if (type === 'pizza') {
+                    navigator.vibrate([25, 30, 25, 30, 50]);
+                } else if (type === 'secretsauce') {
+                    navigator.vibrate([60, 40, 80]);
+                }
+            } catch (e) {}
+        }
+
+        // 2. Xbox / Gamepad Dual-Rumble Haptic Actuator
+        if (navigator.getGamepads) {
+            try {
+                const gps = navigator.getGamepads();
+                let weak = 0, strong = 0, duration = 0;
+                if (type === 'perfect') {
+                    weak = 0.25; strong = 0.1; duration = 60;
+                } else if (type === 'tasty') {
+                    weak = 0.35; strong = 0.15; duration = 75;
+                } else if (type === 'miss' || type === 'trap') {
+                    weak = 0.1; strong = 0.5; duration = 120;
+                } else if (type === 'pizza') {
+                    weak = 0.6; strong = 0.35; duration = 160;
+                } else if (type === 'fever' || type === 'secretsauce') {
+                    weak = 0.65; strong = 0.45; duration = 200;
+                }
+                if (duration > 0 && (weak > 0 || strong > 0)) {
+                    for (let g = 0; g < gps.length; g++) {
+                        const gp = gps[g];
+                        if (gp && gp.vibrationActuator && typeof gp.vibrationActuator.playEffect === 'function') {
+                            gp.vibrationActuator.playEffect('dual-rumble', {
+                                startDelay: 0,
+                                duration: duration,
+                                weakMagnitude: weak,
+                                strongMagnitude: strong
+                            }).catch(() => {});
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
     }
 
     let _difficultyStart = 0.6;  // set by startGame opts
@@ -430,134 +467,145 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
     window.addEventListener("gamepadconnected", onGamepadConnected);
     window.addEventListener("gamepaddisconnected", onGamepadDisconnected);
 
-    // --- XBOX GAMEPAD SUPPORT ---
+    // --- XBOX GAMEPAD SUPPORT (ZERO-ALLOCATION & HYSTERESIS CALIBRATION) ---
+    function isGpButtonPressed(btn) {
+        if (!btn) return false;
+        return !!btn.pressed || (typeof btn.value === 'number' && btn.value > 0.5);
+    }
+
+    function checkAnalogTrigger(gpIndex, isRightTrigger, btn) {
+        if (!btn) return false;
+        const val = typeof btn.value === 'number' ? btn.value : (btn.pressed ? 1.0 : 0.0);
+        if (!gpTriggerHeld[gpIndex]) {
+            gpTriggerHeld[gpIndex] = { lt: false, rt: false };
+        }
+        const stateKey = isRightTrigger ? 'rt' : 'lt';
+        const wasHeld = gpTriggerHeld[gpIndex][stateKey];
+
+        // Professional Hysteresis:
+        // Press threshold: 0.35 (fast responsive trigger actuation without bottoming out)
+        // Release threshold: 0.18 (prevents resting finger pressure from locking the lane or bouncing)
+        if (wasHeld) {
+            if (val < 0.18) {
+                gpTriggerHeld[gpIndex][stateKey] = false;
+                return false;
+            }
+            return true;
+        } else {
+            if (val >= 0.35) {
+                gpTriggerHeld[gpIndex][stateKey] = true;
+                return true;
+            }
+            return false;
+        }
+    }
+
     function pollGamepads() {
         if (!navigator.getGamepads) return;
         const gamepads = navigator.getGamepads();
-        const currentPressed = [false, false, false, false];
+        gpCurrentPressed[0] = false;
+        gpCurrentPressed[1] = false;
+        gpCurrentPressed[2] = false;
+        gpCurrentPressed[3] = false;
         let hasActiveInput = false;
+        let anyStartPressed = false;
+        let anySelectPressed = false;
 
-        // Button helper to handle standard vs analog triggers
-        const checkButton = (btn, isTrigger = false) => {
-            if (!btn) return false;
-            if (isTrigger) {
-                // Triggers (LT/RT) are analog and prone to drift/stretching.
-                // Apply a conservative deadzone threshold (0.15) to register as pressed.
-                const val = typeof btn.value === 'number' ? btn.value : (btn.pressed ? 1.0 : 0.0);
-                return val > 0.15;
-            }
-            return !!btn.pressed;
-        };
-
-        if (gameState === STATE.PAUSED) {
-            // Still poll menu buttons (Start/Select) to pause/quit, but skip play inputs
-            for (let g = 0; g < gamepads.length; g++) {
-                const gp = gamepads[g];
-                if (!gp || !gp.buttons) continue;
-                const startPressed = checkButton(gp.buttons[9]);
-                if (startPressed) {
-                    hasActiveInput = true;
-                    if (!lastStartPressed) {
-                        lastStartPressed = true;
-                        togglePause();
-                    }
-                } else {
-                    lastStartPressed = false;
-                }
-                const selectPressed = checkButton(gp.buttons[8]);
-                if (selectPressed) {
-                    hasActiveInput = true;
-                    if (uiBackBtn) uiBackBtn.click();
-                }
-            }
-            if (hasActiveInput) {
-                gamepadActive = true;
-            }
-            return;
-        }
+        const isPaused = (gameState === STATE.PAUSED);
 
         for (let g = 0; g < gamepads.length; g++) {
             const gp = gamepads[g];
             if (!gp || !gp.buttons) continue;
 
-            // Check Menu buttons
-            const startPressed = checkButton(gp.buttons[9]);
-            if (startPressed) {
-                hasActiveInput = true;
-                if (!lastStartPressed) {
-                    lastStartPressed = true;
-                    togglePause();
-                }
-            } else {
-                lastStartPressed = false;
-            }
-
-            const selectPressed = checkButton(gp.buttons[8]);
-            if (selectPressed) {
-                hasActiveInput = true;
-                if (gameState === STATE.PAUSED) {
-                    if (uiBackBtn) uiBackBtn.click();
-                }
-            }
-
-            // Check gameplay inputs for the 4 lanes:
-            // Lane 0: Button 2 (X), Button 14 (D-pad Left), Button 6 (LT - Left Trigger), or Left Stick Left
-            const lane0Pressed = checkButton(gp.buttons[2]) || 
-                                 checkButton(gp.buttons[14]) || 
-                                 checkButton(gp.buttons[6], true) ||
-                                 (gp.axes && gp.axes[0] < -0.5);
-            if (lane0Pressed) {
-                currentPressed[0] = true;
+            // Start (Menu - Button 9)
+            if (gp.buttons[9] && isGpButtonPressed(gp.buttons[9])) {
+                anyStartPressed = true;
                 hasActiveInput = true;
             }
 
-            // Lane 1: Button 0 (A), Button 13 (D-pad Down), Button 4 (LB - Left Bumper), or Left Stick Down
-            const lane1Pressed = checkButton(gp.buttons[0]) || 
-                                 checkButton(gp.buttons[13]) || 
-                                 checkButton(gp.buttons[4]) ||
-                                 (gp.axes && gp.axes[1] > 0.5);
-            if (lane1Pressed) {
-                currentPressed[1] = true;
+            // Select / Back (View - Button 8)
+            if (gp.buttons[8] && isGpButtonPressed(gp.buttons[8])) {
+                anySelectPressed = true;
                 hasActiveInput = true;
             }
 
-            // Lane 2: Button 3 (Y), Button 12 (D-pad Up), Button 5 (RB - Right Bumper), or Left Stick Up
-            const lane2Pressed = checkButton(gp.buttons[3]) || 
-                                 checkButton(gp.buttons[12]) || 
-                                 checkButton(gp.buttons[5]) ||
-                                 (gp.axes && gp.axes[1] < -0.5);
-            if (lane2Pressed) {
-                currentPressed[2] = true;
+            if (isPaused) continue;
+
+            // Lane 0: LT (Left Trigger, btn 6) | D-pad Left (btn 14) | X (btn 2)
+            const lane0 = checkAnalogTrigger(g, false, gp.buttons[6]) ||
+                          isGpButtonPressed(gp.buttons[14]) ||
+                          isGpButtonPressed(gp.buttons[2]);
+            if (lane0) {
+                gpCurrentPressed[0] = true;
                 hasActiveInput = true;
             }
 
-            // Lane 3: Button 1 (B), Button 15 (D-pad Right), Button 7 (RT - Right Trigger), or Left Stick Right
-            const lane3Pressed = checkButton(gp.buttons[1]) || 
-                                 checkButton(gp.buttons[15]) || 
-                                 checkButton(gp.buttons[7], true) ||
-                                 (gp.axes && gp.axes[0] > 0.5);
-            if (lane3Pressed) {
-                currentPressed[3] = true;
+            // Lane 1: LB (Left Bumper, btn 4) | D-pad Down (btn 13) | A (btn 0)
+            const lane1 = isGpButtonPressed(gp.buttons[4]) ||
+                          isGpButtonPressed(gp.buttons[13]) ||
+                          isGpButtonPressed(gp.buttons[0]);
+            if (lane1) {
+                gpCurrentPressed[1] = true;
+                hasActiveInput = true;
+            }
+
+            // Lane 2: RB (Right Bumper, btn 5) | D-pad Up (btn 12) | Y (btn 3)
+            const lane2 = isGpButtonPressed(gp.buttons[5]) ||
+                          isGpButtonPressed(gp.buttons[12]) ||
+                          isGpButtonPressed(gp.buttons[3]);
+            if (lane2) {
+                gpCurrentPressed[2] = true;
+                hasActiveInput = true;
+            }
+
+            // Lane 3: RT (Right Trigger, btn 7) | D-pad Right (btn 15) | B (btn 1)
+            const lane3 = checkAnalogTrigger(g, true, gp.buttons[7]) ||
+                          isGpButtonPressed(gp.buttons[15]) ||
+                          isGpButtonPressed(gp.buttons[1]);
+            if (lane3) {
+                gpCurrentPressed[3] = true;
                 hasActiveInput = true;
             }
         }
 
-        // Only switch the active UI overlay to Gamepad mode if a real user input action was detected.
-        // This prevents phantom/virtual gamepads from taking over keyboard visual cues.
+        // Global aggregate debounce for Start (Pause/Resume)
+        if (anyStartPressed) {
+            if (!lastStartPressed) {
+                lastStartPressed = true;
+                togglePause();
+            }
+        } else {
+            lastStartPressed = false;
+        }
+
+        // Global aggregate debounce for Select (Back to Lobby when paused)
+        if (anySelectPressed) {
+            if (!lastSelectPressed) {
+                lastSelectPressed = true;
+                if (isPaused && uiBackBtn) {
+                    uiBackBtn.click();
+                }
+            }
+        } else {
+            lastSelectPressed = false;
+        }
+
         if (hasActiveInput) {
             gamepadActive = true;
         }
 
-        for (let lane = 0; lane < 4; lane++) {
-            if (currentPressed[lane]) {
-                if (!Input.gamepadHeld[lane]) {
-                    Input.gamepadHeld[lane] = true;
-                    Input.held[lane] = true;
-                    triggerInput(lane);
+        if (!isPaused) {
+            for (let lane = 0; lane < 4; lane++) {
+                if (gpCurrentPressed[lane]) {
+                    if (!Input.gamepadHeld[lane]) {
+                        Input.gamepadHeld[lane] = true;
+                        Input.held[lane] = true;
+                        triggerInput(lane);
+                    }
+                } else {
+                    Input.gamepadHeld[lane] = false;
+                    Input.held[lane] = Input.keyboardHeld[lane] || Input.gamepadHeld[lane] || Input.touchHeld[lane] || Input.wsHeld[lane];
                 }
-            } else {
-                Input.gamepadHeld[lane] = false;
-                Input.held[lane] = Input.keyboardHeld[lane] || Input.gamepadHeld[lane] || Input.touchHeld[lane] || Input.wsHeld[lane];
             }
         }
     }
