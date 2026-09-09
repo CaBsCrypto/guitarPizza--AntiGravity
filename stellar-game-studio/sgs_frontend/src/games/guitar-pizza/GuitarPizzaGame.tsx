@@ -2887,7 +2887,7 @@ Ganador: ${payload.winnerAddress}`);
 
                     // Append version parameter to bust aggressive browser cache of public assets
 
-                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=10`.replace('//', '/');
+                    const primaryPath = `${baseUrl}game/guitar-pizza-engine.js?v=11`.replace('//', '/');
 
 
 

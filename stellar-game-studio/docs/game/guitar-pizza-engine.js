@@ -2409,25 +2409,47 @@ window.initGuitarPizza = function (canvasElement, userAddress, onComplete, songU
         ctx.globalAlpha = 1.0;
 
         feedbackSystem.forEach(f => {
+            // Base font size scaled down ~28% so lane 0 and 3 do not clip
+            const baseFontSize = Math.min(LANE_W * 0.36, 42);
+            ctx.font = "900 " + baseFontSize + "px 'Bangers'";
+
+            // Smoothed damped harmonic bounce oscillator (peaking at ~1.22x instead of 1.5x)
+            const lifeProgress = 1.0 - f.life;
+            const bounce = 1.0 + Math.sin(lifeProgress * Math.PI * 2.5) * 0.22 * f.life;
+
+            // Adaptive downscaling for longer words (e.g. DELICIOUS!, SYSTEM OVERRIDE!)
+            const textWidth = ctx.measureText(f.text).width;
+            const maxAllowedW = Math.min(LANE_W * 1.6, totalGameWidth - 24);
+            const adaptScale = (textWidth * bounce > maxAllowedW && textWidth > 0)
+                ? (maxAllowedW / (textWidth * bounce))
+                : 1.0;
+            const finalScale = bounce * adaptScale;
+            const effectiveHalfW = (textWidth * finalScale) / 2;
+
             // Adjust feedback X to match lane offset if it was lane-based
             let drawX = f.x;
             if (f.lane !== undefined && f.lane !== -1) {
                 drawX = offsetX + (f.lane * LANE_W) + (LANE_W / 2);
             }
 
-            // Damped harmonic bounce oscillator: pops up dynamically, overshoots, and settles back smoothly
-            const lifeProgress = 1.0 - f.life;
-            const s = 1.0 + Math.sin(lifeProgress * Math.PI * 2.5) * 0.5 * f.life;
+            // Strict clamping within the golden track borders (never overflow into checkered tablecloth or offscreen)
+            const borderPad = 8;
+            const minX = offsetX + borderPad + effectiveHalfW;
+            const maxX = offsetX + totalGameWidth - borderPad - effectiveHalfW;
+            if (minX <= maxX) {
+                drawX = Math.max(minX, Math.min(maxX, drawX));
+            } else {
+                drawX = offsetX + (totalGameWidth / 2);
+            }
 
             ctx.save();
             ctx.translate(drawX, f.y);
-            ctx.scale(s, s); // CRITICAL BUGFIX: Applying the computed elastic scaling directly!
-            
+            ctx.scale(finalScale, finalScale);
             ctx.globalAlpha = f.life;
-            ctx.font = "900 " + Math.min(LANE_W * 0.5, 60) + "px 'Bangers'";
+            ctx.font = "900 " + baseFontSize + "px 'Bangers'";
             ctx.textAlign = "center";
-            ctx.lineWidth = 6; ctx.strokeStyle = "#4D1100"; ctx.strokeText(f.text, 0, 0); // thicker shadow outline
-            ctx.lineWidth = 2.5; ctx.strokeStyle = "#FFF8E7"; ctx.strokeText(f.text, 0, 0); // Double stroke for legibility
+            ctx.lineWidth = 5; ctx.strokeStyle = "#4D1100"; ctx.strokeText(f.text, 0, 0); // Thicker shadow outline
+            ctx.lineWidth = 2; ctx.strokeStyle = "#FFF8E7"; ctx.strokeText(f.text, 0, 0); // Double stroke for legibility
             ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
             ctx.restore();
         });

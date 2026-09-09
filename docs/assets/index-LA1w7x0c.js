@@ -30385,7 +30385,7 @@ Ganador: ${b.winnerAddress}`);
                     if (window.initGuitarPizza) Oe("[GuitarPizza] initGuitarPizza already defined.");
                     else {
                         Oe("[GuitarPizza] initGuitarPizza undefined, loading engine..."), window.GP_BASE_PATH = "/guitarPizza--AntiGravity/";
-                        const Ce = "/guitarPizza--AntiGravity/game/guitar-pizza-engine.js?v=10".replace("//", "/");
+                        const Ce = "/guitarPizza--AntiGravity/game/guitar-pizza-engine.js?v=11".replace("//", "/");
                         Oe(`[GuitarPizza] Loading engine from: ${Ce}`), await b(Ce);
                     }
                 } catch (Se) {
@@ -37695,7 +37695,7 @@ Hash: ${W.txHash || "confirmed"}`);
         }, []), z.useEffect(()=>{
             if (window.initGuitarPizza) return;
             window.GP_BASE_PATH = "/guitarPizza--AntiGravity/";
-            const Y = "/guitarPizza--AntiGravity/game/guitar-pizza-engine.js?v=10".replace("//", "/");
+            const Y = "/guitarPizza--AntiGravity/game/guitar-pizza-engine.js?v=11".replace("//", "/");
             if (document.querySelector(`script[src="${Y}"]`)) return;
             const he = document.createElement("script");
             he.src = Y, he.async = !0, document.body.appendChild(he);
