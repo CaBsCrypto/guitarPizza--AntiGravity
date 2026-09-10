@@ -6452,9 +6452,23 @@ Ganador: ${payload.winnerAddress}`);
 
                             <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={handleCloseLeaderboard}>
 
-                                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', width: '100%', padding: 'clamp(0.6rem, 1.5vh, 1rem)', boxSizing: 'border-box' }}>
+                                <div
+                                    className="modal-content"
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                        maxWidth: '480px',
+                                        width: '100%',
+                                        padding: 'clamp(0.75rem, 2vh, 1.25rem)',
+                                        boxSizing: 'border-box',
+                                        background: '#FFFDF7',
+                                        border: '4px solid #8B0000',
+                                        borderRadius: '16px',
+                                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(139, 0, 0, 0.04)',
+                                        overflowX: 'hidden'
+                                    }}
+                                >
 
-                                    <div className="modal-header">
+                                    <div className="modal-header" style={{ borderBottom: '2px dashed #8B0000', paddingBottom: '0.6rem', marginBottom: '0.6rem' }}>
 
                                         <div className="back-btn-circle" onClick={handleCloseLeaderboard}>
 
@@ -6462,33 +6476,55 @@ Ganador: ${payload.winnerAddress}`);
 
                                         </div>
 
-                                        <h2 className="modal-title">🏆 {t.ranking}</h2>
+                                        <h2 className="modal-title" style={{ fontFamily: "'Special Elite', monospace", fontSize: 'clamp(1.1rem, 2.5vh, 1.35rem)', color: '#8B0000', margin: 0 }}>
+                                            🏆 {t.ranking}
+                                        </h2>
 
                                         <button
-
                                             onClick={() => loadLeaderboard()}
-
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', width: 40, color: '#666' }}
-
+                                            style={{
+                                                background: 'rgba(139, 0, 0, 0.08)',
+                                                border: '1px solid #D5C29D',
+                                                borderRadius: '50%',
+                                                cursor: 'pointer',
+                                                fontSize: '1.1rem',
+                                                width: 36,
+                                                height: 36,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#8B0000',
+                                                transition: 'transform 0.2s ease'
+                                            }}
                                             title={t.refresh}
-
                                         >↺</button>
 
                                     </div>
 
-                                    {/* Song Selector for dynamic ZK Leaderboard */}
+                                    {/* Song Selector — Vintage Trattoria Menu Style */}
                                     <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '0.8rem',
-                                        padding: '0.6rem 1rem',
-                                        background: 'rgba(0,0,0,0.2)',
-                                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                        gap: '0.6rem',
+                                        padding: '0.45rem 0.75rem',
+                                        background: '#F7F0DD',
+                                        border: '1.5px solid #D5C29D',
+                                        borderRadius: '10px',
                                         justifyContent: 'space-between',
-                                        marginBottom: '0.5rem'
+                                        marginBottom: '0.6rem',
+                                        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
                                     }}>
-                                        <span style={{ fontSize: '0.85rem', color: '#aaa', fontWeight: 'bold' }}>
-                                            {language === 'es' ? 'Filtrar por Canción:' : 'Filter by Song:'}
+                                        <span style={{
+                                            fontSize: '0.78rem',
+                                            color: '#5C1D11',
+                                            fontWeight: 'bold',
+                                            fontFamily: "'Special Elite', monospace",
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            🎵 {language === 'es' ? 'Canción:' : 'Song:'}
                                         </span>
                                         <select
                                             value={leaderboardSongId}
@@ -6498,16 +6534,18 @@ Ganador: ${payload.winnerAddress}`);
                                                 loadLeaderboard(val);
                                             }}
                                             style={{
-                                                background: '#222',
-                                                color: '#fff',
-                                                border: '1px solid #ff3e3e',
-                                                padding: '0.4rem 0.8rem',
-                                                borderRadius: '4px',
-                                                fontSize: '0.85rem',
+                                                background: '#FFFDF5',
+                                                color: '#4A1C14',
+                                                border: '1.5px solid #8B0000',
+                                                padding: '0.35rem 0.6rem',
+                                                borderRadius: '6px',
+                                                fontSize: '0.8rem',
                                                 cursor: 'pointer',
                                                 outline: 'none',
                                                 fontWeight: 'bold',
-                                                maxWidth: '65%'
+                                                fontFamily: "'Special Elite', monospace",
+                                                maxWidth: '65%',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                                             }}
                                         >
                                             <option value="all">🌟 {language === 'es' ? 'Todas las Canciones' : 'All Songs'}</option>
@@ -6528,98 +6566,121 @@ Ganador: ${payload.winnerAddress}`);
                                             borderRadius: '8px',
                                             fontSize: '0.8rem',
                                             fontWeight: 'bold',
-                                            background: lbSubmitStatus === 'ok' ? 'rgba(39,174,96,0.12)' : 'rgba(231,76,60,0.12)',
-                                            color: lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c',
-                                            border: `1px solid ${lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c'}`,
+                                            fontFamily: "'Special Elite', monospace",
+                                            background: lbSubmitStatus === 'ok' ? '#E8F8F5' : '#FDEDEC',
+                                            color: lbSubmitStatus === 'ok' ? '#1e824c' : '#c0392b',
+                                            border: `1.5px solid ${lbSubmitStatus === 'ok' ? '#27ae60' : '#e74c3c'}`,
                                         }}>
-                                            {lbSubmitStatus === 'ok' ? '✅ Your score was submitted to the board!' : '⚠️ Leaderboard submission failed — see console'}
+                                            {lbSubmitStatus === 'ok'
+                                                ? (language === 'es' ? '✅ ¡Puntaje registrado en SpicyCrust!' : '✅ Score submitted to SpicyCrust!')
+                                                : (language === 'es' ? '⚠️ No se pudo enviar el puntaje' : '⚠️ Submission failed')}
                                         </div>
                                     )}
 
-                                    <div style={{ flex: 1, overflowY: 'auto', width: '100%' }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', width: '100%', minHeight: 0 }}>
                                         {leaderboardLoading ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-                                                <Loader2 size={24} style={{ margin: '0 auto 0.5rem', display: 'block' }} />
-                                                Loading scores...
+                                            <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#888' }}>
+                                                <Loader2 size={28} style={{ margin: '0 auto 0.6rem', display: 'block', color: '#8B0000', animation: 'spin 1s linear infinite' }} />
+                                                <span style={{ fontFamily: "'Special Elite', monospace", fontSize: '0.9rem' }}>
+                                                    {language === 'es' ? 'Consultando el horno central...' : 'Loading scores...'}
+                                                </span>
                                             </div>
                                         ) : leaderboardError ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
-                                                <div style={{ color: '#e74c3c', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.9rem' }}>Could not load scores</div>
-                                                <div style={{ color: '#888', fontSize: '0.8rem' }}>{leaderboardError}</div>
-                                                <button className="primary-btn" style={{ marginTop: '1rem', padding: '0.6rem 1.2rem' }} onClick={() => loadLeaderboard()}>Try Again</button>
+                                            <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                                                <div style={{ fontSize: '2.2rem', marginBottom: '0.4rem' }}>⚠️</div>
+                                                <div style={{ color: '#c0392b', fontWeight: 'bold', marginBottom: '0.3rem', fontSize: '0.95rem', fontFamily: "'Special Elite', monospace" }}>
+                                                    {language === 'es' ? 'No se pudieron cargar los puntajes' : 'Could not load scores'}
+                                                </div>
+                                                <div style={{ color: '#777', fontSize: '0.78rem', marginBottom: '1rem' }}>{leaderboardError}</div>
+                                                <button className="primary-btn" style={{ padding: '0.55rem 1.2rem', fontSize: '0.85rem' }} onClick={() => loadLeaderboard()}>
+                                                    {language === 'es' ? 'Reintentar' : 'Try Again'}
+                                                </button>
                                             </div>
                                         ) : leaderboard.length === 0 ? (
-                                            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                                            <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
                                                 <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🍕</div>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>{t.noScores}</div>
-                                                <div style={{ color: '#888', fontSize: '0.9rem' }}>{t.beFirst}</div>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.3rem', fontFamily: "'Special Elite', monospace", fontSize: '1rem' }}>{t.noScores}</div>
+                                                <div style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.2rem' }}>{t.beFirst}</div>
                                                 <button
                                                     className="primary-btn"
-                                                    style={{ marginTop: '1.5rem', width: '100%', padding: '0.9rem' }}
+                                                    style={{ width: '100%', padding: '0.8rem' }}
                                                     onClick={() => { setView('lobby'); handleStartGame(); }}
                                                 >🔥 {t.fireUp}</button>
                                             </div>
                                         ) : (
-                                            <div style={{ width: '100%' }}>
-                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.6rem', letterSpacing: '0.08em' }}>
-                                                    🏆 SPICYCRUST LEADERBOARD · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
+                                            <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    color: '#7C6C58',
+                                                    textAlign: 'center',
+                                                    marginBottom: '0.5rem',
+                                                    letterSpacing: '0.05em',
+                                                    fontWeight: 'bold',
+                                                    fontFamily: "'Special Elite', monospace"
+                                                }}>
+                                                    🏆 SPICYCRUST BOARD · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
                                                 </div>
 
-                                                {/* Header de la tabla: # · JUGADOR · PUNTAJE · FECHA */}
+                                                {/* Header de la tabla: 3 Columnas (# · JUGADOR · PUNTAJE) */}
                                                 <div style={{
                                                     display: 'grid',
-                                                    gridTemplateColumns: '36px 1fr 80px 75px',
-                                                    gap: '0.4rem',
-                                                    padding: '0.45rem 0.5rem',
-                                                    fontSize: '0.7rem',
+                                                    gridTemplateColumns: '44px 1fr auto',
+                                                    gap: '0.5rem',
+                                                    padding: '0.4rem 0.5rem',
+                                                    fontSize: '0.72rem',
                                                     fontWeight: 'bold',
                                                     fontFamily: "'Special Elite', monospace",
-                                                    color: '#777',
+                                                    color: '#8B0000',
                                                     textTransform: 'uppercase',
-                                                    borderBottom: '2px solid #E0D4B8',
-                                                    letterSpacing: '0.5px'
+                                                    borderBottom: '2px solid #8B0000',
+                                                    letterSpacing: '0.5px',
+                                                    marginBottom: '0.35rem'
                                                 }}>
                                                     <span style={{ textAlign: 'center' }}>#</span>
-                                                    <span>{language === 'es' ? 'JUGADOR' : 'PLAYER'}</span>
-                                                    <span style={{ textAlign: 'right' }}>{language === 'es' ? 'PUNTAJE' : 'SCORE'}</span>
-                                                    <span style={{ textAlign: 'right' }}>{language === 'es' ? 'FECHA' : 'DATE'}</span>
+                                                    <span>{language === 'es' ? 'CHEF / DETALLES' : 'CHEF / DETAILS'}</span>
+                                                    <span style={{ textAlign: 'right', minWidth: '75px' }}>{language === 'es' ? 'PUNTAJE' : 'SCORE'}</span>
                                                 </div>
 
-                                                {/* Filas del Leaderboard */}
+                                                {/* Filas del Leaderboard — Tarjetas limpias de 3 columnas */}
                                                 {leaderboard.map((entry, i) => {
                                                     const rank = entry.rank || (i + 1);
                                                     const isTop1 = rank === 1;
                                                     const isTop2 = rank === 2;
                                                     const isTop3 = rank === 3;
 
-                                                    let medal = `#${rank}`;
-                                                    let rowBg = 'transparent';
-                                                    let borderStyle = '1px solid #E0D4B8';
-                                                    let rankColor = '#444';
+                                                    let rankDisplay = <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#7C6C58', fontFamily: "'Special Elite', monospace" }}>#{rank}</span>;
+                                                    let rowBg = '#FFFDF7';
+                                                    let borderStyle = '1px solid #EADBCE';
+                                                    let rowShadow = 'none';
 
                                                     if (isTop1) {
-                                                        medal = '🥇';
-                                                        rowBg = 'linear-gradient(90deg, rgba(255, 215, 0, 0.22), rgba(255, 215, 0, 0.05))';
-                                                        borderStyle = '1.5px solid #FFD700';
-                                                        rankColor = '#b8860b';
+                                                        rankDisplay = <span style={{ fontSize: '1.45rem', filter: 'drop-shadow(0 1px 2px rgba(212,175,55,0.4))' }}>🥇</span>;
+                                                        rowBg = 'linear-gradient(90deg, #FFF9DB 0%, #FFFDF5 100%)';
+                                                        borderStyle = '1.5px solid #ECC94B';
+                                                        rowShadow = '0 2px 5px rgba(236,201,75,0.2)';
                                                     } else if (isTop2) {
-                                                        medal = '🥈';
-                                                        rowBg = 'linear-gradient(90deg, rgba(192, 192, 192, 0.22), rgba(192, 192, 192, 0.05))';
-                                                        borderStyle = '1.5px solid #C0C0C0';
-                                                        rankColor = '#7f8c8d';
+                                                        rankDisplay = <span style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 1px 2px rgba(160,160,160,0.3))' }}>🥈</span>;
+                                                        rowBg = 'linear-gradient(90deg, #F0F4F8 0%, #FFFDF5 100%)';
+                                                        borderStyle = '1.5px solid #CBD5E0';
+                                                        rowShadow = '0 2px 4px rgba(0,0,0,0.04)';
                                                     } else if (isTop3) {
-                                                        medal = '🥉';
-                                                        rowBg = 'linear-gradient(90deg, rgba(205, 127, 50, 0.22), rgba(205, 127, 50, 0.05))';
-                                                        borderStyle = '1.5px solid #CD7F32';
-                                                        rankColor = '#a0522d';
+                                                        rankDisplay = <span style={{ fontSize: '1.3rem', filter: 'drop-shadow(0 1px 2px rgba(205,127,50,0.3))' }}>🥉</span>;
+                                                        rowBg = 'linear-gradient(90deg, #FDF4EB 0%, #FFFDF5 100%)';
+                                                        borderStyle = '1.5px solid #ED8936';
+                                                        rowShadow = '0 2px 4px rgba(237,137,54,0.1)';
                                                     }
 
                                                     const displayName = entry.nickname || (entry.player_id && String(entry.player_id).length >= 10 ? `${String(entry.player_id).slice(0, 6)}…${String(entry.player_id).slice(-4)}` : String(entry.player_id || 'Chef Anon'));
                                                     const isMe = entry.nickname === chefName || (userAddress && String(entry.player_id) === userAddress);
                                                     const songName = entry.metadata?.songTitle || entry.metadata?.song_id || '';
 
-                                                    // Formatear fecha
+                                                    if (isMe) {
+                                                        borderStyle = '2px solid #27ae60';
+                                                        rowBg = '#F0FFF4';
+                                                        rowShadow = '0 2px 6px rgba(39,174,96,0.15)';
+                                                    }
+
+                                                    // Formatear fecha limpia
                                                     let dateDisplay = '-';
                                                     if (entry.created_at) {
                                                         try {
@@ -6635,62 +6696,96 @@ Ganador: ${payload.winnerAddress}`);
                                                     }
 
                                                     return (
-                                                        <div key={i} style={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: '36px 1fr 80px 75px',
-                                                            gap: '0.4rem',
-                                                            alignItems: 'center',
-                                                            padding: '0.55rem 0.5rem',
-                                                            borderBottom: borderStyle,
-                                                            borderTop: (isTop1 || isTop2 || isTop3) ? borderStyle : undefined,
-                                                            borderLeft: (isTop1 || isTop2 || isTop3) ? borderStyle : (isMe ? '3px solid #27ae60' : undefined),
-                                                            borderRight: (isTop1 || isTop2 || isTop3) ? borderStyle : undefined,
-                                                            borderRadius: (isTop1 || isTop2 || isTop3) ? '8px' : undefined,
-                                                            margin: (isTop1 || isTop2 || isTop3) ? '3px 0' : undefined,
-                                                            background: isMe && !isTop1 && !isTop2 && !isTop3 ? 'rgba(39,174,96,0.06)' : rowBg,
-                                                            width: '100%',
-                                                            boxSizing: 'border-box'
-                                                        }}>
-                                                            <span style={{ fontSize: rank <= 3 ? '1.25rem' : '0.85rem', textAlign: 'center', fontWeight: 'bold', color: rankColor }}>
-                                                                {medal}
-                                                            </span>
+                                                        <div
+                                                            key={i}
+                                                            style={{
+                                                                display: 'grid',
+                                                                gridTemplateColumns: '44px 1fr auto',
+                                                                gap: '0.5rem',
+                                                                alignItems: 'center',
+                                                                padding: '0.5rem 0.6rem',
+                                                                marginBottom: '5px',
+                                                                borderRadius: '9px',
+                                                                border: borderStyle,
+                                                                background: rowBg,
+                                                                boxShadow: rowShadow,
+                                                                width: '100%',
+                                                                boxSizing: 'border-box'
+                                                            }}
+                                                        >
+                                                            {/* Columna 1: Rango / Medalla */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px' }}>
+                                                                {rankDisplay}
+                                                            </div>
+
+                                                            {/* Columna 2: Nombre del Jugador + Subtítulo con Canción y Fecha */}
                                                             <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                                                 <div
                                                                     title={displayName}
                                                                     style={{
-                                                                        fontSize: 'clamp(0.82rem, 2vh, 0.92rem)',
-                                                                        fontWeight: (rank <= 3 || isMe) ? 'bold' : '600',
+                                                                        fontSize: 'clamp(0.88rem, 2vh, 0.98rem)',
+                                                                        fontWeight: 'bold',
                                                                         fontFamily: "'Special Elite', monospace",
-                                                                        color: isMe ? '#27ae60' : (isTop1 ? '#b8860b' : '#8B0000'),
+                                                                        color: isMe ? '#1e824c' : (isTop1 ? '#935116' : '#3E1F18'),
                                                                         overflow: 'hidden',
                                                                         textOverflow: 'ellipsis',
-                                                                        whiteSpace: 'nowrap'
+                                                                        whiteSpace: 'nowrap',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '5px'
                                                                     }}
                                                                 >
-                                                                    {displayName}{isMe ? ' (tú)' : ''}
+                                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                        {displayName}
+                                                                    </span>
+                                                                    {isMe && (
+                                                                        <span style={{
+                                                                            background: '#27ae60',
+                                                                            color: '#fff',
+                                                                            fontSize: '0.62rem',
+                                                                            padding: '1px 5px',
+                                                                            borderRadius: '4px',
+                                                                            flexShrink: 0,
+                                                                            fontWeight: 'bold'
+                                                                        }}>
+                                                                            TÚ 🍕
+                                                                        </span>
+                                                                    )}
                                                                 </div>
-                                                                {songName && (
-                                                                    <div style={{ fontSize: '0.65rem', color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                        🎵 {songName}
-                                                                    </div>
-                                                                )}
+                                                                <div style={{
+                                                                    fontSize: '0.68rem',
+                                                                    color: '#7C6C58',
+                                                                    marginTop: '1px',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis',
+                                                                    whiteSpace: 'nowrap',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '6px'
+                                                                }}>
+                                                                    {songName ? (
+                                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                            🎵 {songName}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span>🎵 Rhythm Slice</span>
+                                                                    )}
+                                                                    <span>·</span>
+                                                                    <span style={{ flexShrink: 0 }}>📅 {dateDisplay}</span>
+                                                                </div>
                                                             </div>
+
+                                                            {/* Columna 3: Puntaje destacado */}
                                                             <div style={{
                                                                 fontWeight: 'bold',
-                                                                fontSize: 'clamp(0.82rem, 2vh, 0.92rem)',
-                                                                color: isTop1 ? '#b8860b' : '#27ae60',
+                                                                fontSize: 'clamp(0.92rem, 2vh, 1.05rem)',
+                                                                color: isTop1 ? '#B7791F' : (isMe ? '#27ae60' : '#8B0000'),
                                                                 fontFamily: 'monospace',
-                                                                textAlign: 'right'
+                                                                textAlign: 'right',
+                                                                minWidth: '75px',
+                                                                letterSpacing: '0.5px'
                                                             }}>
                                                                 {Number(entry.score).toLocaleString()}
-                                                            </div>
-                                                            <div style={{
-                                                                fontSize: '0.72rem',
-                                                                color: '#666',
-                                                                fontFamily: 'monospace',
-                                                                textAlign: 'right'
-                                                            }}>
-                                                                {dateDisplay}
                                                             </div>
                                                         </div>
                                                     );
@@ -6698,6 +6793,38 @@ Ganador: ${payload.winnerAddress}`);
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Resumen fijado de la posición del jugador si existe en la tabla */}
+                                    {(() => {
+                                        const myEntryIndex = leaderboard.findIndex(entry => entry.nickname === chefName || (userAddress && String(entry.player_id) === userAddress));
+                                        if (myEntryIndex >= 0) {
+                                            const myEntry = leaderboard[myEntryIndex];
+                                            const myRank = myEntry.rank || (myEntryIndex + 1);
+                                            return (
+                                                <div style={{
+                                                    background: '#E8F8F5',
+                                                    border: '1.5px dashed #27ae60',
+                                                    borderRadius: '8px',
+                                                    padding: '0.45rem 0.75rem',
+                                                    marginTop: '0.5rem',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 'bold',
+                                                    color: '#117A65'
+                                                }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        🍕 {language === 'es' ? 'Tu Récord:' : 'Your Record:'} Puesto #{myRank}
+                                                    </span>
+                                                    <span style={{ fontFamily: 'monospace', fontSize: '0.92rem', color: '#1e824c' }}>
+                                                        {Number(myEntry.score).toLocaleString()} pts
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
 
                                     {/* Botón VOLVER A JUGAR */}
                                     <button
@@ -6718,7 +6845,8 @@ Ganador: ${payload.winnerAddress}`);
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '8px',
-                                            boxShadow: '0 3px 8px rgba(139,0,0,0.3)'
+                                            boxShadow: '0 4px 10px rgba(139,0,0,0.3)',
+                                            transition: 'transform 0.15s ease'
                                         }}
                                         onClick={() => {
                                             closeModalWithAnimation('lobby');
