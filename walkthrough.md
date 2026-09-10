@@ -8,6 +8,13 @@
   - Validación de 56 caracteres para asegurar que no se suban direcciones basura.
   - Cada tarjeta de amigo en tu lista incluye botones de acción rápida para borrar contacto (**X**) o **⚔️ RETAR**, lo cual abre el formulario de nueva orden de duelo para apuntar a esa cartera.
 
+## 🏆 Sprint 25: Rediseño Integral de UI/UX del Leaderboard (SpicyCrust × Rhythm Slice)
+- **Fin del apiñamiento y scrollbars horizontales:** Se reemplazó la antigua grilla rígida de 4 columnas por un layout limpio de 3 columnas fluidas (`44px 1fr auto`) con `overflow-x: hidden`.
+- **Máxima legibilidad de nombres:** El apodo del jugador ahora dispone de todo el ancho disponible (`flex: 1`), evitando el truncamiento extremo a 1-2 letras (`8..`, `C..`).
+- **Subtítulo con metadatos:** La canción seleccionada y la fecha se reubicaron en una segunda línea sutil debajo del nombre (`🎵 [Canción] · 📅 [Fecha]`).
+- **Estética Taberna Vintage Italiana:** Tarjetas con fondo pergamino (`#FFFDF7`), medallas en relieve suave (`🥇`, `🥈`, `🥉`) para el podio, tipografía monospace clásica y selector de canciones con estilo de menú de trattoria con alto contraste.
+- **Destacado del Chef Actual:** Borde verde esmeralda y distintivo `TÚ 🍕` en la fila del jugador, sumado a una tarjeta resumen inferior con su puesto y récord de puntos.
+
 ## 📱 Sprint 23: Mobile Background Ceiling Clipping Fix
 - **Background Image White-Ceiling Clipping:** Solved the persistent white/gray header block issue on mobile portrait viewports (e.g. mobile Chrome/Safari). The original kitchen background image `FONDOJUEGO.png` contains a pure white ceiling band in its top 16% of pixels. On desktop (wide aspect ratio), `background-size: cover` naturally crops the top out. On mobile portrait (tall aspect ratio), the top is fully visible. Adjusted [HomePage.css](file:///d:/00%20PROGRAMANDO/guitarPizza--AntiGravity/stellar-game-studio/sgs_frontend/src/pages/HomePage.css) under `@media (max-width: 640px)` to shift the fixed background scene `.hp-scene-bg` upward by `-18%` and scale its height to `128%` to push the white ceiling band off-screen and hide it completely.
 
