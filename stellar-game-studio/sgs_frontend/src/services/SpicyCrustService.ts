@@ -3,8 +3,11 @@
  * Conecta el frontend de Rhythm Slice (Guitar Pizza) con la API central de SpicyCrust.
  */
 
-const API_BASE_URL = import.meta.env.VITE_SPICY_API_URL || 'https://spicycrust-api.chiledao.cl';
-const GAME_KEY = import.meta.env.VITE_SPICY_GAME_KEY || 'rhythm_slice_secret_key_2026';
+import { getActiveSeason } from './spicycrust-api';
+
+const RAW_API_URL = import.meta.env.VITE_SPICY_API_URL || 'https://spicycrust-api.alphadocere.cl/api/v1';
+const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+const GAME_KEY = import.meta.env.VITE_SPICY_GAME_KEY || 'd2682766624499c657444e5ce68bd275ee5a8267a0cff2148656054e01c71099';
 
 export interface SubmitScoreParams {
   playerExternalId: string;
@@ -26,9 +29,10 @@ export interface SubmitScoreParams {
 
 export interface LeaderboardEntry {
   rank: number;
-  player_id: string;
+  player_id: string | number;
   nickname: string;
   score: number;
+  email?: string;
   created_at?: string;
   metadata?: {
     accuracy?: number;
@@ -63,7 +67,7 @@ export class SpicyCrustService {
    */
   static async submitScore(params: SubmitScoreParams) {
     const cleanScore = Math.floor(params.score || 0);
-    const cleanNick = (params.nickname || localStorage.getItem('gp_chef_name') || 'Chef Don').trim();
+    const cleanNick = (params.nickname || localStorage.getItem('gp_chef_name') || '').trim();
     const cleanEmail = params.email ? params.email.trim() : (localStorage.getItem('gp_player_email') || '');
 
     // Record local nickname & email
@@ -80,9 +84,12 @@ export class SpicyCrustService {
       return { success: true, message: 'Zero score skipped' };
     }
 
+    const seasonSlug = await getActiveSeason();
+
     const payloadBody = {
       game_slug: 'rhythm-slice',
-      player_external_id: params.playerExternalId || 'anonymous_chef',
+      season_slug: seasonSlug,
+      player_external_id: params.playerExternalId || ('player-' + Date.now()),
       playerAddress: params.playerExternalId || 'anonymous_chef',
       nickname: cleanNick,
       email: cleanEmail || undefined,
@@ -121,7 +128,8 @@ export class SpicyCrustService {
           'Content-Type': 'application/json',
           'X-Game-Key': GAME_KEY
         },
-        body: JSON.stringify(payloadBody)
+        body: JSON.stringify(payloadBody),
+        signal: AbortSignal.timeout(8000)
       });
 
       if (!response.ok) {
@@ -142,12 +150,12 @@ export class SpicyCrustService {
   /**
    * Sanitizar lista del Leaderboard: filtrar 0 pts, deduplicar por chef y ordenar descendentemente
    */
-  private static sanitizeLeaderboard(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  private static sanitizeLeaderboard(entries: LeaderboardEntry[], allowEmpty = false): LeaderboardEntry[] {
     const chefMap = new Map<string, LeaderboardEntry>();
 
     for (const item of entries) {
       if (!item || typeof item.score !== 'number' || item.score <= 0) continue;
-      const key = (item.nickname || item.player_id || 'Chef Anon').trim().toLowerCase();
+      const key = (item.nickname || String(item.player_id || 'Chef Anon')).trim().toLowerCase();
       const existing = chefMap.get(key);
       if (!existing || item.score > existing.score) {
         chefMap.set(key, { ...item });
@@ -156,10 +164,10 @@ export class SpicyCrustService {
 
     let uniqueList = Array.from(chefMap.values());
 
-    if (uniqueList.length === 0) {
+    if (uniqueList.length === 0 && !allowEmpty) {
       uniqueList = [
-        { rank: 1, player_id: 'player_mario_01', nickname: 'Mario Chef', score: 15400, metadata: { songId: '01_sauce', songTitle: 'Sauce', difficulty: 'Hard' } },
-        { rank: 2, player_id: 'player_luigi_02', nickname: 'Luigi Slice', score: 12800, metadata: { songId: '02_rare_pizzas', songTitle: 'Rare Pizzas', difficulty: 'Medium' } }
+        { rank: 1, player_id: 'player_mario_01', nickname: 'Mario Chef', score: 15400, created_at: new Date().toISOString(), metadata: { songId: '01_sauce', songTitle: 'Sauce', difficulty: 'Hard' } },
+        { rank: 2, player_id: 'player_luigi_02', nickname: 'Luigi Slice', score: 12800, created_at: new Date().toISOString(), metadata: { songId: '02_rare_pizzas', songTitle: 'Rare Pizzas', difficulty: 'Medium' } }
       ];
     }
 
@@ -189,6 +197,7 @@ export class SpicyCrustService {
         player_id: scorePayload.player_external_id,
         nickname: scorePayload.nickname,
         score: scorePayload.score,
+        email: scorePayload.email,
         metadata: scorePayload.metadata,
         created_at: new Date().toISOString()
       });
@@ -238,7 +247,8 @@ export class SpicyCrustService {
               'Content-Type': 'application/json',
               'X-Game-Key': GAME_KEY
             },
-            body: JSON.stringify(item)
+            body: JSON.stringify(item),
+            signal: AbortSignal.timeout(8000)
           });
           if (!res.ok) remaining.push(item);
         } catch {
@@ -264,17 +274,19 @@ export class SpicyCrustService {
    */
   static async getLeaderboard(options: { limit?: number; songFilter?: string; unique?: boolean } = {}) {
     const limit = options.limit || 50;
-    const unique = options.unique !== false;
     const songParam = options.songFilter && options.songFilter !== 'all' ? `&song=${encodeURIComponent(options.songFilter)}` : '';
 
     try {
-      const url = `${API_BASE_URL}/api/v1/leaderboard?game=rhythm-slice&limit=${limit}&unique=${unique}${songParam}`;
-      const response = await fetch(url);
+      const seasonSlug = await getActiveSeason();
+      const url = `${API_BASE_URL}/api/v1/leaderboard?game=rhythm-slice&season=${seasonSlug}&limit=${limit}${songParam}`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       
-      if (data && data.success && Array.isArray(data.data?.ranking)) {
-        const sanitized = SpicyCrustService.sanitizeLeaderboard(data.data.ranking);
+      const rankingList = data?.data?.ranking ?? data?.data?.leaderboard ?? (Array.isArray(data?.data) ? data.data : null);
+
+      if (data && data.success && Array.isArray(rankingList)) {
+        const sanitized = SpicyCrustService.sanitizeLeaderboard(rankingList, true);
         if (typeof localStorage !== 'undefined' && (!options.songFilter || options.songFilter === 'all')) {
           localStorage.setItem('gp_cached_leaderboard', JSON.stringify(sanitized));
         }

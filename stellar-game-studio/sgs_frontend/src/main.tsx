@@ -77,7 +77,7 @@ class GlobalAppErrorBoundary extends React.Component<{ children: React.ReactNode
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <GlobalAppErrorBoundary>
-      {web3Active && isSecure && hasValidPrivyId ? (
+      {web3Active && isSecure && hasValidPrivyId && LazyPrivyWrapper ? (
         <PrivyErrorBoundary>
           <React.Suspense fallback={<App />}>
             <LazyPrivyWrapper appId={rawPrivyId}>

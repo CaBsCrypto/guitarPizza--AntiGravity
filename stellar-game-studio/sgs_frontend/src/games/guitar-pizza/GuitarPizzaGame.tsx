@@ -23,6 +23,7 @@ import { getRandomSong, songPath, SONGS, type Song } from '../../data/songList';
 import { CollectionTab } from '../../components/CollectionTab';
 import { WalletStandalone } from '../../components/WalletStandalone';
 import { SpicyCrustService } from '../../services/SpicyCrustService';
+import { submitScore as submitSpicyScore, getLeaderboard as getSpicyLeaderboard } from '../../services/spicycrust-api';
 import { HubBridgeService } from '../../services/HubBridgeService';
 import { isWeb3Active } from '../../utils/constants';
 
@@ -925,7 +926,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
 
     // --- Leaderboard States & API Fetcher ---
     const [leaderboardSongId, setLeaderboardSongId] = useState<any>('all');
-    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player_id?: string; nickname: string; score: number; metadata?: any }>>([]);
+    const [leaderboard, setLeaderboard] = useState<Array<{ rank: number; player_id?: string | number; nickname: string; score: number; email?: string; created_at?: string; metadata?: any }>>([]);
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
     const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
     const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
@@ -943,7 +944,7 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     const [playerEmail, setPlayerEmail] = useState(() => {
         try { return localStorage.getItem('gp_player_email') || ""; } catch { return ""; }
     });
-    const [formErrors, setFormErrors] = useState<{ chefName?: string; playerEmail?: string }>({});
+    const [formErrors, setFormErrors] = useState<{ chefName?: string; playerEmail?: string; submit?: string }>({});
     const [isSavingScore, setIsSavingScore] = useState(false);
     const [isScoreSaved, setIsScoreSaved] = useState(false);
     const [lastScore, setLastScore] = useState<number>(0);
@@ -6549,54 +6550,135 @@ Ganador: ${payload.winnerAddress}`);
                                             </div>
                                         ) : (
                                             <div style={{ width: '100%' }}>
-                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.8rem', letterSpacing: '0.08em' }}>
-                                                    🏆 Arcade Leaderboard · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
+                                                <div style={{ fontSize: '0.72rem', color: '#999', textAlign: 'center', marginBottom: '0.6rem', letterSpacing: '0.08em' }}>
+                                                    🏆 SPICYCRUST LEADERBOARD · {leaderboard.length} chef{leaderboard.length === 1 ? '' : 's'}
                                                 </div>
+
+                                                {/* Header de la tabla: # · JUGADOR · PUNTAJE · FECHA */}
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: '36px 1fr 80px 75px',
+                                                    gap: '0.4rem',
+                                                    padding: '0.45rem 0.5rem',
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 'bold',
+                                                    fontFamily: "'Special Elite', monospace",
+                                                    color: '#777',
+                                                    textTransform: 'uppercase',
+                                                    borderBottom: '2px solid #E0D4B8',
+                                                    letterSpacing: '0.5px'
+                                                }}>
+                                                    <span style={{ textAlign: 'center' }}>#</span>
+                                                    <span>{language === 'es' ? 'JUGADOR' : 'PLAYER'}</span>
+                                                    <span style={{ textAlign: 'right' }}>{language === 'es' ? 'PUNTAJE' : 'SCORE'}</span>
+                                                    <span style={{ textAlign: 'right' }}>{language === 'es' ? 'FECHA' : 'DATE'}</span>
+                                                </div>
+
+                                                {/* Filas del Leaderboard */}
                                                 {leaderboard.map((entry, i) => {
-                                                    const medals = ['🥇', '🥈', '🥉'];
-                                                    const medal = medals[i] ?? `#${i + 1}`;
-                                                    const displayName = entry.nickname || (entry.player_id && entry.player_id.length >= 10 ? `${entry.player_id.slice(0, 6)}…${entry.player_id.slice(-4)}` : (entry.player_id || 'Chef Anon'));
-                                                    const isMe = entry.nickname === chefName || (userAddress && entry.player_id === userAddress);
+                                                    const rank = entry.rank || (i + 1);
+                                                    const isTop1 = rank === 1;
+                                                    const isTop2 = rank === 2;
+                                                    const isTop3 = rank === 3;
+
+                                                    let medal = `#${rank}`;
+                                                    let rowBg = 'transparent';
+                                                    let borderStyle = '1px solid #E0D4B8';
+                                                    let rankColor = '#444';
+
+                                                    if (isTop1) {
+                                                        medal = '🥇';
+                                                        rowBg = 'linear-gradient(90deg, rgba(255, 215, 0, 0.22), rgba(255, 215, 0, 0.05))';
+                                                        borderStyle = '1.5px solid #FFD700';
+                                                        rankColor = '#b8860b';
+                                                    } else if (isTop2) {
+                                                        medal = '🥈';
+                                                        rowBg = 'linear-gradient(90deg, rgba(192, 192, 192, 0.22), rgba(192, 192, 192, 0.05))';
+                                                        borderStyle = '1.5px solid #C0C0C0';
+                                                        rankColor = '#7f8c8d';
+                                                    } else if (isTop3) {
+                                                        medal = '🥉';
+                                                        rowBg = 'linear-gradient(90deg, rgba(205, 127, 50, 0.22), rgba(205, 127, 50, 0.05))';
+                                                        borderStyle = '1.5px solid #CD7F32';
+                                                        rankColor = '#a0522d';
+                                                    }
+
+                                                    const displayName = entry.nickname || (entry.player_id && String(entry.player_id).length >= 10 ? `${String(entry.player_id).slice(0, 6)}…${String(entry.player_id).slice(-4)}` : String(entry.player_id || 'Chef Anon'));
+                                                    const isMe = entry.nickname === chefName || (userAddress && String(entry.player_id) === userAddress);
                                                     const songName = entry.metadata?.songTitle || entry.metadata?.song_id || '';
+
+                                                    // Formatear fecha
+                                                    let dateDisplay = '-';
+                                                    if (entry.created_at) {
+                                                        try {
+                                                            const d = new Date(entry.created_at);
+                                                            if (!isNaN(d.getTime())) {
+                                                                dateDisplay = d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' });
+                                                            } else {
+                                                                dateDisplay = String(entry.created_at).split(' ')[0] || String(entry.created_at);
+                                                            }
+                                                        } catch {
+                                                            dateDisplay = String(entry.created_at).slice(0, 10);
+                                                        }
+                                                    }
 
                                                     return (
                                                         <div key={i} style={{
-                                                            display: 'flex',
+                                                            display: 'grid',
+                                                            gridTemplateColumns: '36px 1fr 80px 75px',
+                                                            gap: '0.4rem',
                                                             alignItems: 'center',
-                                                            justifyContent: 'space-between',
-                                                            gap: '0.5rem',
-                                                            padding: '0.65rem 0.5rem',
-                                                            borderBottom: '1px solid #E0D4B8',
-                                                            background: isMe ? 'rgba(39,174,96,0.06)' : 'transparent',
-                                                            borderLeft: isMe ? '3px solid #27ae60' : '3px solid transparent',
+                                                            padding: '0.55rem 0.5rem',
+                                                            borderBottom: borderStyle,
+                                                            borderTop: (isTop1 || isTop2 || isTop3) ? borderStyle : undefined,
+                                                            borderLeft: (isTop1 || isTop2 || isTop3) ? borderStyle : (isMe ? '3px solid #27ae60' : undefined),
+                                                            borderRight: (isTop1 || isTop2 || isTop3) ? borderStyle : undefined,
+                                                            borderRadius: (isTop1 || isTop2 || isTop3) ? '8px' : undefined,
+                                                            margin: (isTop1 || isTop2 || isTop3) ? '3px 0' : undefined,
+                                                            background: isMe && !isTop1 && !isTop2 && !isTop3 ? 'rgba(39,174,96,0.06)' : rowBg,
                                                             width: '100%',
                                                             boxSizing: 'border-box'
                                                         }}>
-                                                            <span style={{ fontSize: '1.15rem', width: '2rem', minWidth: '2rem', textAlign: 'center', flexShrink: 0 }}>{medal}</span>
-                                                            <div style={{ flex: '1 1 auto', minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                                            <span style={{ fontSize: rank <= 3 ? '1.25rem' : '0.85rem', textAlign: 'center', fontWeight: 'bold', color: rankColor }}>
+                                                                {medal}
+                                                            </span>
+                                                            <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                                                 <div
                                                                     title={displayName}
                                                                     style={{
-                                                                        fontSize: 'clamp(0.85rem, 2vh, 0.95rem)',
-                                                                        fontWeight: isMe ? 'bold' : '600',
+                                                                        fontSize: 'clamp(0.82rem, 2vh, 0.92rem)',
+                                                                        fontWeight: (rank <= 3 || isMe) ? 'bold' : '600',
                                                                         fontFamily: "'Special Elite', monospace",
-                                                                        color: isMe ? '#27ae60' : '#8B0000',
+                                                                        color: isMe ? '#27ae60' : (isTop1 ? '#b8860b' : '#8B0000'),
                                                                         overflow: 'hidden',
                                                                         textOverflow: 'ellipsis',
-                                                                        whiteSpace: 'nowrap',
-                                                                        width: '100%'
+                                                                        whiteSpace: 'nowrap'
                                                                     }}
                                                                 >
                                                                     {displayName}{isMe ? ' (tú)' : ''}
                                                                 </div>
                                                                 {songName && (
-                                                                    <div style={{ fontSize: '0.7rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                                                                    <div style={{ fontSize: '0.65rem', color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                         🎵 {songName}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: 'clamp(0.85rem, 2vh, 1rem)', color: '#27ae60', whiteSpace: 'nowrap', fontFamily: 'monospace', flexShrink: 0, textAlign: 'right', marginLeft: '0.5rem' }}>
-                                                                {Number(entry.score).toLocaleString()} pts
+                                                            <div style={{
+                                                                fontWeight: 'bold',
+                                                                fontSize: 'clamp(0.82rem, 2vh, 0.92rem)',
+                                                                color: isTop1 ? '#b8860b' : '#27ae60',
+                                                                fontFamily: 'monospace',
+                                                                textAlign: 'right'
+                                                            }}>
+                                                                {Number(entry.score).toLocaleString()}
+                                                            </div>
+                                                            <div style={{
+                                                                fontSize: '0.72rem',
+                                                                color: '#666',
+                                                                fontFamily: 'monospace',
+                                                                textAlign: 'right'
+                                                            }}>
+                                                                {dateDisplay}
                                                             </div>
                                                         </div>
                                                     );
@@ -6605,21 +6687,38 @@ Ganador: ${payload.winnerAddress}`);
                                         )}
                                     </div>
 
-
-
-                                    {leaderboard.length > 0 && (
-
-                                        <button
-
-                                            className="primary-btn"
-
-                                            style={{ width: '100%', marginTop: '0.5rem', padding: '0.9rem' }}
-
-                                            onClick={() => { setView('lobby'); handleStartGame(); }}
-
-                                        >🔥 {t.challenge}</button>
-
-                                    )}
+                                    {/* Botón VOLVER A JUGAR */}
+                                    <button
+                                        className="primary-btn"
+                                        style={{
+                                            width: '100%',
+                                            marginTop: '0.6rem',
+                                            padding: '0.85rem 1rem',
+                                            fontSize: '1rem',
+                                            fontWeight: 'bold',
+                                            fontFamily: "'Special Elite', monospace",
+                                            background: '#8B0000',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '10px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            boxShadow: '0 3px 8px rgba(139,0,0,0.3)'
+                                        }}
+                                        onClick={() => {
+                                            closeModalWithAnimation('lobby');
+                                            const results = document.getElementById('results');
+                                            if (results) results.style.display = 'none';
+                                            const overlay = document.getElementById('overlay');
+                                            if (overlay) overlay.style.display = 'none';
+                                            handleCookAgain();
+                                        }}
+                                    >
+                                        🍕 {language === 'es' ? 'VOLVER A JUGAR' : 'PLAY AGAIN'}
+                                    </button>
 
                                 </div>
 
@@ -8168,31 +8267,31 @@ Ganador: ${payload.winnerAddress}`);
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <label style={{ fontSize: '0.72rem', fontWeight: 'bold', color: formErrors.chefName ? '#c0392b' : '#444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                    👨‍🍳 {language === 'es' ? 'Nombre del Chef *:' : 'Chef Nickname *:'}
+                                                    👨‍🍳 {language === 'es' ? 'Nombre del Jugador *:' : 'Player Nickname *:'}
                                                 </label>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <span style={{ fontSize: '0.62rem', color: chefName.length >= 16 ? '#c0392b' : '#777', fontWeight: chefName.length >= 16 ? 'bold' : 'normal', fontFamily: 'monospace' }}>
-                                                        {chefName.length}/16
+                                                    <span style={{ fontSize: '0.62rem', color: chefName.length >= 20 ? '#c0392b' : '#777', fontWeight: chefName.length >= 20 ? 'bold' : 'normal', fontFamily: 'monospace' }}>
+                                                        {chefName.length}/20
                                                     </span>
                                                     <span style={{ fontSize: '0.62rem', color: formErrors.chefName ? '#c0392b' : '#888', fontWeight: formErrors.chefName ? 'bold' : 'normal' }}>
-                                                        {language === 'es' ? '(Requerido)' : '(Required)'}
+                                                        {language === 'es' ? '(Obligatorio)' : '(Required)'}
                                                     </span>
                                                 </div>
                                             </div>
                                             <input
                                                 type="text"
-                                                maxLength={16}
+                                                maxLength={20}
                                                 value={chefName}
                                                 onChange={(e) => {
-                                                    const val = e.target.value.slice(0, 16);
+                                                    const val = e.target.value.slice(0, 20);
                                                     setChefName(val);
-                                                    if (formErrors.chefName) {
-                                                        setFormErrors(prev => ({ ...prev, chefName: undefined }));
+                                                    if (formErrors.chefName || formErrors.submit) {
+                                                        setFormErrors(prev => ({ ...prev, chefName: undefined, submit: undefined }));
                                                     }
                                                     try { localStorage.setItem('gp_chef_name', val); } catch {}
                                                     setIsScoreSaved(false);
                                                 }}
-                                                placeholder={language === 'es' ? 'Ingresa tu Apodo' : 'Enter your Nickname'}
+                                                placeholder={language === 'es' ? 'Ingresa tu nombre' : 'Enter your name'}
                                                 style={{
                                                     width: '100%',
                                                     padding: '0.4rem 0.55rem',
@@ -8223,8 +8322,8 @@ Ganador: ${payload.winnerAddress}`);
                                                 value={playerEmail}
                                                 onChange={(e) => {
                                                     setPlayerEmail(e.target.value);
-                                                    if (formErrors.playerEmail) {
-                                                        setFormErrors(prev => ({ ...prev, playerEmail: undefined }));
+                                                    if (formErrors.playerEmail || formErrors.submit) {
+                                                        setFormErrors(prev => ({ ...prev, playerEmail: undefined, submit: undefined }));
                                                     }
                                                     try { localStorage.setItem('gp_player_email', e.target.value); } catch {}
                                                     setIsScoreSaved(false);
@@ -8251,15 +8350,34 @@ Ganador: ${payload.winnerAddress}`);
                                             ) : (
                                                 <span style={{ fontSize: '0.64rem', color: '#666', fontStyle: 'italic', lineHeight: 1.2, marginTop: '1px' }}>
                                                     {language === 'es'
-                                                        ? '✉️ Opcional: ingresa tu correo para recibir noticias y actualizaciones exclusivas.'
-                                                        : '✉️ Optional: enter your email for exclusive updates.'}
+                                                        ? '✉️ Opcional: ingresa tu correo para vincular tu puntaje en SpicyCrust.'
+                                                        : '✉️ Optional: enter email to link your score in SpicyCrust.'}
                                                 </span>
                                             )}
                                         </div>
 
+                                        {/* Mensaje de error amigable sin bloquear el juego */}
+                                        {formErrors.submit && (
+                                            <div style={{
+                                                fontSize: '0.72rem',
+                                                color: '#c0392b',
+                                                background: '#fde8e8',
+                                                border: '1px solid #f8b4b4',
+                                                borderRadius: '6px',
+                                                padding: '6px 8px',
+                                                marginTop: '3px',
+                                                lineHeight: 1.3
+                                            }}>
+                                                ⚠️ {formErrors.submit}
+                                            </div>
+                                        )}
+
+                                        {/* Botón ENVIAR PUNTAJE */}
                                         <button
+                                            disabled={isSavingScore}
                                             onClick={async () => {
-                                                const scoreToSave = lastScoreRef.current || lastScore || 0;
+                                                const domScore = parseInt(document.getElementById('resScore')?.innerText?.replace(/[^0-9]/g, '') || '0', 10);
+                                                const scoreToSave = Math.max(lastScoreRef.current || 0, lastScore || 0, domScore || 0);
                                                 if (scoreToSave <= 0) {
                                                     alert(language === 'es'
                                                         ? '⚠️ Consigue puntos jugando la canción para poder clasificar en el ranking.'
@@ -8268,20 +8386,16 @@ Ganador: ${payload.winnerAddress}`);
                                                 }
 
                                                 // Validar campos obligatorios y formato
-                                                const errors: { chefName?: string; playerEmail?: string } = {};
+                                                const errors: { chefName?: string; playerEmail?: string; submit?: string } = {};
                                                 const trimmedChef = chefName.trim();
                                                 if (!trimmedChef) {
                                                     errors.chefName = language === 'es'
-                                                        ? 'Por favor ingresa tu apodo de chef para guardar tu puntuación.'
-                                                        : 'Please enter your chef nickname to save your score.';
-                                                } else if (trimmedChef.length < 2) {
+                                                        ? 'Ingresa tu nombre (obligatorio, máx 20 caracteres).'
+                                                        : 'Please enter your name (required, max 20 chars).';
+                                                } else if (trimmedChef.length > 20) {
                                                     errors.chefName = language === 'es'
-                                                        ? 'El apodo debe tener al menos 2 caracteres.'
-                                                        : 'Nickname must be at least 2 characters.';
-                                                } else if (trimmedChef.length > 16) {
-                                                    errors.chefName = language === 'es'
-                                                        ? 'El apodo no puede exceder los 16 caracteres.'
-                                                        : 'Nickname cannot exceed 16 characters.';
+                                                        ? 'El nombre no puede exceder los 20 caracteres.'
+                                                        : 'Name cannot exceed 20 characters.';
                                                 }
 
                                                 const trimmedEmail = playerEmail.trim();
@@ -8302,11 +8416,11 @@ Ganador: ${payload.winnerAddress}`);
                                                 setFormErrors({});
                                                 setIsSavingScore(true);
                                                 try {
-                                                    await SpicyCrustService.submitScore({
-                                                        playerExternalId: userAddress || 'guest_player',
+                                                    await submitSpicyScore({
                                                         nickname: trimmedChef,
-                                                        email: trimmedEmail || undefined,
+                                                        email: trimmedEmail || '',
                                                         score: scoreToSave,
+                                                        playerExternalId: userAddress || undefined,
                                                         metadata: {
                                                             songId: selectedSong.id,
                                                             songTitle: selectedSong.title,
@@ -8315,9 +8429,20 @@ Ganador: ${payload.winnerAddress}`);
                                                         }
                                                     });
                                                     setIsScoreSaved(true);
+                                                    // Éxito: pasar a la pantalla de leaderboard
                                                     loadLeaderboard();
-                                                } catch (err) {
-                                                    console.error('Error guardando score:', err);
+                                                    const results = document.getElementById('results');
+                                                    if (results) results.style.display = 'none';
+                                                    const overlay = document.getElementById('overlay');
+                                                    if (overlay) overlay.style.display = 'flex';
+                                                    setView('leaderboard');
+                                                } catch (err: any) {
+                                                    console.warn('[SpicyCrust] Error guardando score:', err);
+                                                    setFormErrors({
+                                                        submit: language === 'es'
+                                                            ? 'No se pudo conectar con SpicyCrust en este momento. ¡Tu puntaje quedó respaldado!'
+                                                            : 'Could not submit score to SpicyCrust. Score was backed up locally!'
+                                                    });
                                                 } finally {
                                                     setIsSavingScore(false);
                                                 }
@@ -8325,24 +8450,68 @@ Ganador: ${payload.winnerAddress}`);
                                             style={{
                                                 width: '100%',
                                                 padding: '0.65rem 0.8rem',
-                                                fontSize: '0.9rem',
+                                                fontSize: '0.92rem',
                                                 fontWeight: 'bold',
                                                 fontFamily: "'Special Elite', monospace",
                                                 background: isScoreSaved ? '#27ae60' : '#8B0000',
                                                 color: '#fff',
                                                 border: 'none',
                                                 borderRadius: '8px',
-                                                cursor: 'pointer',
+                                                cursor: isSavingScore ? 'not-allowed' : 'pointer',
                                                 marginTop: '0.3rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                                                opacity: isSavingScore ? 0.85 : 1
+                                            }}
+                                        >
+                                            {isSavingScore ? (
+                                                <>
+                                                    <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                                                    <span>{language === 'es' ? 'ENVIANDO...' : 'SUBMITTING...'}</span>
+                                                </>
+                                            ) : (isScoreSaved ? (
+                                                <span>✅ {language === 'es' ? '¡PUNTAJE ENVIADO!' : 'SCORE SUBMITTED!'}</span>
+                                            ) : (
+                                                <span>🚀 {language === 'es' ? 'ENVIAR PUNTAJE' : 'SUBMIT SCORE'}</span>
+                                            ))}
+                                        </button>
+
+                                        {/* Botón SALTAR para ir al ranking sin guardar */}
+                                        <button
+                                            onClick={() => {
+                                                const results = document.getElementById('results');
+                                                if (results) results.style.display = 'none';
+                                                const overlay = document.getElementById('overlay');
+                                                if (overlay) overlay.style.display = 'flex';
+                                                loadLeaderboard();
+                                                setView('leaderboard');
+                                            }}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.55rem 0.8rem',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 'bold',
+                                                fontFamily: "'Special Elite', monospace",
+                                                background: 'transparent',
+                                                color: '#555',
+                                                border: '1.5px dashed #888',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 gap: '6px',
                                                 transition: 'all 0.2s ease',
-                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                                                marginTop: '0.1rem'
                                             }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = '#f2ece4'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                                         >
-                                            {isSavingScore ? '⏳ Guardando...' : (isScoreSaved ? '✅ ¡PUNTUACIÓN GUARDADA!' : '💾 GUARDAR EN EL RANKING')}
+                                            ⏭️ {language === 'es' ? 'SALTAR AL RANKING' : 'SKIP TO LEADERBOARD'}
                                         </button>
                                     </div>
                                 </div>
