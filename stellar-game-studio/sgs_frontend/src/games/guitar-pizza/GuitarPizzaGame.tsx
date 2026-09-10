@@ -930,6 +930,18 @@ export function GuitarPizzaGame({ userAddress, onGameComplete: onGameCompletePro
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
     const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
     const [lbSubmitStatus, setLbSubmitStatus] = useState<'none' | 'ok' | 'fail'>('none');
+    const [leaderboardOpenedFrom, setLeaderboardOpenedFrom] = useState<'lobby' | 'results'>('lobby');
+
+    const handleCloseLeaderboard = useCallback(() => {
+        closeModalWithAnimation('lobby');
+        if (leaderboardOpenedFrom === 'results') {
+            const overlay = document.getElementById('overlay');
+            if (overlay) overlay.style.display = 'none';
+            const results = document.getElementById('results');
+            if (results) results.style.display = 'flex';
+            setLeaderboardOpenedFrom('lobby');
+        }
+    }, [closeModalWithAnimation, leaderboardOpenedFrom]);
 
     // Profile & Lead Capture State
     const [chefName, setChefName] = useState(() => {
@@ -6438,13 +6450,13 @@ Ganador: ${payload.winnerAddress}`);
 
                         {(view === 'leaderboard' || closingView === 'leaderboard') && (
 
-                            <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={() => closeModalWithAnimation('lobby')}>
+                            <div className={`modal-backdrop ${closingView === 'leaderboard' ? 'closing' : ''}`} onClick={handleCloseLeaderboard}>
 
                                 <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', width: '100%', padding: 'clamp(0.6rem, 1.5vh, 1rem)', boxSizing: 'border-box' }}>
 
                                     <div className="modal-header">
 
-                                        <div className="back-btn-circle" onClick={() => closeModalWithAnimation('lobby')}>
+                                        <div className="back-btn-circle" onClick={handleCloseLeaderboard}>
 
                                             <ArrowLeft size={20} />
 
@@ -8282,7 +8294,9 @@ Ganador: ${payload.winnerAddress}`);
                                                 type="text"
                                                 maxLength={20}
                                                 value={chefName}
+                                                disabled={isSavingScore || isScoreSaved}
                                                 onChange={(e) => {
+                                                    if (isScoreSaved) return;
                                                     const val = e.target.value.slice(0, 20);
                                                     setChefName(val);
                                                     if (formErrors.chefName || formErrors.submit) {
@@ -8295,14 +8309,15 @@ Ganador: ${payload.winnerAddress}`);
                                                 style={{
                                                     width: '100%',
                                                     padding: '0.4rem 0.55rem',
-                                                    background: '#fff',
-                                                    border: formErrors.chefName ? '2px solid #e74c3c' : '1.5px solid #8B0000',
+                                                    background: isScoreSaved ? '#f0ece1' : '#fff',
+                                                    border: formErrors.chefName ? '2px solid #e74c3c' : (isScoreSaved ? '1.5px solid #27ae60' : '1.5px solid #8B0000'),
                                                     borderRadius: '6px',
                                                     fontSize: '0.88rem',
                                                     fontFamily: "'Special Elite', monospace",
-                                                    color: '#111',
+                                                    color: isScoreSaved ? '#555' : '#111',
                                                     boxSizing: 'border-box',
                                                     outline: 'none',
+                                                    cursor: isScoreSaved ? 'not-allowed' : 'text',
                                                     boxShadow: formErrors.chefName ? '0 0 0 2px rgba(231,76,60,0.2)' : 'none'
                                                 }}
                                             />
@@ -8320,7 +8335,9 @@ Ganador: ${payload.winnerAddress}`);
                                             <input
                                                 type="email"
                                                 value={playerEmail}
+                                                disabled={isSavingScore || isScoreSaved}
                                                 onChange={(e) => {
+                                                    if (isScoreSaved) return;
                                                     setPlayerEmail(e.target.value);
                                                     if (formErrors.playerEmail || formErrors.submit) {
                                                         setFormErrors(prev => ({ ...prev, playerEmail: undefined, submit: undefined }));
@@ -8332,14 +8349,15 @@ Ganador: ${payload.winnerAddress}`);
                                                 style={{
                                                     width: '100%',
                                                     padding: '0.4rem 0.55rem',
-                                                    background: '#fff',
-                                                    border: formErrors.playerEmail ? '2px solid #e74c3c' : '1.5px solid #ccc',
+                                                    background: isScoreSaved ? '#f0ece1' : '#fff',
+                                                    border: formErrors.playerEmail ? '2px solid #e74c3c' : (isScoreSaved ? '1.5px solid #27ae60' : '1.5px solid #ccc'),
                                                     borderRadius: '6px',
                                                     fontSize: '0.82rem',
                                                     fontFamily: "'Special Elite', monospace",
-                                                    color: '#111',
+                                                    color: isScoreSaved ? '#555' : '#111',
                                                     boxSizing: 'border-box',
                                                     outline: 'none',
+                                                    cursor: isScoreSaved ? 'not-allowed' : 'text',
                                                     boxShadow: formErrors.playerEmail ? '0 0 0 2px rgba(231,76,60,0.2)' : 'none'
                                                 }}
                                             />
@@ -8372,8 +8390,89 @@ Ganador: ${payload.winnerAddress}`);
                                             </div>
                                         )}
 
-                                        {/* Botón ENVIAR PUNTAJE */}
-                                        <button
+                                        {isScoreSaved ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', width: '100%', marginTop: '0.3rem' }}>
+                                                {/* Badge Confirmación */}
+                                                <div style={{
+                                                    width: '100%',
+                                                    padding: '0.65rem 0.8rem',
+                                                    fontSize: '0.92rem',
+                                                    fontWeight: 'bold',
+                                                    fontFamily: "'Special Elite', monospace",
+                                                    background: '#27ae60',
+                                                    color: '#fff',
+                                                    borderRadius: '8px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
+                                                    boxShadow: '0 2px 6px rgba(39,174,96,0.3)',
+                                                    boxSizing: 'border-box'
+                                                }}>
+                                                    ✅ {language === 'es' ? '¡PUNTAJE ENVIADO!' : 'SCORE SUBMITTED!'}
+                                                </div>
+
+                                                {/* Acciones tras enviar: VER RANKING y COCINAR DE NUEVO */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', width: '100%', marginTop: '0.2rem' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            setLeaderboardOpenedFrom('results');
+                                                            const results = document.getElementById('results');
+                                                            if (results) results.style.display = 'none';
+                                                            const overlay = document.getElementById('overlay');
+                                                            if (overlay) overlay.style.display = 'flex';
+                                                            loadLeaderboard();
+                                                            setView('leaderboard');
+                                                        }}
+                                                        style={{
+                                                            padding: '0.65rem 0.5rem',
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: 'bold',
+                                                            fontFamily: "'Special Elite', monospace",
+                                                            background: 'linear-gradient(135deg, #D4AF37 0%, #AA820A 100%)',
+                                                            color: '#1a1005',
+                                                            border: '1px solid #FFD700',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '5px',
+                                                            boxShadow: '0 2px 6px rgba(212,175,55,0.4)',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        🏆 {language === 'es' ? 'VER RANKING' : 'LEADERBOARD'}
+                                                    </button>
+
+                                                    <button
+                                                        onClick={handleCookAgain}
+                                                        style={{
+                                                            padding: '0.65rem 0.5rem',
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: 'bold',
+                                                            fontFamily: "'Special Elite', monospace",
+                                                            background: '#8B0000',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '5px',
+                                                            boxShadow: '0 2px 6px rgba(139,0,0,0.3)',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                    >
+                                                        🍕 {language === 'es' ? 'COCINAR DE NUEVO' : 'PLAY AGAIN'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* Botón ENVIAR PUNTAJE */}
+                                                <button
                                             disabled={isSavingScore}
                                             onClick={async () => {
                                                 const domScore = parseInt(document.getElementById('resScore')?.innerText?.replace(/[^0-9]/g, '') || '0', 10);
@@ -8429,13 +8528,8 @@ Ganador: ${payload.winnerAddress}`);
                                                         }
                                                     });
                                                     setIsScoreSaved(true);
-                                                    // Éxito: pasar a la pantalla de leaderboard
+                                                    // Mantener en el Ticket con confirmación visual
                                                     loadLeaderboard();
-                                                    const results = document.getElementById('results');
-                                                    if (results) results.style.display = 'none';
-                                                    const overlay = document.getElementById('overlay');
-                                                    if (overlay) overlay.style.display = 'flex';
-                                                    setView('leaderboard');
                                                 } catch (err: any) {
                                                     console.warn('[SpicyCrust] Error guardando score:', err);
                                                     setFormErrors({
@@ -8453,7 +8547,7 @@ Ganador: ${payload.winnerAddress}`);
                                                 fontSize: '0.92rem',
                                                 fontWeight: 'bold',
                                                 fontFamily: "'Special Elite', monospace",
-                                                background: isScoreSaved ? '#27ae60' : '#8B0000',
+                                                background: '#8B0000',
                                                 color: '#fff',
                                                 border: 'none',
                                                 borderRadius: '8px',
@@ -8473,16 +8567,15 @@ Ganador: ${payload.winnerAddress}`);
                                                     <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
                                                     <span>{language === 'es' ? 'ENVIANDO...' : 'SUBMITTING...'}</span>
                                                 </>
-                                            ) : (isScoreSaved ? (
-                                                <span>✅ {language === 'es' ? '¡PUNTAJE ENVIADO!' : 'SCORE SUBMITTED!'}</span>
                                             ) : (
                                                 <span>🚀 {language === 'es' ? 'ENVIAR PUNTAJE' : 'SUBMIT SCORE'}</span>
-                                            ))}
+                                            )}
                                         </button>
 
                                         {/* Botón SALTAR para ir al ranking sin guardar */}
                                         <button
                                             onClick={() => {
+                                                setLeaderboardOpenedFrom('results');
                                                 const results = document.getElementById('results');
                                                 if (results) results.style.display = 'none';
                                                 const overlay = document.getElementById('overlay');
@@ -8513,49 +8606,23 @@ Ganador: ${payload.winnerAddress}`);
                                         >
                                             ⏭️ {language === 'es' ? 'SALTAR AL RANKING' : 'SKIP TO LEADERBOARD'}
                                         </button>
+                                        </>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '0.8rem' }}>
-                                    <button
-                                        onClick={() => {
-                                            const results = document.getElementById('results');
-                                            if (results) results.style.display = 'none';
-                                            const overlay = document.getElementById('overlay');
-                                            if (overlay) overlay.style.display = 'flex';
-                                            loadLeaderboard();
-                                            setView('leaderboard');
-                                        }}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.75rem 1rem',
-                                            fontSize: '1rem',
-                                            fontWeight: 'bold',
-                                            fontFamily: "'Special Elite', monospace",
-                                            background: '#D4AF37',
-                                            color: '#1a1005',
-                                            border: 'none',
-                                            borderRadius: '10px',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '6px',
-                                            boxShadow: '0 3px 8px rgba(212,175,55,0.3)'
-                                        }}
-                                    >
-                                        🏆 {language === 'es' ? 'VER TABLA DE LÍDERES' : 'VIEW LEADERBOARD'}
-                                    </button>
-
-                                    <button
-                                        id="restartBtn"
-                                        className="primary-btn"
-                                        onClick={handleCookAgain}
-                                        style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '1.05rem', boxShadow: 'none' }}
-                                    >
-                                        🍕 {language === 'es' ? 'TOCAR DE NUEVO' : 'PLAY AGAIN'}
-                                    </button>
+                                    {!isScoreSaved && (
+                                        <button
+                                            id="restartBtn"
+                                            className="primary-btn"
+                                            onClick={handleCookAgain}
+                                            style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '1.05rem', boxShadow: 'none' }}
+                                        >
+                                            🍕 {language === 'es' ? 'TOCAR DE NUEVO' : 'PLAY AGAIN'}
+                                        </button>
+                                    )}
 
                                     {onChainScore !== null && onChainScore >= 4000 ? (
                                         <button
